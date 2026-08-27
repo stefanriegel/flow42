@@ -14,13 +14,15 @@ Treat `.flow42/<work-id>/` artifacts as truth. Read `../../core/CONTRACT.md`,
 4. Classify risk by blast radius, reversibility, data, auth, external effects,
    infrastructure, migration, money, and production exposure.
 5. Run the next safe phase using the corresponding Flow42 skill.
-6. Persist artifacts and evidence before reporting progress.
+6. Atomically update status, increment its revision, append one history event,
+   reread both files, and persist evidence before reporting progress.
 7. Stop at intent/spec approval, high-risk plan approval, irreversible actions,
    external publication, merge, or deployment.
 
-Delegate bounded independent work to specialist agents. Parallelize only vertical
-slices with disjoint ownership in isolated worktrees. The orchestrator owns scope,
-state, integration, and final accountability.
+Delegate only bounded vertical slices with disjoint ownership in isolated
+worktrees. Set an explicit worker limit no greater than configured concurrency
+and forbid workers from delegating. The orchestrator alone integrates in plan
+order after slice gates pass and owns recovery and final accountability.
 
 Default endpoint: independently reviewed, CI-green PR/MR ready for human action.
 Never merge or deploy without explicit approval.

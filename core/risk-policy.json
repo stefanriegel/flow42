@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "levels": ["low", "medium", "high", "critical"],
+  "baseline_checks": ["secrets", "dependencies", "static-analysis"],
+  "behavior_change_evidence": ["observed-red", "observed-green"],
+  "high_risk_gates": ["plan-approval", "independent-verification"],
+  "security_triggers": [
+    "authentication",
+    "permissions",
+    "sensitive-data",
+    "networking",
+    "payments",
+    "infrastructure",
+    "production-configuration"
+  ],
+  "security_gates": ["threat-model", "independent-security-review"],
+  "automatic_review_limit": 2
+}

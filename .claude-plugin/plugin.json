@@ -4,5 +4,9 @@
   "description": "From intent to trusted PR, across coding agents.",
   "author": {
     "name": "Stefan Riegel"
-  }
+  },
+  "homepage": "https://github.com/stefanriegel/flow42",
+  "repository": "https://github.com/stefanriegel/flow42",
+  "license": "MIT",
+  "keywords": ["sdlc", "workflow", "skills", "pull-request"]
 }

@@ -13,13 +13,11 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python: ["3.11", "3.13"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
-        with:
-          python-version: ${{ matrix.python }}
-      - run: python3 scripts/check-parity.py
-      - run: python3 scripts/validate.py
-      - run: python3 -m unittest discover -s tests -v
+      - run: sh scripts/check-parity.sh
+      - run: sh scripts/validate.sh
+      - run: sh tests/conformance.sh
+      - run: sh tests/contracts.sh
+      - run: sh tests/active-work.sh

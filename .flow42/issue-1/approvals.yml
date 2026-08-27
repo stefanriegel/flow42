@@ -1,0 +1,10 @@
+schema_version: 1
+intent_hash: "810b4e6d5d94e19d9fab47915fc9535a978ff4102897af4563dbf48649c7b2b6"
+intent_approved_by: "stefanriegel"
+intent_approved_at: "2026-08-27T20:21:07Z"
+spec_hash: "7022a1a616fc33d2f5b9d32af8ec5d327a34c8f74ae817caad1a33d2aac34b4a"
+spec_approved_by: "stefanriegel"
+spec_approved_at: "2026-08-27T20:21:07Z"
+plan_hash: "6fdb17483a8e9906389c9a1b0f6bd3dd949e2550a7e85daf0c90b35136402e62"
+plan_approved_by: "stefanriegel"
+plan_approved_at: "2026-08-27T20:21:07Z"
