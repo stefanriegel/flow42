@@ -9,10 +9,13 @@
 - Claude invocation is blocked by missing local authentication.
 - Codex local install, discovery, invocation, native intent lifecycle, uninstall,
   and removal pass.
+- Codex and Claude Code remote branch install, discovery, same-version refresh,
+  uninstall, and cleanup pass. Codex remote skill invocation passes.
 - Independent review found three P1 lifecycle gaps; all three were fixed.
+- Second independent review found no blockers.
+- PR #2 CI passes on macOS and Ubuntu.
 
 ## Known gaps
 
-Remote installs, version-changing upgrades, Claude invocation, complete harness
-flows, Forge E2E parity, scenario executions, three dogfoods, launch review, CI,
-and release remain open.
+Version-changing upgrades, Claude invocation, complete harness flows, Forge E2E
+parity, scenario executions, three dogfoods, launch review, and release remain open.

@@ -16,5 +16,9 @@
   `4a5c03e61c79a10225fa3dceb2cef8b727fc8ac44f38feb2b20dd2aa0918c9d6`
 - Removal: passed for plugin and marketplace
 - Read-back: passed; neither remained registered
+- Remote branch install: passed from `stefanriegel/flow42` at commit
+  `d1d860ea3576094dad530562ad86a000c5b23659`; discovery and invocation returned
+  `FLOW42_REMOTE_DISCOVERED`, marketplace refresh returned no errors, and cleanup
+  read-back passed.
 
-Remote install, version-changing upgrade, and trusted-PR dogfood are still open.
+Version-changing upgrade and trusted-PR dogfood are still open.
