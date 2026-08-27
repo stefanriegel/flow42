@@ -23,7 +23,7 @@ creates expensive ambiguity. Flow42 supplies a risk-adaptive loop:
 - observable red-green for behavior changes and bug fixes;
 - independent verification and security escalation;
 - GitHub and GitLab through the official `gh` and `glab` CLIs;
-- deterministic resume from `.sdlc/<work-id>/` artifacts.
+- deterministic resume from `.flow42/<work-id>/` artifacts.
 
 ## 90-second local preview
 
@@ -42,7 +42,7 @@ To create a work item inside any Git repository:
 python3 /path/to/flow42/scripts/flow42.py new reliable-retries "Add reliable retries" --type feature
 ```
 
-This creates versionable artifacts under `.sdlc/reliable-retries/`.
+This creates versionable artifacts under `.flow42/reliable-retries/`.
 
 ## Agent installation
 

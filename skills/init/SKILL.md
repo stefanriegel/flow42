@@ -9,7 +9,7 @@ Perform read-only discovery first: languages, package managers, repository
 instructions, architecture docs, test/lint/type/build commands, CI, protected
 branches, Git remotes, sensitive paths, and authenticated `gh`/`glab` availability.
 
-Propose `.sdlc/config.yml` from `../../templates/config.yml`. Never store secrets.
+Propose `.flow42/config.yml` from `../../templates/config.yml`. Never store secrets.
 If `CLAUDE.md` or `AGENTS.md` needs Flow42 guidance, show a mergeable patch and
 wait for approval; never replace existing instructions. Validate with
 `scripts/flow42.py doctor`.

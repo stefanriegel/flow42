@@ -5,7 +5,7 @@ description: Capture a work request as an explicit, approvable Flow42 intent. Us
 
 # Capture Intent
 
-Create a safe work ID and initialize `.sdlc/<work-id>/` with
+Create a safe work ID and initialize `.flow42/<work-id>/` with
 `scripts/flow42.py new`. Fill `intent.md` with the problem, desired outcome,
 users, constraints, non-goals, acceptance signals, assumptions, and risks.
 Research public facts when useful; ask only questions that materially change

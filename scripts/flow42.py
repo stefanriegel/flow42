@@ -56,7 +56,7 @@ def atomic_write(path: Path, content: str) -> None:
 def cmd_new(args: argparse.Namespace) -> None:
     repo = git_root()
     work_id = safe_work_id(args.work_id)
-    target = (repo / ".sdlc" / work_id).resolve()
+    target = (repo / ".flow42" / work_id).resolve()
     if repo not in target.parents:
         fail("unsafe work path")
     if target.exists():
@@ -86,7 +86,7 @@ def cmd_doctor(_: argparse.Namespace) -> None:
         "git": shutil.which("git"),
         "gh": shutil.which("gh"),
         "glab": shutil.which("glab"),
-        "config": str(repo / ".sdlc" / "config.yml") if (repo / ".sdlc" / "config.yml").is_file() else None,
+        "config": str(repo / ".flow42" / "config.yml") if (repo / ".flow42" / "config.yml").is_file() else None,
     }
     remote = subprocess.run(
         ["git", "remote", "get-url", "origin"], cwd=repo, text=True, capture_output=True

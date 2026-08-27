@@ -35,6 +35,16 @@ for template in root.glob("templates/*"):
     unknown = set(re.findall(r"{{([^}]+)}}", text)) - {"work_id", "title", "work_type", "timestamp"}
     if unknown:
         errors.append(f"unknown placeholders in {template.name}: {sorted(unknown)}")
+legacy_workspace = ".sd" + "lc"
+for path in root.rglob("*"):
+    if not path.is_file() or ".git" in path.parts or path.suffix in {".pyc"}:
+        continue
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        continue
+    if legacy_workspace in text:
+        errors.append(f"legacy workspace path remains in {path.relative_to(root)}")
 if errors:
     print("\n".join(errors), file=sys.stderr)
     raise SystemExit(1)

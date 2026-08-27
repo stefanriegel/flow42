@@ -5,7 +5,7 @@ description: Advance a Flow42 work item through the next safe SDLC phase. Use wh
 
 # Flow42 Orchestrator
 
-Treat `.sdlc/<work-id>/` artifacts as truth. Read `../../core/CONTRACT.md`,
+Treat `.flow42/<work-id>/` artifacts as truth. Read `../../core/CONTRACT.md`,
 `../../core/workflow.json`, repository instructions, and the active work item.
 
 1. Preflight Git status, repository instructions, Flow42 config, Forge CLI, and persisted state.

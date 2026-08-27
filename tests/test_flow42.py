@@ -31,8 +31,8 @@ class Flow42Tests(unittest.TestCase):
                 capture_output=True,
                 check=True,
             )
-            target = repo / ".sdlc" / "retry"
-            self.assertEqual(result.stdout.strip(), ".sdlc/retry")
+            target = repo / ".flow42" / "retry"
+            self.assertEqual(result.stdout.strip(), ".flow42/retry")
             self.assertEqual(
                 {p.name for p in target.iterdir()},
                 {"intent.md", "spec.md", "plan.md", "evidence.md", "decisions.md", "status.yml"},
