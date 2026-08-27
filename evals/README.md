@@ -21,3 +21,12 @@ Planned fixture families:
 Fixtures must contain no private repositories, credentials, or unverifiable
 claims. Benchmark reports publish methodology, environment, raw aggregate
 results, limitations, and Flow42 version.
+
+Run deterministic failure-path evaluations with:
+
+```sh
+sh evals/run.sh
+```
+
+Native harness evidence is recorded under `evidence/evals/`; these runs complement
+the deterministic suite and are required before a harness-parity claim.

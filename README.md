@@ -7,8 +7,8 @@ keeps intent, specifications, plans, evidence, and approvals in Git so Claude
 Code, Codex, and humans can safely resume the same work without relying on chat
 memory.
 
-> Early development preview. The workflow contract is public; V1 is not yet
-> launch-ready. Don't Panic.
+> V1 development is in progress. Support claims remain limited to paths backed
+> by public conformance evidence. Don't Panic.
 
 ## Why Flow42
 
@@ -25,30 +25,27 @@ creates expensive ambiguity. Flow42 supplies a risk-adaptive loop:
 - GitHub and GitLab through the official `gh` and `glab` CLIs;
 - deterministic resume from `.flow42/<work-id>/` artifacts.
 
-## 90-second local preview
+## Runtime-free local start
 
-Requirements: Git and Python 3.11+.
+Requirements: your selected coding-agent harness and Git. `gh` or `glab` is
+needed only for the corresponding Forge. No Flow42 executable, Python
+environment, Node runtime, service, or token store is required.
 
 ```bash
 git clone https://github.com/stefanriegel/flow42.git
 cd flow42
-python3 scripts/check-parity.py
-python3 scripts/flow42.py doctor
+sh scripts/check-parity.sh
 ```
 
-To create a work item inside any Git repository:
-
-```bash
-python3 /path/to/flow42/scripts/flow42.py new reliable-retries "Add reliable retries" --type feature
-```
-
-This creates versionable artifacts under `.flow42/reliable-retries/`.
+Install `skills/` through the native skill/plugin mechanism of your harness,
+invoke `flow42:init` for a repository, then invoke `flow42:intent` with your
+request. The skill creates `.flow42/<work-id>/` directly from the templates.
 
 ## Agent installation
 
-Native one-command installation for Claude Code and Codex will be documented
-and tested before V1. Until then, use a local development checkout. We will not
-publish installation commands that have not been exercised end to end.
+Exact install, upgrade, and uninstall commands will be published only after the
+native paths have been exercised end to end in both harnesses. Until then, use a
+local development checkout; this is deliberately not an unverified support claim.
 
 ## Skills
 
@@ -66,8 +63,15 @@ deploy on its own.
 ## Architecture
 
 The canonical contract lives in `core/`; shared skills live in `skills/`;
-harness manifests are thin adapters. `scripts/check-parity.py` rejects missing
-commands or malformed adapter names. See [core/CONTRACT.md](core/CONTRACT.md).
+harness manifests are thin adapters. Repository conformance checks use portable
+shell plus `jq`; they are development checks, not a product runtime. See
+[core/CONTRACT.md](core/CONTRACT.md).
+
+Documentation: [installation](docs/INSTALLATION.md),
+[lifecycle](docs/LIFECYCLE.md), [architecture](docs/ARCHITECTURE.md),
+[configuration](docs/CONFIGURATION.md),
+[troubleshooting](docs/TROUBLESHOOTING.md), and
+[preview migration](docs/MIGRATION.md).
 
 ## Status and roadmap
 

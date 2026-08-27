@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "flow42",
+  "version": "0.1.0",
+  "description": "Runtime-free intent-to-trusted-PR workflow",
+  "owner": {"name": "Stefan Riegel"},
+  "plugins": [
+    {
+      "name": "flow42",
+      "description": "From intent to trusted PR, across coding agents.",
+      "source": "./"
+    }
+  ]
+}

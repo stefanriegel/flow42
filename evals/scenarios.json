@@ -1,10 +1,19 @@
 {
   "schema_version": 1,
   "scenarios": [
-    {"id": "feature", "requires": ["intent-gate", "spec-gate", "red-green", "independent-review"]},
-    {"id": "bug", "requires": ["reproduction", "red-green", "regression-test", "independent-review"]},
-    {"id": "resume", "requires": ["persisted-state", "hash-validation", "no-chat-dependency"]},
-    {"id": "dirty-worktree", "requires": ["preserve-unrelated-changes", "ownership-check"]},
-    {"id": "adapter-parity", "requires": ["claude-code", "codex", "equivalent-artifacts", "equivalent-gates"]}
+    {"id": "happy-feature", "result": "ready-for-human", "requires": ["intent-gate", "spec-gate", "red-green", "independent-review", "ci-green"]},
+    {"id": "bug", "result": "ready-for-human", "requires": ["reproduction", "red-green", "regression-test", "independent-review"]},
+    {"id": "invalid-transition", "result": "blocked", "requires": ["legal-transition-list", "no-state-mutation"]},
+    {"id": "stale-approval", "result": "blocked", "requires": ["hash-mismatch", "downstream-invalidation"]},
+    {"id": "interrupted-resume", "result": "resume-stage", "requires": ["persisted-state", "history-revision", "hash-validation", "no-chat-dependency"]},
+    {"id": "unsafe-action", "result": "approval-required", "requires": ["no-merge", "no-deploy", "no-destructive-git"]},
+    {"id": "forge-cli-missing", "result": "blocked", "requires": ["provider-detection", "exact-preflight-failure"]},
+    {"id": "forge-auth-failure", "result": "blocked", "requires": ["auth-preflight", "no-token-storage"]},
+    {"id": "ci-failure", "result": "blocked", "requires": ["failing-run-evidence", "not-trusted"]},
+    {"id": "security-escalation", "result": "security-review", "requires": ["threat-model", "independent-security-review"]},
+    {"id": "worktree-conflict", "result": "blocked", "requires": ["preserve-unrelated-changes", "ownership-check", "no-reset"]},
+    {"id": "delegation-bounds", "result": "bounded", "requires": ["worker-limit", "no-recursive-delegation", "orchestrator-integration"]},
+    {"id": "adapter-parity", "result": "equivalent", "requires": ["claude-code", "codex", "equivalent-artifacts", "equivalent-gates"]},
+    {"id": "install-lifecycle", "result": "removed", "requires": ["install", "discovery", "invocation", "upgrade-or-replace", "uninstall"]}
   ]
 }

@@ -13,13 +13,32 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python: ["3.11", "3.13"]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: sh scripts/check-parity.sh
+      - run: sh scripts/validate.sh
+      - run: sh tests/conformance.sh
+      - run: sh tests/contracts.sh
+      - run: sh tests/active-work.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - run: sh tests/security.sh
+      - run: sh evals/run.sh
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
-          python-version: ${{ matrix.python }}
-      - run: python3 scripts/check-parity.py
-      - run: python3 scripts/validate.py
-      - run: python3 -m unittest discover -s tests -v
+          fetch-depth: 0
+      - run: shellcheck scripts/*.sh tests/*.sh
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+      - run: sh tests/dependencies.sh

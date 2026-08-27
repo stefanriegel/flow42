@@ -5,8 +5,13 @@ description: Safely resume interrupted Flow42 work from persisted artifacts. Use
 
 # Resume
 
-Validate filesystem, Git, Forge, artifact hashes, approvals, and state revision.
+Validate filesystem, Git, Forge, artifact hashes, approvals, and agreement
+between status revision and the last history event.
+Reverify authenticated approval provenance before treating any gate as current.
 Compare current branches/worktrees and dirty paths with persisted ownership.
 If consistent, continue through `flow`. If inconsistent, stop with a repair
 proposal. Never reset, delete, overwrite, or force-push to manufacture a clean
 state. Recovery heading may say “Don't Panic”; operational details stay precise.
+
+When consistent, transition `blocked` to the recorded legal `resume_stage`, clear
+resolved blockers, increment revision, append history, and reread both files.
