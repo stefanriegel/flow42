@@ -24,6 +24,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
       - run: sh tests/security.sh
+      - run: sh evals/run.sh
 
   security:
     runs-on: ubuntu-latest

@@ -11,6 +11,8 @@
   and removal pass.
 - Codex and Claude Code remote branch install, discovery, same-version refresh,
   uninstall, and cleanup pass. Codex remote skill invocation passes.
+- Claude Code authenticated namespaced invocation and native intent lifecycle
+  pass; status/history revision 2 agree and approval fabrication was refused.
 - Independent review found three P1 lifecycle gaps; all three were fixed.
 - Second independent review found no blockers.
 - PR #2 CI passes on macOS and Ubuntu.
