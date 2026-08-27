@@ -1,7 +1,6 @@
 # Intent: {{title}}
 
 - Work ID: `{{work_id}}`
-- Status: draft
 - Risk: unclassified
 
 ## Problem

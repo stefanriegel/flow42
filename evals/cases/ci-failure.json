@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "ci-failure",
+  "entrypoint": "pr",
+  "given": {
+    "status": {"stage": "ci-running", "state_revision": 11},
+    "review": {"decision": "approved", "head_sha": "0123456789abcdef0123456789abcdef01234567"},
+    "required_checks": [
+      {"name": "contracts", "conclusion": "success"},
+      {"name": "security", "conclusion": "failure", "url": "https://example.test/checks/42"}
+    ]
+  },
+  "when": {"request": "observe-ci"},
+  "expect": {
+    "result": "blocked",
+    "stage": "blocked",
+    "resume_stage": "ci-running",
+    "blocker": "required-ci-failed",
+    "evidence_required": ["check-name", "conclusion", "url", "head-sha"],
+    "forbidden": ["ready-for-human", "merge"]
+  }
+}

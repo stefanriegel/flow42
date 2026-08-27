@@ -19,3 +19,7 @@ configuration by rereading them, and report discovered Git/Forge prerequisites.
 Represent commands as direct-argv token arrays, never shell strings. Present the
 resolved configuration digest for authenticated human approval before execution.
 Reject scalar commands and unknown fields or schema versions.
+Configuration may add gates but must include every canonical mandatory gate from
+`core/workflow.json`; omission blocks initialization.
+Persist approval in `.flow42/config-approval.yml`, reverify its Forge comment or
+signed commit, and block all configured commands when the digest is stale.

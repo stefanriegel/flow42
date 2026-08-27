@@ -17,3 +17,12 @@
 
 Ownership prefix, redaction, direct-argv, and forbidden-shell cases also execute
 deterministically in `tests/security.sh` on macOS and Ubuntu CI.
+
+The first real-repository initialization found that `templates/config.yml`
+omitted two canonical gates. The template and `init` skill now require
+`high-risk-plan` and `irreversible-action` as well as intent, spec, merge, and
+deploy.
+
+The feature dogfood found a duplicated `Status: draft` line inside approved
+`intent.md`. Updating it would invalidate approval, so lifecycle state now exists
+only in `status.yml` and the field was removed from the template.
