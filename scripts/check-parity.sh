@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+root=$(CDPATH=''; export CDPATH; cd -- "$(dirname -- "$0")/.." && pwd)
 commands='flow init intent spec plan build verify pr maintain status resume'
 
 for command in $commands; do

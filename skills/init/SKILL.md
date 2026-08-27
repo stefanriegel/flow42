@@ -16,3 +16,5 @@ operations. Never store secrets.
 If `CLAUDE.md` or `AGENTS.md` needs Flow42 guidance, show a mergeable patch and
 wait for approval; never replace existing instructions. Validate paths and
 configuration by rereading them, and report discovered Git/Forge prerequisites.
+Represent commands as direct-argv token arrays, never shell strings. Present the
+resolved configuration digest for authenticated human approval before execution.

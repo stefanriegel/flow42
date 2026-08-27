@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+root=$(CDPATH=''; export CDPATH; cd -- "$(dirname -- "$0")/.." && pwd)
 errors=0
 
 for json in "$root/core/workflow.json" "$root/core/risk-policy.json" "$root/evals/scenarios.json" \

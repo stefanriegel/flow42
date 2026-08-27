@@ -15,4 +15,5 @@ infrastructure, supply chain, or production configuration. Gate on the spec hash
 
 On completion transition `drafting-spec` to `spec-gate` with the canonical
 revision, atomic status, append-only history, and read-back procedure. After
-valid human approval, the next invocation transitions to `planning`.
+valid authenticated human approval provenance, the next invocation transitions
+to `planning`.

@@ -1,0 +1,24 @@
+schema_version: 1
+forge: github
+base_branch: main
+concurrency: 4
+worktree_parent: auto
+commands:
+  format: []
+  lint: [shellcheck, scripts/check-parity.sh, scripts/validate.sh, tests/active-work.sh, tests/conformance.sh, tests/contracts.sh]
+  typecheck: []
+  test: [sh, tests/conformance.sh]
+  build: []
+protected_paths:
+  - .github/workflows
+  - .claude-plugin
+  - .codex-plugin
+  - core
+  - skills
+mandatory_gates:
+  - intent
+  - spec
+  - high-risk-plan
+  - irreversible-action
+  - merge
+  - deploy

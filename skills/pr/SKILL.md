@@ -13,6 +13,10 @@ reviews with `gh pr view --json reviewDecision,reviews`, and watch checks with
 --source-branch <branch>`, `glab mr create`, `glab mr view`, and `glab ci status`.
 Document a CLI-version capability gap instead of guessing.
 
+Use direct argv with validated branch and identifier grammars and `--` before
+untrusted positional values where supported. Never interpolate Forge text into a
+shell command. Redact remote userinfo and query strings before recording evidence.
+
 Do not manage tokens or implement an API client. Include work ID, artifact
 links/hashes, evidence, risks, rollback, limitations, and issue closure syntax.
 Retries update the found PR/MR and never create duplicates. Stop only at a

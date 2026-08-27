@@ -13,7 +13,9 @@ users, constraints, non-goals, acceptance signals, assumptions, and risks.
 Research public facts when useful; ask only questions that materially change
 outcome, risk, confidentiality, or cost. Compute SHA-256 with `sha256sum` or
 macOS `shasum -a 256`. Persist a named human approval and UTC time in
-`approvals.yml`, reread it, and do not advance on ambiguous approval.
+`approvals.yml`. Require authenticated Forge-comment read-back or a verified
+signed-commit trailer as defined by `core/SECURITY.md`; store and reverify its
+canonical reference. Reread the record and do not advance on ambiguous approval.
 
 When the intent is complete, transition `draft-intent` to `intent-gate` by
 incrementing the revision, atomically updating status, appending history, and

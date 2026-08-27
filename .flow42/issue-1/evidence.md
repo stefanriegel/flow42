@@ -14,6 +14,8 @@
 - Independent review found three P1 lifecycle gaps; all three were fixed.
 - Second independent review found no blockers.
 - PR #2 CI passes on macOS and Ubuntu.
+- Independent security review found three high and four medium issues; remediation
+  is implemented and awaiting security re-review and CI.
 
 ## Known gaps
 

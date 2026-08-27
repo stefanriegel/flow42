@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+root=$(CDPATH=''; export CDPATH; cd -- "$(dirname -- "$0")/.." && pwd)
 workflow="$root/core/workflow.json"
 risk="$root/core/risk-policy.json"
 scenarios="$root/evals/scenarios.json"
@@ -27,6 +27,10 @@ done
 
 for phrase in 'never merges' 'force-pushes' 'explicit human authorization' 'stale approval must block'; do
   grep -qi "$phrase" "$root/core/CONTRACT.md"
+done
+
+for phrase in 'never use' 'authenticated approval' 'no Forge-write authority' 'immutable V1 tag'; do
+  grep -qi "$phrase" "$root/core/SECURITY.md"
 done
 
 for command in 'gh auth status' 'gh pr create' 'glab auth status' 'glab mr create'; do
