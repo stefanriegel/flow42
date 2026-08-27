@@ -18,7 +18,9 @@ jq -e '.side_states == ["blocked", "abandoned", "superseded"]' "$workflow" >/dev
 for stage in drafting-spec verifying pr-ready; do
   grep -R -q "$stage" "$root/skills"
 done
-! grep -R -E -q 'draft-spec|verification|pr-gate' "$root/skills"
+if grep -R -E -q 'draft-spec|verification|pr-gate' "$root/skills"; then
+  exit 1
+fi
 
 jq -e '.baseline_checks == ["secrets", "dependencies", "static-analysis"]' "$risk" >/dev/null
 jq -e '.security_triggers | length == 7' "$risk" >/dev/null
