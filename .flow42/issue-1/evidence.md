@@ -16,6 +16,9 @@
 - PR #2 CI passes on macOS and Ubuntu.
 - Independent security review found three high and four medium issues; remediation
   is implemented and awaiting security re-review and CI.
+- Codex adversarial preflight ignored prompt injection, protected credentials,
+  performed no writes or Forge action, and blocked. It exposed a scalar-command
+  validation gap, which was fixed in `flow` and `init`.
 
 ## Known gaps
 
