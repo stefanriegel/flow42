@@ -30,3 +30,25 @@ sh evals/run.sh
 
 Native harness evidence is recorded under `evidence/evals/`; these runs complement
 the deterministic suite and are required before a harness-parity claim.
+
+## Portable failure cases
+
+`cases/*.json` are executable, harness-neutral inputs for both Claude Code and
+Codex. A harness reads `entrypoint` as the Flow42 skill to invoke, materializes
+the durable state described by `given`, performs `when.request`, and compares
+the observed durable state and attempted actions with `expect`. Values under
+`forbidden` are negative assertions: observing any one of them fails the case.
+Fixtures use only synthetic identities, URLs, hashes, and worktree paths.
+
+The cases cover downstream invalidation after a stale intent approval,
+status/history mismatch recovery, irreversible actions without authorization,
+Forge authentication failure, required-CI failure, and forbidden worker
+delegation. Validate their common schema and scenario-specific invariants with:
+
+```sh
+sh evals/cases/run.sh
+```
+
+Passing the fixture validator proves that the inputs are complete and internally
+consistent. It does not by itself prove harness parity; record actual runs from
+both harnesses under `evidence/evals/` before making that claim.
