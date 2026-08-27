@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "stale-approval-downstream-invalidation",
+  "entrypoint": "spec",
+  "given": {
+    "status": {"stage": "intent-gate", "state_revision": 4},
+    "artifacts": {
+      "intent.md": "Outcome: ship the original behavior.\n",
+      "spec.md": "The original behavior is testable.\n",
+      "plan.md": "Implement the original behavior.\n"
+    },
+    "approvals": {
+      "intent": {"hash": "sha256:stale-intent", "approver": "human@example.test", "approved_at": "2026-08-27T08:00:00Z", "provenance_kind": "forge-comment", "provenance_ref": "https://example.test/review/1"},
+      "spec": {"hash": "sha256:approved-spec", "approver": "human@example.test", "approved_at": "2026-08-27T08:05:00Z", "provenance_kind": "forge-comment", "provenance_ref": "https://example.test/review/2"},
+      "plan": {"hash": "sha256:approved-plan", "approver": "human@example.test", "approved_at": "2026-08-27T08:10:00Z", "provenance_kind": "forge-comment", "provenance_ref": "https://example.test/review/3"}
+    },
+    "fresh_hashes": {"intent": "sha256:changed-intent", "spec": "sha256:approved-spec", "plan": "sha256:approved-plan"}
+  },
+  "when": {"request": "advance"},
+  "expect": {
+    "result": "blocked",
+    "stage": "blocked",
+    "resume_stage": "intent-gate",
+    "cleared_approvals": ["intent", "spec", "plan"],
+    "history_reason": "approval-invalidated",
+    "forbidden": ["advance", "recompute-approval", "carry-downstream-approval"]
+  }
+}

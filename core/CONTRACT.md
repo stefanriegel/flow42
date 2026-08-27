@@ -17,6 +17,14 @@ Every work item lives at `.flow42/<work-id>/`, where `<work-id>` matches
 - `approvals.yml` for the human approver, UTC timestamp, and artifact SHA-256;
 - append-only `history.jsonl` transition events.
 
+Lifecycle state appears only in `status.yml`; gated Markdown artifacts must not
+duplicate mutable lifecycle fields that would require content edits after approval.
+
+Repository initialization creates `.flow42/config.yml` and
+`.flow42/config-approval.yml`. The latter uses the same authenticated provenance
+contract and configuration digest; changing configuration invalidates it and
+blocks command execution.
+
 Use a temporary sibling and atomic rename when supported, then reread every
 mutation. Commit artifacts so another session can resume without chat history.
 
@@ -71,5 +79,7 @@ boundaries in `core/SECURITY.md` for every phase.
 
 Flow42 never merges, deploys, publishes, force-pushes, discards changes, or
 performs another irreversible action without explicit human authorization.
+Normal commits, branch pushes, and change-request creation are reversible
+workflow steps and do not satisfy or consume the irreversible-action gate.
 Harnesses may differ in presentation but must preserve this contract. Run
 `sh scripts/check-parity.sh` to detect missing skills or adapter drift.

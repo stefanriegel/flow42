@@ -20,6 +20,7 @@ for name in intent.md spec.md plan.md evidence.md decisions.md status.yml approv
 done
 
 test "$(find "$target" -type f | wc -l | tr -d ' ')" = 8
+test -f "$tmp/templates/config-approval.yml"
 grep -q '^stage: draft-intent$' "$target/status.yml"
 test "$(jq -r '.revision' "$target/history.jsonl")" = 1
 test "$(jq -r '.to' "$target/history.jsonl")" = draft-intent

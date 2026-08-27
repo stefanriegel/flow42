@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "id": "status-history-mismatch",
+  "entrypoint": "resume",
+  "given": {
+    "status": {"stage": "building", "state_revision": 8, "resume_stage": "building"},
+    "history": [
+      {"revision": 7, "from": "planning", "to": "plan-gate", "actor": "flow42", "at": "2026-08-27T09:00:00Z", "reason": "plan-written"}
+    ]
+  },
+  "when": {"request": "resume"},
+  "expect": {
+    "result": "blocked",
+    "stage": "blocked",
+    "blocker": "status-history-mismatch",
+    "repair_proposal_required": true,
+    "forbidden": ["resume", "invent-history", "reset-state"]
+  }
+}
