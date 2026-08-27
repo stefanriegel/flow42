@@ -1,0 +1,23 @@
+# Public evaluations
+
+Flow42 evaluates workflow outcomes, not prose similarity. Every fixture defines
+an initial repository, intent, allowed actions, required gates, expected
+artifacts, and observable pass/fail conditions.
+
+Planned fixture families:
+
+- greenfield feature;
+- bug fix with observed red-green;
+- legacy characterization before change;
+- behavior-preserving refactor;
+- UI change with visual/interaction evidence;
+- migration with dry-run and rollback proof;
+- interrupted session and deterministic resume;
+- conflicting unrelated user changes;
+- stale or invalid approval hash;
+- GitHub and GitLab PR/MR parity;
+- Claude Code and Codex adapter parity.
+
+Fixtures must contain no private repositories, credentials, or unverifiable
+claims. Benchmark reports publish methodology, environment, raw aggregate
+results, limitations, and Flow42 version.

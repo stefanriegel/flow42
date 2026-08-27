@@ -20,7 +20,12 @@ for path in root.glob("skills/*/SKILL.md"):
         errors.append(f"invalid frontmatter: {path.relative_to(root)}")
     if "[TODO:" in text:
         errors.append(f"placeholder: {path.relative_to(root)}")
-for path in (root / ".codex-plugin" / "plugin.json", root / ".claude-plugin" / "plugin.json", root / "core" / "workflow.json"):
+for path in (
+    root / ".codex-plugin" / "plugin.json",
+    root / ".claude-plugin" / "plugin.json",
+    root / "core" / "workflow.json",
+    root / "evals" / "scenarios.json",
+):
     try:
         json.loads(path.read_text(encoding="utf-8"))
     except Exception as exc:

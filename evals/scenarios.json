@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "scenarios": [
+    {"id": "feature", "requires": ["intent-gate", "spec-gate", "red-green", "independent-review"]},
+    {"id": "bug", "requires": ["reproduction", "red-green", "regression-test", "independent-review"]},
+    {"id": "resume", "requires": ["persisted-state", "hash-validation", "no-chat-dependency"]},
+    {"id": "dirty-worktree", "requires": ["preserve-unrelated-changes", "ownership-check"]},
+    {"id": "adapter-parity", "requires": ["claude-code", "codex", "equivalent-artifacts", "equivalent-gates"]}
+  ]
+}
