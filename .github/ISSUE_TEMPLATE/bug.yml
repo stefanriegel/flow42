@@ -1,0 +1,10 @@
+name: Bug report
+description: Report reproducible Flow42 behavior
+body:
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Include harness, Flow42 version, repository fixture, expected behavior, and actual behavior. Remove secrets.
+    validations:
+      required: true

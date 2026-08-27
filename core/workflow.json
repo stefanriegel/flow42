@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "stages": [
+    "draft-intent",
+    "intent-gate",
+    "drafting-spec",
+    "spec-gate",
+    "planning",
+    "plan-gate",
+    "building",
+    "verifying",
+    "pr-ready",
+    "ci-running",
+    "ready-for-human",
+    "complete"
+  ],
+  "side_states": ["blocked", "superseded", "abandoned"],
+  "commands": ["flow", "init", "intent", "spec", "plan", "build", "verify", "pr", "maintain", "status", "resume"],
+  "automatic_review_limit": 2,
+  "mandatory_gates": ["intent", "spec", "merge", "deploy"]
+}

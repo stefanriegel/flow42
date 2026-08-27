@@ -1,0 +1,11 @@
+schema_version: 1
+work_id: "{{work_id}}"
+title: "{{title}}"
+work_type: "{{work_type}}"
+stage: draft-intent
+risk: unclassified
+state_revision: 1
+created_at: "{{timestamp}}"
+updated_at: "{{timestamp}}"
+review_loops: 0
+blockers: []

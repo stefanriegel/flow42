@@ -1,0 +1,17 @@
+schema_version: 1
+forge: auto
+base_branch: auto
+concurrency: 4
+worktree_parent: auto
+commands:
+  format: auto
+  lint: auto
+  typecheck: auto
+  test: auto
+  build: auto
+protected_paths: []
+mandatory_gates:
+  - intent
+  - spec
+  - merge
+  - deploy
