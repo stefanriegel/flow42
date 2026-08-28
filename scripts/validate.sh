@@ -45,9 +45,10 @@ test "$errors" -eq 0 || exit 1
 
 versions=$(jq -r '.version' "$root/.claude-plugin/marketplace.json" \
   "$root/.claude-plugin/plugin.json" "$root/.codex-plugin/plugin.json" | sort -u)
-test "$versions" = 1.0.0 || {
-  echo 'plugin and marketplace versions must all be 1.0.0' >&2
+if test "$(printf '%s\n' "$versions" | wc -l | tr -d ' ')" != 1 ||
+  ! printf '%s\n' "$versions" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+  echo 'plugin and marketplace versions must match semantic versioning' >&2
   exit 1
-}
+fi
 
 echo 'validation ok'

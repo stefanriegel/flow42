@@ -45,6 +45,8 @@ implementer self-review rejection, fabricated-human-approval rejection,
 status/history mismatch recovery, irreversible actions without authorization,
 Forge authentication failure, required-CI failure, and forbidden worker
 delegation. Validate their common schema and scenario-specific invariants with:
+Unsafe model identifiers and workers that inherit Forge or SSH authority are
+also required to fail closed before terminal creation.
 
 ```sh
 sh evals/cases/run.sh

@@ -52,6 +52,11 @@ profile available and no Forge-write authority. Before integration compare
 path, recursive delegation, untracked process, or unapproved external effect
 blocks integration while preserving the worktree.
 
+Worker preflight must prove model-only authentication and the absence of Forge
+tokens, authenticated Forge CLIs, SSH-agent access, and writable credential
+helpers. A policy instruction is not capability isolation. If the environment
+cannot remove those capabilities, do not dispatch the worker.
+
 ## Release provenance
 
 Supported installs use an immutable V1 tag. Verify the resolved commit, plugin

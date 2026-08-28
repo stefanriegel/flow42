@@ -18,6 +18,10 @@ for manifest in "$root/.claude-plugin/plugin.json" "$root/.codex-plugin/plugin.j
   }
 done
 
+grep -q '^## Pi examples$' "$root/core/MODEL-ROUTING.md"
+grep -q 'pi install git:github.com/stefanriegel/flow42@' "$root/docs/INSTALLATION.md"
+grep -q 'orca status' "$root/skills/flow/SKILL.md"
+
 jq -e '.name == "flow42" and (.plugins | length == 1) and .plugins[0].name == "flow42"' \
   "$root/.claude-plugin/marketplace.json" >/dev/null
 
@@ -27,4 +31,4 @@ test "$workflow_commands" = "$commands" || {
   exit 1
 }
 
-echo "parity ok: 11 commands, 2 harness manifests"
+echo "parity ok: 11 commands, 3 harness paths, Orca ADE adapter"

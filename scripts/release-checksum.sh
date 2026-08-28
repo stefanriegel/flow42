@@ -1,21 +1,41 @@
 #!/bin/sh
 set -eu
 
-ref=${1:-refs/tags/v1.0.0}
+ref=${1:-}
 output_dir=${2:-dist}
-root=$(CDPATH=''; export CDPATH; cd -- "$(dirname -- "$0")/.." && pwd)
-allowed_signers="$root/.github/allowed_signers"
 signer_identity=flow42-release@stefanriegel
+trusted_fingerprint=SHA256:rEzLnNrBUzyqeYfVtW9HRtMHTk2dwtOaiLwp+/qzfG8
 
-if test "$ref" != refs/tags/v1.0.0; then
-    echo "release ref must be exactly refs/tags/v1.0.0" >&2
+case "$ref" in
+  refs/tags/v[0-9]*.[0-9]*.[0-9]*) ;;
+  *)
+    echo "release ref must be an exact refs/tags/vX.Y.Z ref" >&2
     exit 2
+    ;;
+esac
+release_version=${ref#refs/tags/v}
+if ! printf '%s\n' "$release_version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+  echo "release ref must be an exact refs/tags/vX.Y.Z ref" >&2
+  exit 2
 fi
 
 git rev-parse --verify "$ref^{tag}" >/dev/null 2>&1 || {
   echo "release ref must be an annotated tag" >&2
   exit 1
 }
+allowed_signers=$(mktemp "${TMPDIR:-/tmp}/flow42-signers.XXXXXX")
+trap 'rm -f "$allowed_signers"' EXIT HUP INT TERM
+git show "$ref:.github/allowed_signers" >"$allowed_signers" || {
+  echo "cannot read release signer allowlist" >&2
+  exit 1
+}
+if test "$(wc -l <"$allowed_signers" | tr -d ' ')" != 1 ||
+  test "$(awk '{print $1}' "$allowed_signers")" != "$signer_identity" ||
+  test "$(awk '{print $2}' "$allowed_signers")" != ssh-ed25519 ||
+  test "$(ssh-keygen -lf "$allowed_signers" | awk '{print $2}')" != "$trusted_fingerprint"; then
+  echo "release signer allowlist differs from pinned trust root" >&2
+  exit 1
+fi
 verification=$(git -c gpg.format=ssh \
   -c gpg.ssh.allowedSignersFile="$allowed_signers" \
   verify-tag --raw "$ref" 2>&1) || {
@@ -33,17 +53,17 @@ for manifest in .claude-plugin/marketplace.json .claude-plugin/plugin.json .code
     echo "cannot read version from $manifest at $ref" >&2
     exit 1
   }
-  if test "$version" != 1.0.0; then
-    echo "$manifest at $ref must declare version 1.0.0" >&2
+  if test "$version" != "$release_version"; then
+    echo "$manifest at $ref must declare version $release_version" >&2
     exit 1
   fi
 done
 
 mkdir -p "$output_dir"
-archive="$output_dir/flow42-v1.0.0.tar"
+archive="$output_dir/flow42-v$release_version.tar"
 checksum="$archive.sha256"
 
-git archive --format=tar --prefix="flow42-v1.0.0/" "$ref" >"$archive"
+git archive --format=tar --prefix="flow42-v$release_version/" "$ref" >"$archive"
 
 if command -v sha256sum >/dev/null 2>&1; then
   digest=$(sha256sum "$archive" | awk '{print $1}')

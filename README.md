@@ -4,12 +4,12 @@
 
 Flow42 is an open, artifact-driven agentic SDLC for professional engineers. It
 keeps intent, specifications, plans, evidence, and approvals in Git so Claude
-Code, Codex, and humans can safely resume the same work without relying on chat
+Code, Codex, Pi, Orca ADE, and humans can share the same work without relying on chat
 memory.
 
-> The V1 release candidate is merged. The signed `v1.0.0` tag and release remain
-> pending, and support claims stay limited to paths backed by public conformance
-> evidence. Don't Panic.
+> `v1.0.0` is published. The `v1.0.1` candidate adds solo-developer review, Pi, Orca ADE,
+> capability-based model routing, and semver-aware release verification. Support
+> claims stay limited to paths backed by public evidence. Don't Panic.
 
 ## Why Flow42
 
@@ -18,7 +18,7 @@ creates expensive ambiguity. Flow42 supplies a risk-adaptive loop:
 
 `init → intent → spec → plan → build → verify → PR/MR → maintain`
 
-- one canonical workflow across coding agents;
+- one canonical skill contract across Claude Code, Codex, and Pi;
 - human gates where judgment or authority matters;
 - vertical slices in isolated worktrees;
 - observable red-green for behavior changes and bug fixes;
@@ -42,12 +42,10 @@ Install `skills/` through the native skill/plugin mechanism of your harness,
 invoke `flow42:init` for a repository, then invoke `flow42:intent` with your
 request. The skill creates `.flow42/<work-id>/` directly from the templates.
 
-## 90-second quickstart (pending release evidence)
+## Quickstart
 
-The 90-second claim is pending a signed published `v1.0.0` tag and a timed
-end-to-end work-item run. The versioned commands below become usable only after
-that tag is published. Until then, use the checkout command above and follow the
-[development-checkout instructions](docs/INSTALLATION.md#development-checkout).
+The published `v1.0.0` Codex path installed in one second on the recorded test
+machine. Use an immutable tag; timings vary with network and harness startup.
 
 Claude Code:
 
@@ -70,11 +68,24 @@ codex
 Then ask Codex to invoke `flow42:init`, followed by `flow42:intent` for the
 request. Restart either harness after install or update so it reloads the plugin.
 
+Pi:
+
+```sh
+pi install git:github.com/stefanriegel/flow42@v1.0.0
+pi
+```
+
+Then invoke `/skill:init`, followed by `/skill:intent <request>`. Pi discovers
+Flow42's conventional `skills/` package without a Flow42 runtime.
+The `v1.0.1` candidate proves discovery plus intent creation through Pi and Orca;
+a complete Pi trusted-PR run is not yet claimed.
+
 ## Skills
 
 `flow`, `init`, `intent`, `spec`, `plan`, `build`, `verify`, `pr`, `maintain`,
 `status`, and `resume`. Claude Code exposes plugin skills as `/flow42:<skill>`;
-Codex discovers the same skill directories through its native plugin manifest.
+Codex discovers them through its native plugin manifest, and Pi discovers the
+same directories as an Agent Skills package.
 
 ## Safety model
 
@@ -98,13 +109,13 @@ shell plus `jq`; they are development checks, not a product runtime. See
 Documentation: [installation](docs/INSTALLATION.md),
 [lifecycle](docs/LIFECYCLE.md), [architecture](docs/ARCHITECTURE.md),
 [configuration](docs/CONFIGURATION.md),
-[troubleshooting](docs/TROUBLESHOOTING.md), and
+[troubleshooting](docs/TROUBLESHOOTING.md), [model routing](core/MODEL-ROUTING.md), and
 [preview migration](docs/MIGRATION.md).
 
 ## Status and roadmap
 
-Current milestone: complete the remaining release gates, then publish the signed
-`v1.0.0` tag and release. See [ROADMAP.md](ROADMAP.md).
+Current milestone: publish `v1.0.1`, then continue GitLab execution work in V2.
+See [ROADMAP.md](ROADMAP.md).
 
 ## Contributing
 

@@ -89,5 +89,6 @@ performs another irreversible action without explicit human authorization from
 that accountable human.
 Normal commits, branch pushes, and change-request creation are reversible
 workflow steps and do not satisfy or consume the irreversible-action gate.
-Harnesses may differ in presentation but must preserve this contract. Run
+Claude Code, Codex, Pi, and optional Orca ADE execution may differ in presentation
+but must preserve this contract. Run
 `sh scripts/check-parity.sh` to detect missing skills or adapter drift.

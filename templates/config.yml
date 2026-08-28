@@ -1,8 +1,14 @@
 schema_version: 1
 forge: auto
+harness: auto
+execution_environment: auto
 base_branch: auto
 concurrency: 4
 worktree_parent: auto
+model_profiles:
+  frontier: auto
+  worker: auto
+  utility: auto
 commands:
   format: [auto]
   lint: [auto]

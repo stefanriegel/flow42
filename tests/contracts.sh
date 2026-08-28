@@ -35,7 +35,7 @@ done
 
 for id in happy-feature invalid-transition stale-approval interrupted-resume unsafe-action \
   forge-cli-missing forge-auth-failure ci-failure security-escalation \
-  worktree-conflict delegation-bounds adapter-parity install-lifecycle; do
+  worktree-conflict delegation-bounds adapter-parity install-lifecycle unsafe-model-routing; do
   jq -e --arg id "$id" '.scenarios[] | select(.id == $id)' "$scenarios" >/dev/null
 done
 
@@ -45,6 +45,12 @@ done
 for phrase in 'exactly one accountable authenticated human' 'did not implement the change' 'SHA-pinned PR/MR comment'; do
   tr '\n' ' ' <"$root/core/CONTRACT.md" | grep -q "$phrase"
 done
+for phrase in 'task schedule graph' 'data flow graph' 'majority voting' 'utility model'; do
+  grep -R -qi "$phrase" "$root/core"
+done
+grep -q 'harness: auto' "$root/templates/config.yml"
+grep -q 'execution_environment: auto' "$root/templates/config.yml"
+grep -q 'frontier: auto' "$root/templates/config.yml"
 grep -q 'never fabricate a formal approval' "$root/skills/pr/SKILL.md"
 grep -q 'change-request creation are reversible' "$root/core/CONTRACT.md"
 
