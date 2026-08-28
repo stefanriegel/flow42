@@ -7,8 +7,9 @@ keeps intent, specifications, plans, evidence, and approvals in Git so Claude
 Code, Codex, and humans can safely resume the same work without relying on chat
 memory.
 
-> V1 release preparation is in progress. Support claims remain limited to paths
-> backed by public conformance evidence. Don't Panic.
+> The V1 release candidate is merged. The signed `v1.0.0` tag and release remain
+> pending, and support claims stay limited to paths backed by public conformance
+> evidence. Don't Panic.
 
 ## Why Flow42
 
@@ -97,9 +98,8 @@ Documentation: [installation](docs/INSTALLATION.md),
 
 ## Status and roadmap
 
-Current milestone: prove the state machine, approval hashing, native installs,
-GitHub/GitLab adapters, interrupted resume, and public eval fixtures. See
-[ROADMAP.md](ROADMAP.md).
+Current milestone: complete the remaining release gates, then publish the signed
+`v1.0.0` tag and release. See [ROADMAP.md](ROADMAP.md).
 
 ## Contributing
 
