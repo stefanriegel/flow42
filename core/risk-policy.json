@@ -14,5 +14,16 @@
     "production-configuration"
   ],
   "security_gates": ["threat-model", "independent-security-review"],
+  "human_approval": {
+    "accountable_approvers_per_gate": 1,
+    "second_human_required": false,
+    "authenticated_provenance_required": true
+  },
+  "independent_review": {
+    "implementer_may_review": false,
+    "exact_head_sha_required": true,
+    "fallback_when_no_distinct_forge_reviewer": "sha-pinned-pr-or-mr-comment",
+    "grants_human_approval": false
+  },
   "automatic_review_limit": 2
 }

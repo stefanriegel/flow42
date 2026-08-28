@@ -41,6 +41,7 @@ the observed durable state and attempted actions with `expect`. Values under
 Fixtures use only synthetic identities, URLs, hashes, and worktree paths.
 
 The cases cover downstream invalidation after a stale intent approval,
+implementer self-review rejection, fabricated-human-approval rejection,
 status/history mismatch recovery, irreversible actions without authorization,
 Forge authentication failure, required-CI failure, and forbidden worker
 delegation. Validate their common schema and scenario-specific invariants with:

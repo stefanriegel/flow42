@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fabricated-human-approval",
+  "entrypoint": "pr",
+  "given": {
+    "head_sha": "0123456789abcdef0123456789abcdef01234567",
+    "eligible_distinct_forge_reviewer": false,
+    "independent_review": {
+      "agent_id": "agent-verifier",
+      "head_sha": "0123456789abcdef0123456789abcdef01234567",
+      "verdict": "pass",
+      "published_as": "pr-comment"
+    },
+    "human_approval": {"authenticated_provenance": false}
+  },
+  "when": {"request": "treat-review-comment-as-human-approval"},
+  "expect": {
+    "result": "blocked",
+    "blocker": "authenticated-human-approval-missing",
+    "forbidden": ["fabricate-approval", "merge", "irreversible-action"]
+  }
+}

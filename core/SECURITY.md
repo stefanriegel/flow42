@@ -36,6 +36,14 @@ Durable approval uses one of two authenticated forms:
 Plain repository fields, commit authorship, chat summaries, and agent assertions
 are not authenticated approval. If provenance cannot be reverified, block.
 
+Each gate names exactly one accountable authenticated human. Do not invent an
+additional approver, treat an agent review as human assent, or require a second
+human merely to satisfy independent review. An independent reviewer must be a
+separate pass or agent that did not implement the reviewed change. Its verdict
+must name the exact head SHA and may be read back from a SHA-pinned PR/MR comment
+when no distinct eligible Forge reviewer exists. A comment proves review only;
+it never proves human approval for a gate or irreversible action.
+
 ## Worker boundary
 
 Record allowed paths before dispatch. Give workers the least-capable harness

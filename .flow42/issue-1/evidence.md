@@ -69,3 +69,24 @@ open; no tag or release has been published.
   release public key and signer identity `flow42-release@stefanriegel`.
 - Tag and release publication remain pending; this change does not publish,
   push, tag, release, merge, or close Issue #1.
+
+## 2026-08-28 private dual-harness trusted-PR dogfood
+
+- The owner recorded the private `stefanriegel/flow42-v1-proof` dogfood in
+  [Issue #1](https://github.com/stefanriegel/flow42/issues/1#issuecomment-5452405196).
+- Claude Code delivered Issue #1 to open PR #4 at exact head
+  `7ac891bfca93ecda94d1ad89dd55498c1a86f802` with green exact-head CI, durable
+  lifecycle evidence, red-green proof, two verification loops, and a SHA-pinned
+  independent PASS attestation in 29m20s.
+- Codex delivered Issue #2 to open PR #3 at exact head
+  `7face51d72a9223896163e1551cb0c4a0bfa3521` with green exact-head CI, durable
+  lifecycle evidence, red-green proof, and a SHA-pinned independent PASS
+  attestation in 15m56s.
+- The private repository has no distinct eligible Forge reviewer. The
+  independent reviewers were separate non-implementing agents and published
+  exact-head PR comments; neither comment was treated as human approval.
+- The formal-review blocker is resolved under the solo-developer review
+  contract. Both proof PRs remain open, unmerged, and undeployed.
+
+Public repeatable evaluation packaging, strict identical-scenario parity, and a
+timed 90-second install-to-work-item quickstart remain open.

@@ -23,6 +23,8 @@ pending explicit owner authorization and the remaining documented release gates.
   CLIs.
 - Stabilized lifecycle stages, approval hashing and provenance, stale-approval
   invalidation, recovery, bounded delegation, and human gates.
+- Defined solo-developer independent review as a separate non-implementing pass,
+  with exact-head PR/MR comment attestations when no eligible reviewer exists.
 
 ### Security
 
@@ -33,5 +35,5 @@ pending explicit owner authorization and the remaining documented release gates.
 ### Known release gates
 
 - The `v1.0.0` tag and release checksum are not published yet.
-- Version-changing upgrade proof, current-head authenticated Claude invocation,
-  and formal dogfood PR reviews remain unproven.
+- Public repeatable evaluation packaging and strict identical-scenario harness
+  parity remain unproven.

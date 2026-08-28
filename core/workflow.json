@@ -26,7 +26,7 @@
     {"from": "building", "to": "verifying"},
     {"from": "verifying", "to": "pr-ready", "gate": "verification-passed"},
     {"from": "pr-ready", "to": "ci-running", "gate": "change-request-open"},
-    {"from": "ci-running", "to": "ready-for-human", "gate": "reviewed-and-ci-green"},
+    {"from": "ci-running", "to": "ready-for-human", "gate": "independently-reviewed-and-ci-green"},
     {"from": "ready-for-human", "to": "complete", "gate": "human-authorized-close"}
   ],
   "side_transitions": [
@@ -38,6 +38,8 @@
   "commands": ["flow", "init", "intent", "spec", "plan", "build", "verify", "pr", "maintain", "status", "resume"],
   "automatic_review_limit": 2,
   "mandatory_gates": ["intent", "spec", "high-risk-plan", "irreversible-action", "merge", "deploy"],
+  "accountable_human_approvers_per_gate": 1,
+  "second_human_required": false,
   "terminal_outcome": "ready-for-human",
   "final_states": ["complete", "abandoned", "superseded"]
 }
