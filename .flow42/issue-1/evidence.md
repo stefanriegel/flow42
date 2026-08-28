@@ -48,9 +48,9 @@
 ## Known gaps
 
 Version-changing upgrades, current-head authenticated Claude invocation, formal
-dogfood PR reviews, a CI-green GitLab MR, final release-branch CI/read-back, and
-release authorization remain open. Issue #1 remains open; no tag or release has
-been published.
+dogfood PR reviews, final release-branch CI/read-back, and release authorization
+remain open. The owner accepted the documented GitLab evidence without a runner
+pipeline. Issue #1 remains open; no tag or release has been published.
 
 ## 2026-08-28 release-candidate review remediation
 
