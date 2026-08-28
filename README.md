@@ -4,10 +4,10 @@
 
 Flow42 is an open, artifact-driven agentic SDLC for professional engineers. It
 keeps intent, specifications, plans, evidence, and approvals in Git so Claude
-Code, Codex, Pi, Orca ADE, and humans can safely resume the same work without relying on chat
+Code, Codex, Pi, Orca ADE, and humans can share the same work without relying on chat
 memory.
 
-> `v1.0.0` is published. `v1.0.1` adds solo-developer review, Pi, Orca ADE,
+> `v1.0.0` is published. The `v1.0.1` candidate adds solo-developer review, Pi, Orca ADE,
 > capability-based model routing, and semver-aware release verification. Support
 > claims stay limited to paths backed by public evidence. Don't Panic.
 
@@ -18,7 +18,7 @@ creates expensive ambiguity. Flow42 supplies a risk-adaptive loop:
 
 `init → intent → spec → plan → build → verify → PR/MR → maintain`
 
-- one canonical workflow across Claude Code, Codex, and Pi;
+- one canonical skill contract across Claude Code, Codex, and Pi;
 - human gates where judgment or authority matters;
 - vertical slices in isolated worktrees;
 - observable red-green for behavior changes and bug fixes;
@@ -50,7 +50,7 @@ machine. Use an immutable tag; timings vary with network and harness startup.
 Claude Code:
 
 ```sh
-claude plugin marketplace add stefanriegel/flow42#v1.0.1
+claude plugin marketplace add stefanriegel/flow42#v1.0.0
 claude plugin install flow42@flow42
 claude
 ```
@@ -60,7 +60,7 @@ Then invoke `/flow42:init`, followed by `/flow42:intent <request>`.
 Codex:
 
 ```sh
-codex plugin marketplace add stefanriegel/flow42 --ref v1.0.1
+codex plugin marketplace add stefanriegel/flow42 --ref v1.0.0
 codex plugin add flow42@flow42
 codex
 ```
@@ -71,12 +71,14 @@ request. Restart either harness after install or update so it reloads the plugin
 Pi:
 
 ```sh
-pi install git:github.com/stefanriegel/flow42@v1.0.1
+pi install git:github.com/stefanriegel/flow42@v1.0.0
 pi
 ```
 
 Then invoke `/skill:init`, followed by `/skill:intent <request>`. Pi discovers
 Flow42's conventional `skills/` package without a Flow42 runtime.
+The `v1.0.1` candidate proves discovery plus intent creation through Pi and Orca;
+a complete Pi trusted-PR run is not yet claimed.
 
 ## Skills
 

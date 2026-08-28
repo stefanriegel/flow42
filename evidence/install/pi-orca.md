@@ -24,9 +24,17 @@
 ## Orca ADE
 
 - `orca status --json` reported `runtime.state: ready` and `graph.state: ready`.
-- The version-matched Orca CLI guide lists `pi` as a known agent and documents
-  agent-first worktree creation.
-- Explicit Pi model selection uses a custom Orca terminal command, followed by
-  `terminal wait --for tui-idle` and a single prompt send to the returned handle.
+- Orca created a child worktree at exact source commit
+  `b9e8d83913cf0e73a968420975c99da7ad63260b`.
+- An Orca terminal launched Pi with Qwen 3.8 and the checkout's Flow42 skills.
+  The model twice exhausted its response before writing files, so the job was
+  escalated instead of retried again.
+- A second Orca terminal launched Pi with `openai-codex/gpt-5.6-sol` in the same
+  worktree. It created all eight files for `orca-pi-hello-proof`, reached
+  `intent-gate` at revision 2, wrote matching two-entry history, and left every
+  approval field empty.
+- Intent SHA-256:
+  `ad25d97b872a1c12cbad279e20fa235f27c8cc0bf1ffbf70a0416742aaa58748`
 - Flow42 falls back to native harness and Git operations when Orca is absent or
-  not ready; Orca remains optional.
+  not ready. That fallback and a complete Orca trusted-PR run remain unexecuted
+  and are not claimed by this record.
