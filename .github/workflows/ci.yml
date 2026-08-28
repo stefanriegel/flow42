@@ -20,11 +20,16 @@ jobs:
       - run: sh scripts/validate.sh
       - run: sh tests/conformance.sh
       - run: sh tests/contracts.sh
+      - run: sh tests/config-approval.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - run: sh tests/config-approval-adversarial.sh
       - run: sh tests/active-work.sh
         env:
           GH_TOKEN: ${{ github.token }}
       - run: sh tests/security.sh
       - run: sh evals/run.sh
+      - run: sh evals/cases/run.sh
 
   security:
     runs-on: ubuntu-latest
