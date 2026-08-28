@@ -1,7 +1,0 @@
-schema_version: 1
-config_hash: "69ecdc3cbb2a64c5e0afdf382661bed7ef02cd144e1ed9d116dbf235a65e50e6"
-config_approved_by: "stefanriegel"
-config_approved_at: "2026-08-27T20:33:30Z"
-config_provenance_kind: "github-comment"
-config_provenance_ref: "https://github.com/stefanriegel/flow42/issues/1#issuecomment-5444860242"
-config_provenance_verified_at: "2026-08-27T22:43:04Z"

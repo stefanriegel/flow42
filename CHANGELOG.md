@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.1 - 2026-08-28
+
+### Removed
+
+- Removed obsolete tracked configuration and work-item approval artifacts from
+  release archives.
+
 ## 2.0.0 - 2026-08-28
 
 ### Added

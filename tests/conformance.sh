@@ -22,6 +22,9 @@ done
 test "$(find "$target" -type f | wc -l | tr -d ' ')" = 7
 test ! -e "$tmp/templates/approvals.yml"
 test ! -e "$tmp/templates/config-approval.yml"
+test ! -e "$root/.flow42/config-approval.yml"
+test ! -e "$root/.flow42/$work_id/approvals.yml"
+test "$(find "$root/.flow42" -type f \( -name approvals.yml -o -name config-approval.yml \) | wc -l | tr -d ' ')" = 0
 grep -q '^stage: draft-intent$' "$target/status.yml"
 test "$(jq -r '.revision' "$target/history.jsonl")" = 1
 test "$(jq -r '.to' "$target/history.jsonl")" = draft-intent
