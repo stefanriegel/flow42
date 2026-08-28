@@ -3,6 +3,15 @@
 Flow42 requires Git and a supported coding-agent harness. Forge operations also
 require authenticated `gh` for GitHub or `glab` for GitLab. Flow42 has no runtime.
 
+## Onboarding check
+
+After installation, invoke `flow42:init` from the target repository. The harness
+runs the onboarding preflight through the installed skill: Flow42 files and
+version, Git worktree, repository instructions, Forge CLI and authentication,
+and optional Orca readiness. It reports blocking and optional gaps before it
+proposes configuration. Users do not need a Flow42 checkout or its validation
+scripts for onboarding.
+
 ## Development checkout
 
 Clone Flow42 and validate the plugin before installation:
@@ -31,7 +40,7 @@ The skills are namespaced as `/flow42:flow`, `/flow42:init`, and so on.
 Install and start Claude Code from the current immutable tag:
 
 ```sh
-claude plugin marketplace add stefanriegel/flow42#v1.0.0
+claude plugin marketplace add stefanriegel/flow42#v1.0.1
 claude plugin install flow42@flow42
 claude
 ```
@@ -50,7 +59,7 @@ Codex installs plugins from marketplace snapshots. Install from the current
 immutable tag:
 
 ```sh
-codex plugin marketplace add stefanriegel/flow42 --ref v1.0.0
+codex plugin marketplace add stefanriegel/flow42 --ref v1.0.1
 codex plugin add flow42@flow42
 codex
 ```
@@ -69,7 +78,7 @@ codex plugin marketplace remove flow42
 Install the immutable Git package and start Pi:
 
 ```sh
-pi install git:github.com/stefanriegel/flow42@v1.0.0
+pi install git:github.com/stefanriegel/flow42@v1.0.1
 pi
 ```
 
@@ -88,7 +97,7 @@ skills first; Flow42 never bypasses this harness trust gate.
 ## Orca ADE
 
 Flow42 detects Orca only when `orca status --json` reports a ready runtime. The
-candidate evidence proves an Orca-created worktree, explicit-model Pi terminal,
+published evidence proves an Orca-created worktree, explicit-model Pi terminal,
 coordinator model-profile escalation, and durable intent creation. Broader lifecycle,
 resume, and fallback behavior retain their existing contract but are not yet
 claimed as Orca end-to-end evidence. Orca is an optional execution environment,
@@ -109,7 +118,7 @@ From a clean checkout containing the published tag, create the deterministic
 source archive and checksum with:
 
 ```sh
-sh scripts/release-checksum.sh refs/tags/v1.0.0 dist
+sh scripts/release-checksum.sh refs/tags/v1.0.1 dist
 ```
 
 The script accepts only an exact annotated semantic-version tag ref, verifies
@@ -117,10 +126,10 @@ its SSH signature against the repository's committed `.github/allowed_signers`,
 requires signer identity `flow42-release@stefanriegel`, and requires all three
 manifests in that tag to declare the matching version. It then uses `git archive` and the
 platform's native `sha256sum` or `shasum -a 256`, writing
-`dist/flow42-v1.0.0.tar` and the adjacent `.sha256` file. Verify after download
+`dist/flow42-v1.0.1.tar` and the adjacent `.sha256` file. Verify after download
 with one of:
 
 ```sh
-sha256sum -c flow42-v1.0.0.tar.sha256
-shasum -a 256 -c flow42-v1.0.0.tar.sha256
+sha256sum -c flow42-v1.0.1.tar.sha256
+shasum -a 256 -c flow42-v1.0.1.tar.sha256
 ```

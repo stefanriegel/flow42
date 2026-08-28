@@ -5,6 +5,22 @@ description: Initialize Flow42 in a repository by discovering its stack, checks,
 
 # Initialize Flow42
 
+Begin with a read-only onboarding preflight. Confirm that this installed skill
+can resolve the Flow42 contract, templates, and all 11 canonical skill
+directories. Read the installed manifest version and report it. Do not ask the
+user to clone Flow42 or run repository maintainer scripts.
+
+Confirm that the target is a Git worktree and report its root, current branch,
+working-tree state, redacted remotes, and repository instruction files. Detect
+the Forge from remotes. Check the matching `gh` or `glab` executable and authentication
+without printing credentials. If Orca is installed, use `orca status --json`
+and treat it as available only when its runtime is ready. Orca absence is not a
+failure.
+
+Report the preflight as `ready`, `optional`, and `blocked` items. Missing core
+skills, contracts, templates, Git, or required Forge authentication blocks the
+dependent operation. A missing optional integration does not block local work.
+
 Perform read-only discovery first: languages, package managers, repository
 instructions, architecture docs, test/lint/type/build commands, CI, protected
 branches, Git remotes, sensitive paths, and authenticated `gh`/`glab` availability.
