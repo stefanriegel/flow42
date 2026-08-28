@@ -1,7 +1,8 @@
 # Worker ownership procedure
 
 Before dispatch, persist the worktree path, base commit, allowed path prefixes,
-worker limit, and `delegation_allowed: false` in the plan. Capture `git status
+worker limit, selected model profile, input artifact hashes, output schema, and
+`delegation_allowed: false` in the plan. Capture `git status
 --short` so pre-existing changes remain attributed to their owner.
 
 After worker completion, collect tracked changes with `git diff --name-only
@@ -13,3 +14,8 @@ with that path plus `/`.
 Block integration when a new path is outside ownership, the worker launched a
 delegate, the worker used Forge-write authority, or the observed worktree differs
 from the dispatched worktree. Preserve all files and report the exact mismatch.
+
+Keep the task schedule graph separate from the data flow graph. Schedule edges
+define dependencies and synchronization barriers. Data edges name a versioned
+artifact, schema, producer, consumer, provenance fields, and validator. Integration
+starts only after every required input validates.

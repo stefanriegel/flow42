@@ -1,10 +1,23 @@
 # Changelog
 
-## 1.0.0 - release pending
+## 1.0.1 - 2026-08-28
 
-This release is prepared but is not tagged or published.
-The `1.0.0` release candidate merged in PR #5. Tag and release publication remain
-pending explicit owner authorization and the remaining documented release gates.
+### Added
+
+- Pi package discovery and invocation through the same 11 Agent Skills.
+- Optional Orca ADE execution with managed worktrees and exact-model terminals.
+- Capability-based frontier, worker, and utility model routing.
+- Separate task-schedule and data-flow graphs with typed edge contracts.
+
+### Changed
+
+- Solo developers can use a distinct non-implementing exact-head agent review
+  when no eligible independent Forge approver exists.
+- Signed release archive verification now supports any matching semantic-version tag.
+
+## 1.0.0 - 2026-08-28
+
+The initial signed V1 release is published with deterministic source archives and checksums.
 
 ### Added
 
@@ -31,9 +44,3 @@ pending explicit owner authorization and the remaining documented release gates.
 - Added explicit trust boundaries for repository and Forge content, baseline
   secret/dependency/static checks, immutable release references, and
   fail-closed authenticated approval evidence.
-
-### Known release gates
-
-- The `v1.0.0` tag and release checksum are not published yet.
-- Public repeatable evaluation packaging and strict identical-scenario harness
-  parity remain unproven.

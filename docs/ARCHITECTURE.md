@@ -17,5 +17,16 @@ exact-head verdict may be a SHA-pinned PR/MR comment instead of a formal Forge
 approval. This does not add a second human gate or grant approval authority. The
 trusted endpoint is an independently reviewed, CI-green PR/MR.
 
+Planning represents two related graphs. The task schedule graph defines jobs,
+dependencies, parallelism, and synchronization barriers. The data flow graph
+defines the typed artifacts crossing those boundaries. Keeping them separate makes
+parallel execution recoverable and lets validators reject incomplete or fabricated
+worker output before integration.
+
+Jobs select a capability profile rather than a globally fixed model. Frontier models
+own ambiguous planning and synthesis, worker models own bounded implementation and
+specialist review, and utility models own mechanical transformations. See
+[model routing](../core/MODEL-ROUTING.md).
+
 Trust boundaries are the human approval channel, repository and worktrees,
 agent harness, Forge CLI credential store, CI, and untrusted external text.

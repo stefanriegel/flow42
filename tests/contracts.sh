@@ -45,6 +45,12 @@ done
 for phrase in 'exactly one accountable authenticated human' 'did not implement the change' 'SHA-pinned PR/MR comment'; do
   tr '\n' ' ' <"$root/core/CONTRACT.md" | grep -q "$phrase"
 done
+for phrase in 'task schedule graph' 'data flow graph' 'majority voting' 'utility model'; do
+  grep -R -qi "$phrase" "$root/core"
+done
+grep -q 'harness: auto' "$root/templates/config.yml"
+grep -q 'execution_environment: auto' "$root/templates/config.yml"
+grep -q 'frontier: auto' "$root/templates/config.yml"
 grep -q 'never fabricate a formal approval' "$root/skills/pr/SKILL.md"
 grep -q 'change-request creation are reversible' "$root/core/CONTRACT.md"
 

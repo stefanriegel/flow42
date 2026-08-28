@@ -30,18 +30,18 @@ git config gpg.ssh.allowedSignersFile "$tmp/ambient-signers"
 
 mkdir -p .claude-plugin .codex-plugin
 for manifest in .claude-plugin/marketplace.json .claude-plugin/plugin.json .codex-plugin/plugin.json; do
-  printf '{"version":"1.0.0"}\n' >"$manifest"
+  printf '{"version":"1.0.1"}\n' >"$manifest"
 done
 printf 'release fixture\n' >README.md
 git add .
 git commit -qm fixture
-git tag -s v1.0.0 -m 'Flow42 1.0.0'
+git tag -s v1.0.1 -m 'Flow42 1.0.1'
 
-sh "$repo/scripts/release-checksum.sh" refs/tags/v1.0.0 "$tmp/one" >/dev/null
-sh "$repo/scripts/release-checksum.sh" refs/tags/v1.0.0 "$tmp/two" >/dev/null
+sh "$repo/scripts/release-checksum.sh" refs/tags/v1.0.1 "$tmp/one" >/dev/null
+sh "$repo/scripts/release-checksum.sh" refs/tags/v1.0.1 "$tmp/two" >/dev/null
 
-first="$tmp/one/flow42-v1.0.0.tar"
-second="$tmp/two/flow42-v1.0.0.tar"
+first="$tmp/one/flow42-v1.0.1.tar"
+second="$tmp/two/flow42-v1.0.1.tar"
 cmp "$first" "$second"
 cmp "$first.sha256" "$second.sha256"
 
@@ -62,39 +62,39 @@ reject() {
 
 reject HEAD
 reject refs/heads/main
-reject v1.0.0
-git tag -s v1.0.1 -m wrong
-reject refs/tags/v1.0.1
+reject v1.0.1
+git tag -s v1.0.0 -m wrong
+reject refs/tags/v1.0.0
 
-git tag -d v1.0.0 >/dev/null
-git tag v1.0.0
-reject refs/tags/v1.0.0
-git tag -d v1.0.0 >/dev/null
-git tag -a v1.0.0 -m unsigned
-reject refs/tags/v1.0.0
-git tag -d v1.0.0 >/dev/null
+git tag -d v1.0.1 >/dev/null
+git tag v1.0.1
+reject refs/tags/v1.0.1
+git tag -d v1.0.1 >/dev/null
+git tag -a v1.0.1 -m unsigned
+reject refs/tags/v1.0.1
+git tag -d v1.0.1 >/dev/null
 awk '{print "wrong@example.invalid", $2, $3, $4}' .github/allowed_signers >.github/allowed_signers.tmp
 mv .github/allowed_signers.tmp .github/allowed_signers
 git add .github/allowed_signers
 git commit -qm wrong-principal
-git tag -s v1.0.0 -m 'wrong-principal Flow42 1.0.0'
-reject refs/tags/v1.0.0
-git tag -d v1.0.0 >/dev/null
+git tag -s v1.0.1 -m 'wrong-principal Flow42 1.0.1'
+reject refs/tags/v1.0.1
+git tag -d v1.0.1 >/dev/null
 awk -v identity="$identity" '{print identity, $2, $3, $4}' .github/allowed_signers >.github/allowed_signers.tmp
 mv .github/allowed_signers.tmp .github/allowed_signers
 ssh-keygen -q -t ed25519 -N '' -C untrusted@example.invalid -f "$tmp/untrusted-key"
 git config user.signingkey "$tmp/untrusted-key"
 git add .github/allowed_signers
 git commit -qm untrusted-key
-git tag -s v1.0.0 -m 'untrusted-key Flow42 1.0.0'
-reject refs/tags/v1.0.0
-git tag -d v1.0.0 >/dev/null
+git tag -s v1.0.1 -m 'untrusted-key Flow42 1.0.1'
+reject refs/tags/v1.0.1
+git tag -d v1.0.1 >/dev/null
 git config user.signingkey "$tmp/signing-key"
-sed 's/1.0.0/1.0.1/' .codex-plugin/plugin.json >.codex-plugin/plugin.json.tmp
+sed 's/1.0.1/1.0.2/' .codex-plugin/plugin.json >.codex-plugin/plugin.json.tmp
 mv .codex-plugin/plugin.json.tmp .codex-plugin/plugin.json
 git add .codex-plugin/plugin.json
 git commit -qm mismatch
-git tag -s v1.0.0 -m 'mismatched Flow42 1.0.0'
-reject refs/tags/v1.0.0
+git tag -s v1.0.1 -m 'mismatched Flow42 1.0.1'
+reject refs/tags/v1.0.1
 
 echo 'release checksum ok: trusted signer, exact tag, bound manifests, deterministic SHA-256'
