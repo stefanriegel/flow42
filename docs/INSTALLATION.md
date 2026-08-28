@@ -89,7 +89,7 @@ skills first; Flow42 never bypasses this harness trust gate.
 
 Flow42 detects Orca only when `orca status --json` reports a ready runtime. The
 candidate evidence proves an Orca-created worktree, explicit-model Pi terminal,
-worker-to-frontier escalation, and durable intent creation. Broader lifecycle,
+coordinator model-profile escalation, and durable intent creation. Broader lifecycle,
 resume, and fallback behavior retain their existing contract but are not yet
 claimed as Orca end-to-end evidence. Orca is an optional execution environment,
 not a required Flow42 runtime. See

@@ -25,6 +25,9 @@ git config user.signingkey "$tmp/signing-key"
 mkdir -p .github scripts
 awk -v identity="$identity" '{print identity, $0}' "$tmp/signing-key.pub" >.github/allowed_signers
 cp "$root/scripts/release-checksum.sh" scripts/release-checksum.sh
+fixture_key=$(awk '{print $2}' "$tmp/signing-key.pub")
+sed "s|^trusted_key=.*|trusted_key=$fixture_key|" scripts/release-checksum.sh >scripts/release-checksum.sh.tmp
+mv scripts/release-checksum.sh.tmp scripts/release-checksum.sh
 printf 'ambient@example.invalid %s\n' "$(cat "$tmp/signing-key.pub")" >"$tmp/ambient-signers"
 git config gpg.ssh.allowedSignersFile "$tmp/ambient-signers"
 
@@ -40,6 +43,8 @@ git tag -s v1.0.1 -m 'Flow42 1.0.1'
 
 sh "$repo/scripts/release-checksum.sh" refs/tags/v1.0.1 "$tmp/one" >/dev/null
 sh "$repo/scripts/release-checksum.sh" refs/tags/v1.0.1 "$tmp/two" >/dev/null
+FLOW42_RELEASE_TRUST_REF=refs/tags/attacker \
+  sh "$repo/scripts/release-checksum.sh" refs/tags/v1.0.1 "$tmp/ignored-override" >/dev/null
 
 first="$tmp/one/flow42-v1.0.1.tar"
 second="$tmp/two/flow42-v1.0.1.tar"

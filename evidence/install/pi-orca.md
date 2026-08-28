@@ -26,15 +26,26 @@
 - `orca status --json` reported `runtime.state: ready` and `graph.state: ready`.
 - Orca created a child worktree at exact source commit
   `b9e8d83913cf0e73a968420975c99da7ad63260b`.
-- An Orca terminal launched Pi with Qwen 3.8 and the checkout's Flow42 skills.
+- An accountable-coordinator Orca terminal launched Pi with Qwen 3.8 and the
+  checkout's Flow42 skills. This was not a delegated worker and made no Forge call.
   The model twice exhausted its response before writing files, so the job was
   escalated instead of retried again.
-- A second Orca terminal launched Pi with `openai-codex/gpt-5.6-sol` in the same
+- A second accountable-coordinator Orca terminal launched Pi with
+  `openai-codex/gpt-5.6-sol` in the same
   worktree. It created all eight files for `orca-pi-hello-proof`, reached
   `intent-gate` at revision 2, wrote matching two-entry history, and left every
   approval field empty.
 - Intent SHA-256:
   `ad25d97b872a1c12cbad279e20fa235f27c8cc0bf1ffbf70a0416742aaa58748`
+- Sanitized observed state:
+
+```text
+source: b9e8d83913cf0e73a968420975c99da7ad63260b
+files: approvals.yml decisions.md evidence.md history.jsonl intent.md plan.md spec.md status.yml
+status: stage=intent-gate state_revision=2 next_actions=[await-intent-approval]
+history: 1 null->draft-intent; 2 draft-intent->intent-gate
+approvals: all provenance, actor, timestamp, and hash fields empty
+```
 - Flow42 falls back to native harness and Git operations when Orca is absent or
   not ready. That fallback and a complete Orca trusted-PR run remain unexecuted
   and are not claimed by this record.

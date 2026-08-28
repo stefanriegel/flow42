@@ -4,7 +4,7 @@ set -eu
 ref=${1:-}
 output_dir=${2:-dist}
 signer_identity=flow42-release@stefanriegel
-trust_ref=${FLOW42_RELEASE_TRUST_REF:-refs/tags/v1.0.0}
+trusted_key=AAAAC3NzaC1lZDI1NTE5AAAAIHwQoU4CQFvLL4xDRlGZbvtAfU+NK7cZhPey28aCoiV8
 
 case "$ref" in
   refs/tags/v[0-9]*.[0-9]*.[0-9]*) ;;
@@ -23,20 +23,17 @@ git rev-parse --verify "$ref^{tag}" >/dev/null 2>&1 || {
   echo "release ref must be an annotated tag" >&2
   exit 1
 }
-git rev-parse --verify "$trust_ref^{tag}" >/dev/null 2>&1 || {
-  echo "release trust anchor must be an annotated tag" >&2
-  exit 1
-}
 allowed_signers=$(mktemp "${TMPDIR:-/tmp}/flow42-signers.XXXXXX")
 trap 'rm -f "$allowed_signers"' EXIT HUP INT TERM
-git show "$trust_ref:.github/allowed_signers" >"$allowed_signers" || {
-  echo "cannot read release trust anchor" >&2
+git show "$ref:.github/allowed_signers" >"$allowed_signers" || {
+  echo "cannot read release signer allowlist" >&2
   exit 1
 }
-trusted_signers_hash=$(git hash-object "$allowed_signers")
-release_signers_hash=$(git show "$ref:.github/allowed_signers" | git hash-object --stdin)
-if test "$trusted_signers_hash" != "$release_signers_hash"; then
-  echo "release signer allowlist differs from trusted release" >&2
+if test "$(wc -l <"$allowed_signers" | tr -d ' ')" != 1 ||
+  test "$(awk '{print $1}' "$allowed_signers")" != "$signer_identity" ||
+  test "$(awk '{print $2}' "$allowed_signers")" != ssh-ed25519 ||
+  test "$(awk '{print $3}' "$allowed_signers")" != "$trusted_key"; then
+  echo "release signer allowlist differs from pinned trust root" >&2
   exit 1
 fi
 verification=$(git -c gpg.format=ssh \
