@@ -30,7 +30,7 @@ status_stage=$(sed -n 's/^stage: //p' "$target/status.yml")
 
 test "$status_revision" = "$history_revision"
 test "$status_stage" = "$history_stage"
-test "$status_stage" = building
+test "$status_stage" = verifying
 
 provenance_ref=$(sed -n 's/^plan_provenance_ref: "\(.*\)"$/\1/p' "$target/approvals.yml")
 comment_id=${provenance_ref##*issuecomment-}

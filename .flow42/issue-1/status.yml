@@ -2,15 +2,15 @@ schema_version: 1
 work_id: "issue-1"
 title: "Ship Flow42 V1"
 work_type: "feature"
-stage: building
+stage: verifying
 risk: high
-state_revision: 1
+state_revision: 2
 created_at: "2026-08-27T20:21:07Z"
-updated_at: "2026-08-27T20:21:07Z"
-review_loops: 1
-blockers: []
+updated_at: "2026-08-28T10:43:05Z"
+review_loops: 2
+blockers: [formal-dogfood-pr-reviews,gitlab-ci-green-mr,version-changing-upgrade,current-head-claude-invocation,release-authorization]
 resume_stage: ""
 forge_item: "https://github.com/stefanriegel/flow42/issues/1"
 change_request: ""
 ci_state: unknown
-next_actions: [complete-native-parity,run-dogfoods,verify]
+next_actions: [verify-release-branch,complete-open-evidence-gates,request-release-authorization]
