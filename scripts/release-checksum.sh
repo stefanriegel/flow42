@@ -4,7 +4,7 @@ set -eu
 ref=${1:-}
 output_dir=${2:-dist}
 signer_identity=flow42-release@stefanriegel
-trusted_key=AAAAC3NzaC1lZDI1NTE5AAAAIHwQoU4CQFvLL4xDRlGZbvtAfU+NK7cZhPey28aCoiV8
+trusted_fingerprint=SHA256:rEzLnNrBUzyqeYfVtW9HRtMHTk2dwtOaiLwp+/qzfG8
 
 case "$ref" in
   refs/tags/v[0-9]*.[0-9]*.[0-9]*) ;;
@@ -32,7 +32,7 @@ git show "$ref:.github/allowed_signers" >"$allowed_signers" || {
 if test "$(wc -l <"$allowed_signers" | tr -d ' ')" != 1 ||
   test "$(awk '{print $1}' "$allowed_signers")" != "$signer_identity" ||
   test "$(awk '{print $2}' "$allowed_signers")" != ssh-ed25519 ||
-  test "$(awk '{print $3}' "$allowed_signers")" != "$trusted_key"; then
+  test "$(ssh-keygen -lf "$allowed_signers" | awk '{print $2}')" != "$trusted_fingerprint"; then
   echo "release signer allowlist differs from pinned trust root" >&2
   exit 1
 fi

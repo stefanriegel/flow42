@@ -25,8 +25,8 @@ git config user.signingkey "$tmp/signing-key"
 mkdir -p .github scripts
 awk -v identity="$identity" '{print identity, $0}' "$tmp/signing-key.pub" >.github/allowed_signers
 cp "$root/scripts/release-checksum.sh" scripts/release-checksum.sh
-fixture_key=$(awk '{print $2}' "$tmp/signing-key.pub")
-sed "s|^trusted_key=.*|trusted_key=$fixture_key|" scripts/release-checksum.sh >scripts/release-checksum.sh.tmp
+fixture_fingerprint=$(ssh-keygen -lf "$tmp/signing-key.pub" | awk '{print $2}')
+sed "s|^trusted_fingerprint=.*|trusted_fingerprint=$fixture_fingerprint|" scripts/release-checksum.sh >scripts/release-checksum.sh.tmp
 mv scripts/release-checksum.sh.tmp scripts/release-checksum.sh
 printf 'ambient@example.invalid %s\n' "$(cat "$tmp/signing-key.pub")" >"$tmp/ambient-signers"
 git config gpg.ssh.allowedSignersFile "$tmp/ambient-signers"
