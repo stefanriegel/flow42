@@ -15,12 +15,12 @@ work-item lifecycle.
 
 ## Quickstart
 
-Install the current release, [`v2.0.0`](https://github.com/stefanriegel/flow42/releases/tag/v2.0.0):
+Install the current release, [`v2.0.1`](https://github.com/stefanriegel/flow42/releases/tag/v2.0.1):
 
 Claude Code:
 
 ```sh
-claude plugin marketplace add stefanriegel/flow42#v2.0.0
+claude plugin marketplace add stefanriegel/flow42#v2.0.1
 claude plugin install flow42@flow42
 claude
 ```
@@ -28,7 +28,7 @@ claude
 Codex:
 
 ```sh
-codex plugin marketplace add stefanriegel/flow42 --ref v2.0.0
+codex plugin marketplace add stefanriegel/flow42 --ref v2.0.1
 codex plugin add flow42@flow42
 codex
 ```
@@ -36,7 +36,7 @@ codex
 Pi:
 
 ```sh
-pi install git:github.com/stefanriegel/flow42@v2.0.0
+pi install git:github.com/stefanriegel/flow42@v2.0.1
 pi
 ```
 
