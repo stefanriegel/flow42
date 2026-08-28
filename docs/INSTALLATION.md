@@ -40,7 +40,7 @@ The skills are namespaced as `/flow42:flow`, `/flow42:init`, and so on.
 Install and start Claude Code from the current immutable tag:
 
 ```sh
-claude plugin marketplace add stefanriegel/flow42#v1.0.1
+claude plugin marketplace add stefanriegel/flow42#v1.0.2
 claude plugin install flow42@flow42
 claude
 ```
@@ -59,7 +59,7 @@ Codex installs plugins from marketplace snapshots. Install from the current
 immutable tag:
 
 ```sh
-codex plugin marketplace add stefanriegel/flow42 --ref v1.0.1
+codex plugin marketplace add stefanriegel/flow42 --ref v1.0.2
 codex plugin add flow42@flow42
 codex
 ```
@@ -78,7 +78,7 @@ codex plugin marketplace remove flow42
 Install the immutable Git package and start Pi:
 
 ```sh
-pi install git:github.com/stefanriegel/flow42@v1.0.1
+pi install git:github.com/stefanriegel/flow42@v1.0.2
 pi
 ```
 
@@ -87,7 +87,7 @@ run `pi --skill "$PWD/skills"`. Upgrade a pinned installation by installing the
 new tag explicitly; uninstall with:
 
 ```sh
-pi install git:github.com/stefanriegel/flow42@v1.0.1
+pi install git:github.com/stefanriegel/flow42@v1.0.2
 pi remove git:github.com/stefanriegel/flow42
 ```
 
@@ -118,7 +118,7 @@ From a clean checkout containing the published tag, create the deterministic
 source archive and checksum with:
 
 ```sh
-sh scripts/release-checksum.sh refs/tags/v1.0.1 dist
+sh scripts/release-checksum.sh refs/tags/v1.0.2 dist
 ```
 
 The script accepts only an exact annotated semantic-version tag ref, verifies
@@ -126,10 +126,10 @@ its SSH signature against the repository's committed `.github/allowed_signers`,
 requires signer identity `flow42-release@stefanriegel`, and requires all three
 manifests in that tag to declare the matching version. It then uses `git archive` and the
 platform's native `sha256sum` or `shasum -a 256`, writing
-`dist/flow42-v1.0.1.tar` and the adjacent `.sha256` file. Verify after download
+`dist/flow42-v1.0.2.tar` and the adjacent `.sha256` file. Verify after download
 with one of:
 
 ```sh
-sha256sum -c flow42-v1.0.1.tar.sha256
-shasum -a 256 -c flow42-v1.0.1.tar.sha256
+sha256sum -c flow42-v1.0.2.tar.sha256
+shasum -a 256 -c flow42-v1.0.2.tar.sha256
 ```
