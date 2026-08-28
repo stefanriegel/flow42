@@ -28,6 +28,30 @@ into an expensive surprise. Flow42 adds a risk-aware loop:
 - Forge operations through the official `gh` and `glab` CLIs;
 - deterministic resume from `.flow42/<work-id>/` artifacts.
 
+## How to use the lifecycle
+
+Start with `flow42:flow <request>` when you want Flow42 to guide the whole job.
+You can also invoke a stage directly when you know exactly where the work should
+continue. Your harness may display the command as `/flow42:<stage>`,
+`flow42:<stage>`, or `/skill:<stage>`.
+
+| Stage | Use it when | What it does |
+| --- | --- | --- |
+| `init` | Flow42 is new to the repository | Checks the installation and repository, discovers commands, risk signals, Forge access, and optional Orca, then proposes configuration. |
+| `intent` | You have an idea, issue, or requested change | Captures the problem, scope, constraints, and success criteria. Stops for human approval before solution design. |
+| `spec` | The intent is approved | Turns the request into testable requirements, boundaries, and acceptance criteria. Stops for human approval. |
+| `plan` | The specification is approved | Breaks the work into owned vertical slices, checks, dependencies, and recovery steps. High-risk plans need human approval. |
+| `build` | The plan is ready | Captures baseline or failing evidence, implements the approved slices, and records what changed. |
+| `verify` | Implementation is complete | Checks acceptance criteria, tests, security, scope, and evidence independently. It does not approve its own implementation. |
+| `pr` | Verification has passed | Opens or updates the PR/MR, watches exact-head CI, and records independent review. It never merges by itself. |
+| `maintain` | CI, review, or a new issue changes the work | Converts new Forge signals into deduplicated, gated follow-up intent instead of silently expanding scope. |
+| `status` | You want to know where the work stands | Reads the durable artifacts and reports the current stage, blockers, approvals, and next legal actions. |
+| `resume` | A session stopped or another agent takes over | Revalidates history, approvals, Git state, ownership, and Forge state before continuing safely. |
+
+`intent`, `spec`, high-risk `plan`, irreversible actions, merge, and deployment
+remain human decisions. Flow42 normally finishes at a reviewed, CI-green PR/MR
+that is ready for a person to merge.
+
 ## Runtime-free onboarding
 
 Requirements: your selected coding-agent harness and Git. `gh` or `glab` is
