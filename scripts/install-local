@@ -1,0 +1,57 @@
+#!/bin/sh
+set -eu
+
+root=$(CDPATH=''; export CDPATH; cd -- "$(dirname -- "$0")/.." && pwd)
+target=${1:-}
+mode=${2:-}
+
+usage() {
+  echo 'usage: scripts/install-local <claude|codex|pi> [--dry-run]' >&2
+  exit 2
+}
+
+case "$target" in claude|codex|pi) ;; *) usage ;; esac
+case "$mode" in ''|--dry-run) ;; *) usage ;; esac
+
+sh "$root/scripts/validate.sh"
+sh "$root/scripts/check-parity.sh"
+for test_script in "$root"/tests/*.sh; do
+  test "$(basename "$test_script")" = update.sh && continue
+  sh "$test_script"
+done
+
+run() {
+  if test "$mode" = --dry-run; then
+    printf 'DRY-RUN'
+    for argument in "$@"; do
+      printf ' [%s]' "$argument"
+    done
+    printf '\n'
+  else
+    "$@"
+  fi
+}
+
+case "$target" in
+  claude)
+    command -v claude >/dev/null 2>&1 || { echo 'claude is not installed' >&2; exit 1; }
+    run claude plugin validate --strict "$root"
+    run claude plugin marketplace add "$root" --scope local
+    run claude plugin install flow42@flow42 --scope local --yes
+    ;;
+  codex)
+    command -v codex >/dev/null 2>&1 || { echo 'codex is not installed' >&2; exit 1; }
+    run codex plugin marketplace add "$root" --json
+    run codex plugin add flow42@flow42 --json
+    ;;
+  pi)
+    command -v pi >/dev/null 2>&1 || { echo 'pi is not installed' >&2; exit 1; }
+    run pi install "$root" --local --approve
+    ;;
+esac
+
+if test "$mode" = --dry-run; then
+  echo "local $target installation plan verified"
+else
+  echo "local Flow42 installed for $target; restart the harness"
+fi

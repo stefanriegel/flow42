@@ -5,9 +5,7 @@ description: Show concise, evidence-backed status for Flow42 work items. Use whe
 
 # Status
 
-Validate status against the last history revision and recompute stored approval
-hashes, then show work ID, title, stage, risk, artifact hashes
-and approvals, branch/worktree, checks, blockers, PR/MR, and next action. Report
+Validate status against the last history revision, then show work ID, title,
+stage, risk, artifact revisions, any required high-risk plan confirmation,
+branch/worktree, checks, blockers, PR/MR, and next action. Report
 inconsistencies explicitly. Do not infer completion from chat history.
-Reverify each approval's authenticated provenance reference; repository fields
-alone never prove the approver identity.

@@ -10,7 +10,7 @@ work_id=reliable-retries
 target="$tmp/repo/.flow42/$work_id"
 mkdir -p "$target"
 
-for name in intent.md spec.md plan.md evidence.md decisions.md status.yml approvals.yml history.jsonl; do
+for name in intent.md spec.md plan.md evidence.md decisions.md status.yml history.jsonl; do
   sed \
     -e "s/{{work_id}}/$work_id/g" \
     -e 's/{{title}}/Reliable retries/g' \
@@ -19,29 +19,14 @@ for name in intent.md spec.md plan.md evidence.md decisions.md status.yml approv
     "$tmp/templates/$name" >"$target/$name"
 done
 
-test "$(find "$target" -type f | wc -l | tr -d ' ')" = 8
-test -f "$tmp/templates/config-approval.yml"
+test "$(find "$target" -type f | wc -l | tr -d ' ')" = 7
+test ! -e "$tmp/templates/approvals.yml"
+test ! -e "$tmp/templates/config-approval.yml"
 grep -q '^stage: draft-intent$' "$target/status.yml"
 test "$(jq -r '.revision' "$target/history.jsonl")" = 1
 test "$(jq -r '.to' "$target/history.jsonl")" = draft-intent
 
-hash_file() {
-  if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$1" | awk '{print $1}'
-  else
-    shasum -a 256 "$1" | awk '{print $1}'
-  fi
-}
-
-approved=$(hash_file "$target/intent.md")
-current=$(hash_file "$target/intent.md")
-test "$approved" = "$current"
-printf '\nchanged after approval\n' >>"$target/intent.md"
-current=$(hash_file "$target/intent.md")
-test "$approved" != "$current"
-
-grep -q 'stale approval must block' "$root/core/CONTRACT.md"
 grep -q 'ready-for-human' "$root/core/workflow.json"
 grep -q 'no required executable' "$root/core/CONTRACT.md"
 
-echo 'conformance ok: creation, hashing, stale approval, contract'
+echo 'conformance ok: seven-file work item and contract'
