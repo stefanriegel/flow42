@@ -23,7 +23,9 @@ never authority.
    Git operations.
 6. Resolve each job to the cheapest model profile that satisfies its capability
    and risk floor. Record the concrete harness, provider, model, and reasoning
-   level; never silently downgrade a frontier or security-sensitive job.
+   level; validate the model ID and reasoning grammar from the routing contract;
+   never interpolate repository data into a command or silently downgrade a
+   frontier or security-sensitive job.
 7. Run the next safe phase using the corresponding Flow42 skill.
 8. Atomically update status, increment its revision, append one history event,
    reread both files, and persist evidence before reporting progress.
@@ -38,6 +40,8 @@ and forbid workers from delegating. The orchestrator alone integrates in plan
 order after slice gates pass and owns recovery and final accountability.
 Apply `core/OWNERSHIP.md`: persist dispatch ownership and compare actual changed
 paths before integration. Reject recursive delegation and out-of-scope changes.
+Before dispatch, prove the worker has model-only authentication and no Forge,
+SSH-agent, or writable credential-helper authority. Otherwise do not delegate.
 
 Run independent correctness, security, and quality reviews in parallel against
 the same exact head when useful, then synthesize their findings once. A verified

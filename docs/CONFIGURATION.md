@@ -11,7 +11,7 @@
 | `base_branch` | `auto` or branch | Integration base. |
 | `concurrency` | `1`–`4` | Total worker ceiling; workers cannot delegate. |
 | `worktree_parent` | `auto` or safe path | Isolated worktree location. |
-| `model_profiles.*` | `auto` or harness model ID | Frontier, worker, and utility model preferences. |
+| `model_profiles.*` | `auto` or `^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$` | Frontier, worker, and utility model preferences. |
 | `commands.*` | token array, `[auto]`, or `[]` | Direct-argv checks discovered by `init`. |
 | `protected_paths` | path list | Areas that raise risk and review depth. |
 | `mandatory_gates` | gate list | May add gates but never remove canonical gates. |

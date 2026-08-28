@@ -35,6 +35,7 @@ done
 printf 'release fixture\n' >README.md
 git add .
 git commit -qm fixture
+git tag -s v1.0.0 -m 'Flow42 trust anchor 1.0.0'
 git tag -s v1.0.1 -m 'Flow42 1.0.1'
 
 sh "$repo/scripts/release-checksum.sh" refs/tags/v1.0.1 "$tmp/one" >/dev/null
@@ -63,7 +64,6 @@ reject() {
 reject HEAD
 reject refs/heads/main
 reject v1.0.1
-git tag -s v1.0.0 -m wrong
 reject refs/tags/v1.0.0
 
 git tag -d v1.0.1 >/dev/null
@@ -73,6 +73,18 @@ git tag -d v1.0.1 >/dev/null
 git tag -a v1.0.1 -m unsigned
 reject refs/tags/v1.0.1
 git tag -d v1.0.1 >/dev/null
+ssh-keygen -q -t ed25519 -N '' -C replacement@example.invalid -f "$tmp/replacement-key"
+awk -v identity="$identity" '{print identity, $0}' "$tmp/replacement-key.pub" >.github/allowed_signers
+git config user.signingkey "$tmp/replacement-key"
+git add .github/allowed_signers
+git commit -qm replacement-same-principal
+git tag -s v1.0.1 -m 'replacement-same-principal Flow42 1.0.1'
+reject refs/tags/v1.0.1
+git tag -d v1.0.1 >/dev/null
+git config user.signingkey "$tmp/signing-key"
+awk -v identity="$identity" '{print identity, $0}' "$tmp/signing-key.pub" >.github/allowed_signers
+git add .github/allowed_signers
+git commit -qm restore-trust-anchor
 awk '{print "wrong@example.invalid", $2, $3, $4}' .github/allowed_signers >.github/allowed_signers.tmp
 mv .github/allowed_signers.tmp .github/allowed_signers
 git add .github/allowed_signers

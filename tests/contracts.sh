@@ -35,7 +35,7 @@ done
 
 for id in happy-feature invalid-transition stale-approval interrupted-resume unsafe-action \
   forge-cli-missing forge-auth-failure ci-failure security-escalation \
-  worktree-conflict delegation-bounds adapter-parity install-lifecycle; do
+  worktree-conflict delegation-bounds adapter-parity install-lifecycle unsafe-model-routing; do
   jq -e --arg id "$id" '.scenarios[] | select(.id == $id)' "$scenarios" >/dev/null
 done
 

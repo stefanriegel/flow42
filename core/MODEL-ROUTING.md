@@ -35,6 +35,11 @@ pi --model qwen-redteam/qwen3.8-27b-uncensored
 
 Model catalogs are local and change over time. These are examples, not portable
 defaults. `model_profiles` stores an approved local choice or `auto`.
+Before persistence or invocation, require model IDs to match
+`^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$` and reasoning levels to be one of
+`off`, `minimal`, `low`, `medium`, `high`, `xhigh`, or `max`. Never interpolate
+a repository or work-item value into a terminal command string. Use a fixed,
+human-approved command or a structured argv interface.
 
 ## Orca ADE examples
 
@@ -58,3 +63,8 @@ orca terminal send --terminal <returned-handle> --text "<bounded job>" --enter -
 Use the returned full worktree ID and terminal handle. If Orca is absent or not
 ready, use native harness and Git worktree operations with the same ownership,
 data-contract, and recovery rules.
+
+Before any worker starts, prove its environment has model-only authentication and
+no Forge-write credentials, SSH agent, writable credential helper, or inherited
+Forge session. If that isolation cannot be proven, do not delegate; run the job in
+the accountable coordinator or stop. Record the capability preflight in evidence.

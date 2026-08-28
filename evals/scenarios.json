@@ -14,6 +14,7 @@
     {"id": "worktree-conflict", "result": "blocked", "requires": ["preserve-unrelated-changes", "ownership-check", "no-reset"]},
     {"id": "delegation-bounds", "result": "bounded", "requires": ["worker-limit", "no-recursive-delegation", "orchestrator-integration"]},
     {"id": "adapter-parity", "result": "equivalent", "requires": ["claude-code", "codex", "equivalent-artifacts", "equivalent-gates"]},
-    {"id": "install-lifecycle", "result": "removed", "requires": ["install", "discovery", "invocation", "upgrade-or-replace", "uninstall"]}
+    {"id": "install-lifecycle", "result": "removed", "requires": ["install", "discovery", "invocation", "upgrade-or-replace", "uninstall"]},
+    {"id": "unsafe-model-routing", "result": "blocked", "requires": ["model-id-grammar", "no-shell-interpolation", "worker-capability-isolation"]}
   ]
 }
