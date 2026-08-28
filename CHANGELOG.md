@@ -1,12 +1,12 @@
 # Changelog
 
-## Unreleased
+## 1.0.2 - 2026-08-28
 
 ### Changed
 
 - Made `init` responsible for harness-native installation and repository
   onboarding checks.
-- Updated and humanized the README for the published `v1.0.1` release.
+- Streamlined the README and installation guidance for the current release.
 - Removed private dogfood repository identifiers from public evidence.
 
 ## 1.0.1 - 2026-08-28
