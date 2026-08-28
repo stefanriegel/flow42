@@ -9,13 +9,20 @@ manifests expose the same `skills/` and optional specialist definitions. Work
 state resides only in `.flow42/<work-id>/`; conversation context is never a
 source of truth.
 
-The orchestrator owns scope, approvals, integration order, and recovery. Workers
-receive bounded slices in isolated worktrees, cannot delegate, and cannot approve
-their own implementation. Independence is role separation: a separate review
-pass or agent did not implement the change. In a solo-owned repository, its
-exact-head verdict may be a SHA-pinned PR/MR comment instead of a formal Forge
-approval. This does not add a second human gate or grant approval authority. The
+The single-agent path is the default. The orchestrator owns scope,
+confirmations, integration order, and recovery when the user requests
+multi-agent work or independent slices materially benefit from parallelism.
+Workers receive bounded slices in isolated worktrees, cannot delegate, and
+cannot authorize their own implementation. Independence is role separation: a
+separate review pass or agent did not implement the change. In a solo-owned repository, its
+exact-head verdict is stored as durable review evidence. This does not add a
+second human gate or grant authorization authority. The
 trusted endpoint is an independently reviewed, CI-green PR/MR.
+
+Orca orchestration is used only through its live CLI-served contract. A real
+Run, Task, and Dispatch plus `worker_done` settlement distinguish orchestration
+from ordinary subagents or terminal management. Missing Orca falls back to the
+single-agent path.
 
 Planning represents two related graphs. The task schedule graph defines jobs,
 dependencies, parallelism, and synchronization barriers. The data flow graph
@@ -28,5 +35,5 @@ own ambiguous planning and synthesis, worker models own bounded implementation a
 specialist review, and utility models own mechanical transformations. See
 [model routing](../core/MODEL-ROUTING.md).
 
-Trust boundaries are the human approval channel, repository and worktrees,
+Trust boundaries are the human confirmation channel, repository and worktrees,
 agent harness, Forge CLI credential store, CI, and untrusted external text.

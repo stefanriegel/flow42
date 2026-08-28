@@ -12,24 +12,8 @@ record_pass() {
   printf 'ok %s\n' "$1"
 }
 
-hash_file() {
-  if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$1" | awk '{print $1}'
-  else
-    shasum -a 256 "$1" | awk '{print $1}'
-  fi
-}
-
-if ! jq -e '.transitions[] | select(.from == "draft-intent" and .to == "drafting-spec")' "$root/core/workflow.json" >/dev/null; then
+if jq -e '.scenarios[] | select(.id == "invalid-transition" and .result == "blocked" and (.requires | index("no-state-mutation")))' "$root/evals/scenarios.json" >/dev/null; then
   record_pass invalid-transition
-fi
-
-cp "$root/templates/intent.md" "$tmp/intent.md"
-approved=$(hash_file "$tmp/intent.md")
-printf '\nchanged\n' >>"$tmp/intent.md"
-current=$(hash_file "$tmp/intent.md")
-if test "$approved" != "$current"; then
-  record_pass stale-approval
 fi
 
 printf '%s\n' '{"revision":3,"from":"building","to":"blocked"}' >"$tmp/history.jsonl"
@@ -61,9 +45,9 @@ if sh "$root/tests/security.sh" >/dev/null; then
   record_pass worktree-conflict
 fi
 
-if grep -q 'forbid workers from delegating' "$root/skills/flow/SKILL.md" && grep -q 'worker limit' "$root/core/OWNERSHIP.md"; then
+if grep -q 'forbid recursive delegation' "$root/skills/flow/SKILL.md" && grep -q 'worker limit' "$root/core/OWNERSHIP.md"; then
   record_pass delegation-bounds
 fi
 
-test "$pass" -eq 10
+test "$pass" -eq 9
 echo "evals ok: $pass failure paths"

@@ -1,9 +1,9 @@
 # Troubleshooting
 
-## Approval is stale
+## Confirmation no longer matches the action
 
-Recompute the artifact digest. Record invalidation, clear downstream approvals,
-and return to the relevant gate. Never replace the stored hash automatically.
+Do not proceed. Record the scope change and obtain fresh explicit human
+confirmation for the exact high-risk or irreversible action.
 
 ## Status and history disagree
 

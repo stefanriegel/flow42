@@ -14,7 +14,7 @@ Planned fixture families:
 - migration with dry-run and rollback proof;
 - interrupted session and deterministic resume;
 - conflicting unrelated user changes;
-- stale or invalid approval hash;
+- invalid or inconsistent persisted artifacts;
 - GitHub and GitLab PR/MR parity;
 - Claude Code and Codex adapter parity.
 
@@ -38,15 +38,13 @@ Codex. A harness reads `entrypoint` as the Flow42 skill to invoke, materializes
 the durable state described by `given`, performs `when.request`, and compares
 the observed durable state and attempted actions with `expect`. Values under
 `forbidden` are negative assertions: observing any one of them fails the case.
-Fixtures use only synthetic identities, URLs, hashes, and worktree paths.
+Fixtures use only synthetic identities, URLs, commit identifiers, and worktree paths.
 
-The cases cover downstream invalidation after a stale intent approval,
-implementer self-review rejection, fabricated-human-approval rejection,
-status/history mismatch recovery, irreversible actions without authorization,
-Forge authentication failure, required-CI failure, and forbidden worker
-delegation. Validate their common schema and scenario-specific invariants with:
-Unsafe model identifiers and workers that inherit Forge or SSH authority are
-also required to fail closed before terminal creation.
+The cases cover implementer self-review rejection, fabricated human-authorization
+rejection, status/history mismatch recovery, irreversible actions without
+authorization, Forge authentication failure, required-CI failure, and forbidden
+worker delegation. Validate their common schema and scenario-specific invariants
+with the command below. Unsafe model identifiers also fail before invocation.
 
 ```sh
 sh evals/cases/run.sh

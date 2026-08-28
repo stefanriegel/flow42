@@ -1,19 +1,17 @@
 ---
 name: spec
-description: Turn an approved Flow42 intent into testable requirements and design constraints. Use after intent approval.
+description: Turn a Flow42 intent into testable requirements and design constraints. Use after intent capture.
 ---
 
 # Specify
 
-Recompute the approved `intent.md` hash. On mismatch clear intent, spec, and plan
-approvals, append an invalidation event, and block. Otherwise write `spec.md` with functional and
+Read the current `intent.md` and ensure it agrees with persisted status and
+history. On mismatch append an inconsistency event and block. Otherwise write `spec.md` with functional and
 non-functional requirements, domain terminology, interfaces, data behavior,
 security considerations, acceptance criteria, and verification strategy.
 Identify contradictions and decisions rather than silently choosing. Trigger a
 threat model for auth, permissions, sensitive data, network boundaries, money,
-infrastructure, supply chain, or production configuration. Gate on the spec hash.
+infrastructure, supply chain, or production configuration.
 
-On completion transition `drafting-spec` to `spec-gate` with the canonical
-revision, atomic status, append-only history, and read-back procedure. After
-valid authenticated human approval provenance, the next invocation transitions
-to `planning`.
+On completion transition directly from `drafting-spec` to `planning` with the
+canonical revision, atomic status, append-only history, and read-back procedure.

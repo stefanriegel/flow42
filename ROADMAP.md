@@ -7,7 +7,7 @@
 
 ## 0.2 — Executable state machine
 
-- Atomic transitions, approval hashes, invalidation, risk policy, and recovery.
+- Atomic transitions, recorded high-risk confirmations, risk policy, and recovery.
 - GitHub/GitLab read/write adapters with idempotency fixtures.
 
 ## 0.3 — Native harness preview

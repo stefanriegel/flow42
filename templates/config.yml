@@ -17,8 +17,6 @@ commands:
   build: [auto]
 protected_paths: []
 mandatory_gates:
-  - intent
-  - spec
   - high-risk-plan
   - irreversible-action
   - merge

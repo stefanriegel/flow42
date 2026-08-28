@@ -16,8 +16,7 @@
   "security_gates": ["threat-model", "independent-security-review"],
   "human_approval": {
     "accountable_approvers_per_gate": 1,
-    "second_human_required": false,
-    "authenticated_provenance_required": true
+    "second_human_required": false
   },
   "independent_review": {
     "implementer_may_review": false,

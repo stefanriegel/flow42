@@ -7,9 +7,9 @@ require authenticated `gh` for GitHub or `glab` for GitLab. Flow42 has no runtim
 
 After installation, invoke `flow42:init` from the target repository. The harness
 runs the onboarding preflight through the installed skill: Flow42 files and
-version, Git worktree, repository instructions, Forge CLI and authentication,
-and optional Orca readiness. It reports blocking and optional gaps before it
-proposes configuration. Users do not need a Flow42 checkout or its validation
+version, Git worktree, repository instructions, and optional Orca readiness. It
+reports blocking and optional gaps before it proposes configuration. Onboarding
+does not create or update Forge issues or comments. Users do not need a Flow42 checkout or its validation
 scripts for onboarding.
 
 ## Development checkout
@@ -21,6 +21,18 @@ git clone https://github.com/stefanriegel/flow42.git
 cd flow42
 sh scripts/check-parity.sh
 ```
+
+Validate and install the current checkout through a harness-native local source:
+
+```sh
+scripts/install-local claude
+scripts/install-local codex
+scripts/install-local pi
+```
+
+The script validates the checkout before installation and never writes directly
+to a harness cache. Add `--dry-run` to verify the complete plan without changing
+harness configuration. Released installations can invoke `flow42:update` instead.
 
 This path is executable before release: run Claude directly with `--plugin-dir`
 as shown below, or point Codex at the checkout's `skills/` through its native
@@ -40,15 +52,15 @@ The skills are namespaced as `/flow42:flow`, `/flow42:init`, and so on.
 Install and start Claude Code from the current immutable tag:
 
 ```sh
-claude plugin marketplace add stefanriegel/flow42#v1.0.2
+claude plugin marketplace add stefanriegel/flow42#v2.0.0
 claude plugin install flow42@flow42
 claude
 ```
 
-Invoke `/flow42:init`, then `/flow42:intent <request>`. Update or uninstall with:
+Invoke `/flow42:init`, then `/flow42:flow <request>`. Invoke `/flow42:update` to
+move the immutable marketplace pin and refresh the plugin. Uninstall with:
 
 ```sh
-claude plugin update flow42@flow42
 claude plugin uninstall flow42@flow42
 claude plugin marketplace remove flow42
 ```
@@ -59,16 +71,16 @@ Codex installs plugins from marketplace snapshots. Install from the current
 immutable tag:
 
 ```sh
-codex plugin marketplace add stefanriegel/flow42 --ref v1.0.2
+codex plugin marketplace add stefanriegel/flow42 --ref v2.0.0
 codex plugin add flow42@flow42
 codex
 ```
 
-Ask Codex to invoke `flow42:init`, then `flow42:intent` for the request. Refresh
-the Git marketplace or uninstall with:
+Ask Codex to invoke `flow42:init`, then `flow42:flow` for the request. Invoke
+`flow42:update` to move the immutable marketplace pin and refresh the plugin.
+Uninstall with:
 
 ```sh
-codex plugin marketplace upgrade flow42
 codex plugin remove flow42@flow42
 codex plugin marketplace remove flow42
 ```
@@ -78,16 +90,15 @@ codex plugin marketplace remove flow42
 Install the immutable Git package and start Pi:
 
 ```sh
-pi install git:github.com/stefanriegel/flow42@v1.0.2
+pi install git:github.com/stefanriegel/flow42@v2.0.0
 pi
 ```
 
-Invoke `/skill:init`, then `/skill:intent <request>`. For a checkout-only test,
-run `pi --skill "$PWD/skills"`. Upgrade a pinned installation by installing the
-new tag explicitly; uninstall with:
+Invoke `/skill:init`, then `/skill:flow <request>`. For a checkout-only test,
+run `pi --skill "$PWD/skills"`. Invoke `/skill:update` to install the newest
+immutable tag explicitly. Uninstall with:
 
 ```sh
-pi install git:github.com/stefanriegel/flow42@v1.0.2
 pi remove git:github.com/stefanriegel/flow42
 ```
 
@@ -118,7 +129,7 @@ From a clean checkout containing the published tag, create the deterministic
 source archive and checksum with:
 
 ```sh
-sh scripts/release-checksum.sh refs/tags/v1.0.2 dist
+sh scripts/release-checksum.sh refs/tags/v2.0.0 dist
 ```
 
 The script accepts only an exact annotated semantic-version tag ref, verifies
@@ -126,10 +137,10 @@ its SSH signature against the repository's committed `.github/allowed_signers`,
 requires signer identity `flow42-release@stefanriegel`, and requires all three
 manifests in that tag to declare the matching version. It then uses `git archive` and the
 platform's native `sha256sum` or `shasum -a 256`, writing
-`dist/flow42-v1.0.2.tar` and the adjacent `.sha256` file. Verify after download
+`dist/flow42-v2.0.0.tar` and the adjacent `.sha256` file. Verify after download
 with one of:
 
 ```sh
-sha256sum -c flow42-v1.0.2.tar.sha256
-shasum -a 256 -c flow42-v1.0.2.tar.sha256
+sha256sum -c flow42-v2.0.0.tar.sha256
+shasum -a 256 -c flow42-v2.0.0.tar.sha256
 ```

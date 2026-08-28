@@ -13,7 +13,7 @@ Use the cheapest profile that satisfies the job contract. Escalate when a worker
 cannot satisfy its schema, repeats a failed attempt, encounters ambiguity outside
 its ownership, or finds high-impact risk. Do not silently downgrade a frontier or
 security-sensitive job. Record the selected harness, provider, model, reasoning
-level, input artifact hashes, and output validation in evidence.
+level, required inputs, and output validation in evidence.
 
 Model selection never changes authority. Workers cannot delegate, approve their
 own work, merge, deploy, publish, discard changes, or widen scope. A utility model
@@ -41,30 +41,23 @@ Before persistence or invocation, require model IDs to match
 a repository or work-item value into a terminal command string. Use a fixed,
 human-approved command or a structured argv interface.
 
-## Orca ADE examples
+## Orca orchestration
 
-When `orca status --json` reports a ready runtime, use Orca-managed worktrees and
-terminals. The known-agent path is sufficient when its default model matches the
-profile:
-
-```sh
-orca worktree create --name <slice> --agent pi --prompt "<bounded job>" --json
-```
-
-For an explicit model, create the worktree, then start Pi with exact arguments:
+Use a single agent by default. Use Orca orchestration only when the user asks for
+it or independent, non-overlapping slices materially benefit from parallel work.
+Resolve the current orchestration guide with `orca skills get orchestration`;
+do not guess a cached command contract.
 
 ```sh
-orca worktree create --name <slice> --no-parent --json
-orca terminal create --worktree <returned-worktree-id> --command 'pi --model openai-codex/gpt-5.6-sol --thinking high' --json
-orca terminal wait --terminal <returned-handle> --for tui-idle --timeout-ms 60000 --json
-orca terminal send --terminal <returned-handle> --text "<bounded job>" --enter --json
+orca status --json
+orca orchestration run-create --objective "<objective>" --json
+orca orchestration task-create --spec "<bounded job>" --json
+orca orchestration worker-start --task <task-id> --worktree current --agent codex --json
+orca orchestration check --wait --types worker_done,escalation,question --timeout-ms 900000 --json
+orca orchestration worker-release --dispatch <dispatch-id> --json
 ```
 
-Use the returned full worktree ID and terminal handle. If Orca is absent or not
-ready, use native harness and Git worktree operations with the same ownership,
-data-contract, and recovery rules.
-
-Before any worker starts, prove its environment has model-only authentication and
-no Forge-write credentials, SSH agent, writable credential helper, or inherited
-Forge session. If that isolation cannot be proven, do not delegate; run the job in
-the accountable coordinator or stop. Record the capability preflight in evidence.
+Create all independent tasks before starting their workers, wait for a valid
+`worker_done` or escalation for every dispatch, and release settled workers.
+Generic subagent tools are not Orca orchestration and must not be described as
+such. If Orca is absent or not ready, continue with a normal single-agent flow.

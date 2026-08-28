@@ -1,5 +1,29 @@
 # Changelog
 
+## 2.0.0 - 2026-08-28
+
+### Added
+
+- Added the `update` management skill for immutable-tag upgrades through Claude
+  Code, Codex, and Pi.
+- Added `scripts/install-local` for validated checkout installation through each
+  harness's supported local source mechanism.
+
+### Changed
+
+- Made initialization entirely local and non-blocking when a repository has no
+  remote, default branch, Forge CLI, or Forge authentication.
+- Made single-agent execution the default and bound multi-agent claims to real
+  Orca Run, Task, Dispatch, and `worker_done` provenance.
+- Reduced human confirmation to high-risk and irreversible actions, merge,
+  deploy, publish, force-push, and destructive operations.
+
+### Removed
+
+- Removed setup issues and comments used only for approval bookkeeping.
+- Removed configuration and work-item approval files, artifact approval hashes,
+  authenticated Forge-comment provenance, and intent/spec approval gates.
+
 ## 1.0.2 - 2026-08-28
 
 ### Changed

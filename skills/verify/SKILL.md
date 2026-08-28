@@ -5,17 +5,17 @@ description: Independently verify a Flow42 implementation against intent, spec, 
 
 # Verify
 
-Recompute approval hashes first. Use a separate review pass or agent that did
+Confirm the current artifacts, status, and history agree. Use a separate review pass or agent that did
 not implement any of the reviewed change. Record reviewer identity, exact head
-SHA, verdict, findings, and checks; reject a review whose reviewer identity is
-the implementing agent. Review the diff against approved
+Git head SHA, verdict, findings, and checks; reject a review whose reviewer identity is
+the implementing agent. Review the diff against the current
 artifacts and acceptance criteria. Run repository-relevant format, lint, type,
 test, build, secret, dependency, and static checks. Add UI interaction/visual
 evidence or migration dry-run/rollback proof where applicable. The implementer
-may fix findings but cannot approve its own result. Allow at most two automatic
+may fix findings but cannot independently review its own result. Allow at most two automatic
 fix/review loops, with each fixed head reviewed again by a non-implementing
-review pass, then escalate concrete blockers. Independent review does not grant
-human approval. Always run every available
+review pass, then escalate concrete blockers. Independent review does not replace
+explicit human confirmation where high-risk or irreversible action requires it. Always run every available
 secret, dependency-vulnerability, and static-analysis check. For auth,
 permissions, sensitive data, networking, payments, infrastructure, or production
 configuration, require a persisted threat model and independent security review.

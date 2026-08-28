@@ -2,7 +2,7 @@
 set -eu
 
 root=$(CDPATH=''; export CDPATH; cd -- "$(dirname -- "$0")/.." && pwd)
-commands='flow init intent spec plan build verify pr maintain status resume'
+commands='flow init update intent spec plan build verify pr maintain status resume'
 
 for command in $commands; do
   test -f "$root/skills/$command/SKILL.md" || {
@@ -31,4 +31,4 @@ test "$workflow_commands" = "$commands" || {
   exit 1
 }
 
-echo "parity ok: 11 commands, 3 harness paths, Orca ADE adapter"
+echo "parity ok: 12 commands, 3 harness paths, Orca ADE adapter"
