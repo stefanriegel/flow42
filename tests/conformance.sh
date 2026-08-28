@@ -42,6 +42,6 @@ test "$approved" != "$current"
 
 grep -q 'stale approval must block' "$root/core/CONTRACT.md"
 grep -q 'ready-for-human' "$root/core/workflow.json"
-grep -q 'No Flow42 executable' "$root/README.md"
+grep -q 'no required executable' "$root/core/CONTRACT.md"
 
 echo 'conformance ok: creation, hashing, stale approval, contract'
