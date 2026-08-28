@@ -24,4 +24,18 @@
 - Approval safety: passed; Claude refused to fabricate authenticated provenance
   and left the gate closed.
 
-Version-changing upgrade and trusted-PR dogfood are still open.
+## PR #4 current-head rerun
+
+- Date: 2026-08-28
+- Commit: `f9a8f77bd7fbdc7d2060b3e720823733a7734a45`
+- Environment: macOS, Claude Code 2.1.250, temporary `HOME`,
+  `CLAUDE_CONFIG_DIR`, and `XDG_CONFIG_HOME`
+- Remote branch marketplace add, discovery, install, inventory of 11 skills and
+  4 agents, same-version update, uninstall, marketplace removal, and empty
+  read-backs: passed
+- Fresh `/flow42:status` invocation: blocked because the isolated scope was not
+  authenticated. Copying existing opaque Claude state did not authenticate it.
+- Cleanup: temporary scopes moved to Trash; repository and Forge state unchanged
+
+The earlier authenticated invocation and native lifecycle remain the invocation
+proof. Version-changing release upgrade and trusted-PR dogfood are still open.

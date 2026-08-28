@@ -21,4 +21,20 @@
   `FLOW42_REMOTE_DISCOVERED`, marketplace refresh returned no errors, and cleanup
   read-back passed.
 
-Version-changing upgrade and trusted-PR dogfood are still open.
+## PR #4 current-head rerun
+
+- Date: 2026-08-28
+- Commit: `f9a8f77bd7fbdc7d2060b3e720823733a7734a45`
+- Environment: macOS, Codex CLI 0.150.1, temporary `CODEX_HOME`
+- Checkout marketplace add, install, enabled-state read-back, fresh read-only
+  `flow42:status` invocation, idempotent marketplace add, same-version reinstall,
+  uninstall, marketplace removal, and empty read-backs: passed
+- Isolation: invocation used approval policy `never` and a read-only sandbox.
+  Authentication was copied temporarily with mode 0600, never inspected or
+  printed, and removed with the complete temporary home.
+- Repository and normal Codex configuration: unchanged
+- Local-marketplace difference: `marketplace upgrade` applies only to Git
+  marketplaces; checkout replacement is proven by idempotent marketplace add
+  and same-version reinstall.
+
+Version-changing release upgrade and trusted-PR dogfood are still open.
