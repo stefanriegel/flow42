@@ -11,7 +11,11 @@ source of truth.
 
 The orchestrator owns scope, approvals, integration order, and recovery. Workers
 receive bounded slices in isolated worktrees, cannot delegate, and cannot approve
-their own implementation. The trusted endpoint is a reviewed, CI-green PR/MR.
+their own implementation. Independence is role separation: a separate review
+pass or agent did not implement the change. In a solo-owned repository, its
+exact-head verdict may be a SHA-pinned PR/MR comment instead of a formal Forge
+approval. This does not add a second human gate or grant approval authority. The
+trusted endpoint is an independently reviewed, CI-green PR/MR.
 
 Trust boundaries are the human approval channel, repository and worktrees,
 agent harness, Forge CLI credential store, CI, and untrusted external text.

@@ -83,6 +83,11 @@ actions, publication, merge, and deployment are explicit human gates. Flow42
 does not store Forge tokens, force-push, discard unrelated changes, merge, or
 deploy on its own.
 
+Each gate has one accountable authenticated human; Flow42 does not require a
+second human or repository collaborator. Independent review is performed by a
+separate non-implementing pass or agent and can be published as an exact-head
+SHA-pinned PR/MR comment when formal Forge approval is unavailable.
+
 ## Architecture
 
 The canonical contract lives in `core/`; shared skills live in `skills/`;
