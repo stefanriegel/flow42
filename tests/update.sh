@@ -8,6 +8,8 @@ grep -q 'Do not edit harness cache directories' "$root/skills/update/SKILL.md"
 grep -q 'all 12 canonical skill' "$root/skills/update/SKILL.md"
 grep -q 'refreshing the existing marketplace alone cannot advance versions' "$root/skills/update/SKILL.md"
 grep -q 'restore the recorded source' "$root/skills/update/SKILL.md"
+grep -q '^require_command()' "$root/scripts/install-local"
+grep -q 'dry-run && return 0' "$root/scripts/install-local"
 
 for target in claude codex pi; do
   output=$(sh "$root/scripts/install-local" "$target" --dry-run)
