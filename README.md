@@ -41,10 +41,11 @@ Install `skills/` through the native skill/plugin mechanism of your harness,
 invoke `flow42:init` for a repository, then invoke `flow42:intent` with your
 request. The skill creates `.flow42/<work-id>/` directly from the templates.
 
-## 90-second quickstart
+## 90-second quickstart (pending release evidence)
 
-The versioned commands below become usable only after the immutable `v1.0.0` tag
-is published. Until then, use the checkout command above and follow the
+The 90-second claim is pending a signed published `v1.0.0` tag and a timed
+end-to-end work-item run. The versioned commands below become usable only after
+that tag is published. Until then, use the checkout command above and follow the
 [development-checkout instructions](docs/INSTALLATION.md#development-checkout).
 
 Claude Code:

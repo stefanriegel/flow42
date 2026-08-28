@@ -13,6 +13,11 @@ cd flow42
 sh scripts/check-parity.sh
 ```
 
+This path is executable before release: run Claude directly with `--plugin-dir`
+as shown below, or point Codex at the checkout's `skills/` through its native
+local skill discovery. It does not depend on a tag, marketplace publication, or
+the pending 90-second claim.
+
 ## Claude Code
 
 Test a checkout without persistent installation:
@@ -74,11 +79,13 @@ From a clean checkout containing the published tag, create the deterministic
 source archive and checksum with:
 
 ```sh
-sh scripts/release-checksum.sh v1.0.0 dist
+sh scripts/release-checksum.sh refs/tags/v1.0.0 dist
 ```
 
-The script uses `git archive` and the platform's native `sha256sum` or
-`shasum -a 256`. It writes `dist/flow42-v1.0.0.tar` and the adjacent
+The script accepts only the exact annotated tag ref `refs/tags/v1.0.0`, verifies
+its Git signature, and requires all three manifests in that tag to declare
+`1.0.0`. It then uses `git archive` and the platform's native `sha256sum` or
+`shasum -a 256`, writing `dist/flow42-v1.0.0.tar` and the adjacent
 `.sha256` file. Verify after download with one of:
 
 ```sh

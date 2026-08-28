@@ -3,6 +3,9 @@
 ## 1.0.0 - release pending
 
 This release is prepared but is not tagged or published.
+The `1.0.0` version changes belong only to this unmerged final release-candidate
+commit. It must not merge until every documented release gate passes and the
+owner gives explicit release authorization.
 
 ### Added
 

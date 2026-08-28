@@ -51,3 +51,15 @@ Version-changing upgrades, current-head authenticated Claude invocation, formal
 dogfood PR reviews, a CI-green GitLab MR, final release-branch CI/read-back, and
 release authorization remain open. Issue #1 remains open; no tag or release has
 been published.
+
+## 2026-08-28 release-candidate review remediation
+
+- Independent review of `94d6c35` found that checksum generation accepted
+  mutable or unsigned refs, release manifests were not bound to the tag, and
+  the active work state did not represent its blockers.
+- The checksum path now fails closed on anything except a Git-verified signed
+  annotated `refs/tags/v1.0.0`, with all three tagged manifests bound to
+  version `1.0.0`; portable ephemeral-signing tests cover the negative cases.
+- The final release candidate remains unmerged and blocked. No merge, tag,
+  release, issue close, PR, or push is authorized before all listed gates pass
+  and the owner explicitly authorizes release.

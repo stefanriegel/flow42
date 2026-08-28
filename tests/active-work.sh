@@ -30,7 +30,34 @@ status_stage=$(sed -n 's/^stage: //p' "$target/status.yml")
 
 test "$status_revision" = "$history_revision"
 test "$status_stage" = "$history_stage"
-test "$status_stage" = verifying
+test "$status_stage" = blocked
+
+blockers=$(sed -n 's/^blockers: \(.*\)$/\1/p' "$target/status.yml")
+resume_stage=$(sed -n 's/^resume_stage: \(.*\)$/\1/p' "$target/status.yml")
+test "$blockers" != '[]'
+test "$resume_stage" = verifying
+
+valid_blocker_state() {
+  candidate_stage=$1
+  candidate_blockers=$2
+  candidate_resume=$3
+  if test "$candidate_blockers" != '[]'; then
+    test "$candidate_stage" = blocked
+    test -n "$candidate_resume"
+  fi
+}
+
+valid_blocker_state "$status_stage" "$blockers" "$resume_stage"
+for ordinary_stage in building verifying pr-ready; do
+  if valid_blocker_state "$ordinary_stage" '[open-gate]' ''; then
+    echo "accepted blockers at ordinary stage: $ordinary_stage" >&2
+    exit 1
+  fi
+done
+if valid_blocker_state blocked '[open-gate]' ''; then
+  echo 'accepted blocked state with empty resume_stage' >&2
+  exit 1
+fi
 
 provenance_ref=$(sed -n 's/^plan_provenance_ref: "\(.*\)"$/\1/p' "$target/approvals.yml")
 comment_id=${provenance_ref##*issuecomment-}
