@@ -53,6 +53,9 @@ grep -q 'execution_environment: auto' "$root/templates/config.yml"
 grep -q 'frontier: auto' "$root/templates/config.yml"
 grep -q 'never fabricate a formal approval' "$root/skills/pr/SKILL.md"
 grep -q 'change-request creation are reversible' "$root/core/CONTRACT.md"
+grep -q 'read-only onboarding preflight' "$root/skills/init/SKILL.md"
+grep -q 'all 11 canonical skill' "$root/skills/init/SKILL.md"
+grep -q 'ready.*,.*optional.*,.*blocked' "$root/skills/init/SKILL.md"
 
 for phrase in 'never use' 'authenticated approval' 'no Forge-write authority' 'immutable V1 tag'; do
   grep -qi "$phrase" "$root/core/SECURITY.md"

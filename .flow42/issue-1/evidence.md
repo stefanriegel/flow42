@@ -72,14 +72,12 @@ open; no tag or release has been published.
 
 ## 2026-08-28 private dual-harness trusted-PR dogfood
 
-- The owner recorded the private `stefanriegel/flow42-v1-proof` dogfood in
-  [Issue #1](https://github.com/stefanriegel/flow42/issues/1#issuecomment-5452405196).
-- Claude Code delivered Issue #1 to open PR #4 at exact head
-  `7ac891bfca93ecda94d1ad89dd55498c1a86f802` with green exact-head CI, durable
+- The owner recorded the private dual-harness dogfood in Issue #1. Private
+  repository identifiers and commit metadata are intentionally omitted.
+- Claude Code delivered its work item to an open PR with green exact-head CI, durable
   lifecycle evidence, red-green proof, two verification loops, and a SHA-pinned
   independent PASS attestation in 29m20s.
-- Codex delivered Issue #2 to open PR #3 at exact head
-  `7face51d72a9223896163e1551cb0c4a0bfa3521` with green exact-head CI, durable
+- Codex delivered its work item to an open PR with green exact-head CI, durable
   lifecycle evidence, red-green proof, and a SHA-pinned independent PASS
   attestation in 15m56s.
 - The private repository has no distinct eligible Forge reviewer. The

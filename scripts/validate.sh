@@ -36,7 +36,8 @@ if find "$root" -type f \( -name '*.py' -o -name '*.pyc' \) -not -path "$root/.g
   errors=1
 fi
 
-if grep -R -n '\.sdlc' "$root" --exclude=validate.sh --exclude-dir=.git >/dev/null; then
+if grep -R -n '\.sdlc' "$root" --exclude=validate.sh --exclude-dir=.git \
+  --exclude-dir=dist --exclude-dir=build >/dev/null; then
   echo 'legacy workspace path remains' >&2
   errors=1
 fi
