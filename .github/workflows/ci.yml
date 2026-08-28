@@ -27,6 +27,7 @@ jobs:
       - run: sh tests/active-work.sh
         env:
           GH_TOKEN: ${{ github.token }}
+      - run: sh tests/release-checksum.sh
       - run: sh tests/security.sh
       - run: sh evals/run.sh
       - run: sh evals/cases/run.sh

@@ -22,7 +22,44 @@
   performed no writes or Forge action, and blocked. It exposed a scalar-command
   validation gap, which was fixed in `flow` and `init`.
 
+## 2026-08-28 merged and accepted evidence
+
+- GitHub PRs [#2](https://github.com/stefanriegel/flow42/pull/2),
+  [#3](https://github.com/stefanriegel/flow42/pull/3), and
+  [#4](https://github.com/stefanriegel/flow42/pull/4) are merged as
+  `71881245e39ff44e727c60b83a3d215a4ab4924c`,
+  `ebbf1d5a75927843aea42c0317cfe729d180d5f5`, and
+  `3b01874517ed0c51ce6727feffdbbfdda4a174e0`; each had all four GitHub checks
+  pass. GitHub records no formal reviews on these PRs.
+- The three feature, bug-fix, and maintenance dogfood PRs were merged with green
+  exact-head checks. GitHub records zero formal reviews on each; separate Orca
+  independent-review evidence does not satisfy the formal-review requirement.
+- The Issue #1 owner [accepted the GitLab support delivery slice](https://github.com/stefanriegel/flow42/issues/1#issuecomment-5451319635)
+  based on
+  authenticated `glab` operation, durable approved artifacts, GitLab CI lint,
+  local tests, and documented Forge differences.
+- The GitLab runner was deliberately not used because it was unprotected,
+  accepted untagged jobs, and advertised Docker-in-Docker/host-socket access.
+  No GitLab pipeline execution or CI-green GitLab MR is claimed.
+- PR #4 current-head Codex invocation passed. Current-head Claude invocation
+  failed at isolated-scope authentication, so only the earlier authenticated
+  Claude invocation is evidence.
+
 ## Known gaps
 
-Version-changing upgrades, Claude invocation, complete harness flows, Forge E2E
-parity, scenario executions, three dogfoods, launch review, and release remain open.
+Version-changing upgrades, current-head authenticated Claude invocation, formal
+dogfood PR reviews, final release-branch CI/read-back, and release authorization
+remain open. The owner accepted the documented GitLab evidence without a runner
+pipeline. Issue #1 remains open; no tag or release has been published.
+
+## 2026-08-28 release-candidate review remediation
+
+- Independent review of `94d6c35` found that checksum generation accepted
+  mutable or unsigned refs, release manifests were not bound to the tag, and
+  the active work state did not represent its blockers.
+- The checksum path now fails closed on anything except a Git-verified signed
+  annotated `refs/tags/v1.0.0`, with all three tagged manifests bound to
+  version `1.0.0`; portable ephemeral-signing tests cover the negative cases.
+- The final release candidate remains unmerged and blocked. No merge, tag,
+  release, issue close, PR, or push is authorized before all listed gates pass
+  and the owner explicitly authorizes release.

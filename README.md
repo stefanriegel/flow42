@@ -7,8 +7,8 @@ keeps intent, specifications, plans, evidence, and approvals in Git so Claude
 Code, Codex, and humans can safely resume the same work without relying on chat
 memory.
 
-> V1 development is in progress. Support claims remain limited to paths backed
-> by public conformance evidence. Don't Panic.
+> V1 release preparation is in progress. Support claims remain limited to paths
+> backed by public conformance evidence. Don't Panic.
 
 ## Why Flow42
 
@@ -41,11 +41,33 @@ Install `skills/` through the native skill/plugin mechanism of your harness,
 invoke `flow42:init` for a repository, then invoke `flow42:intent` with your
 request. The skill creates `.flow42/<work-id>/` directly from the templates.
 
-## Agent installation
+## 90-second quickstart (pending release evidence)
 
-Exact install, upgrade, and uninstall commands will be published only after the
-native paths have been exercised end to end in both harnesses. Until then, use a
-local development checkout; this is deliberately not an unverified support claim.
+The 90-second claim is pending a signed published `v1.0.0` tag and a timed
+end-to-end work-item run. The versioned commands below become usable only after
+that tag is published. Until then, use the checkout command above and follow the
+[development-checkout instructions](docs/INSTALLATION.md#development-checkout).
+
+Claude Code:
+
+```sh
+claude plugin marketplace add stefanriegel/flow42#v1.0.0
+claude plugin install flow42@flow42
+claude
+```
+
+Then invoke `/flow42:init`, followed by `/flow42:intent <request>`.
+
+Codex:
+
+```sh
+codex plugin marketplace add stefanriegel/flow42 --ref v1.0.0
+codex plugin add flow42@flow42
+codex
+```
+
+Then ask Codex to invoke `flow42:init`, followed by `flow42:intent` for the
+request. Restart either harness after install or update so it reloads the plugin.
 
 ## Skills
 
