@@ -83,10 +83,12 @@ sh scripts/release-checksum.sh refs/tags/v1.0.0 dist
 ```
 
 The script accepts only the exact annotated tag ref `refs/tags/v1.0.0`, verifies
-its Git signature, and requires all three manifests in that tag to declare
-`1.0.0`. It then uses `git archive` and the platform's native `sha256sum` or
-`shasum -a 256`, writing `dist/flow42-v1.0.0.tar` and the adjacent
-`.sha256` file. Verify after download with one of:
+its SSH signature against the repository's committed `.github/allowed_signers`,
+requires signer identity `flow42-release@stefanriegel`, and requires all three
+manifests in that tag to declare `1.0.0`. It then uses `git archive` and the
+platform's native `sha256sum` or `shasum -a 256`, writing
+`dist/flow42-v1.0.0.tar` and the adjacent `.sha256` file. Verify after download
+with one of:
 
 ```sh
 sha256sum -c flow42-v1.0.0.tar.sha256

@@ -3,9 +3,8 @@
 ## 1.0.0 - release pending
 
 This release is prepared but is not tagged or published.
-The `1.0.0` version changes belong only to this unmerged final release-candidate
-commit. It must not merge until every documented release gate passes and the
-owner gives explicit release authorization.
+The `1.0.0` release candidate merged in PR #5. Tag and release publication remain
+pending explicit owner authorization and the remaining documented release gates.
 
 ### Added
 
@@ -35,4 +34,4 @@ owner gives explicit release authorization.
 
 - The `v1.0.0` tag and release checksum are not published yet.
 - Version-changing upgrade proof, current-head authenticated Claude invocation,
-  formal dogfood PR reviews, and a CI-green GitLab MR remain unproven.
+  and formal dogfood PR reviews remain unproven.

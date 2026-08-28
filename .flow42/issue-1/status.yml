@@ -4,13 +4,13 @@ title: "Ship Flow42 V1"
 work_type: "feature"
 stage: blocked
 risk: high
-state_revision: 4
+state_revision: 5
 created_at: "2026-08-27T20:21:07Z"
-updated_at: "2026-08-28T10:54:31Z"
+updated_at: "2026-08-28T11:00:52Z"
 review_loops: 2
 blockers: [formal-dogfood-pr-reviews,version-changing-upgrade,current-head-claude-invocation,release-authorization]
 resume_stage: verifying
 forge_item: "https://github.com/stefanriegel/flow42/issues/1"
 change_request: ""
 ci_state: unknown
-next_actions: [complete-open-evidence-gates,obtain-release-authorization,resume-verifying]
+next_actions: [merge-release-signing-finalization,complete-open-evidence-gates,obtain-release-authorization,resume-verifying]

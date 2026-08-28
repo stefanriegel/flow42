@@ -2,3 +2,4 @@
 {"actor":"flow42","from":"building","reason":"merged-prs-2-3-4-and-owner-accepted-gitlab-evidence-reconciled","revision":2,"timestamp":"2026-08-28T10:43:05Z","to":"verifying"}
 {"actor":"flow42","from":"verifying","reason":"release-candidate-awaits-open-evidence-gates-and-explicit-release-authorization","revision":3,"timestamp":"2026-08-28T10:50:30Z","to":"blocked"}
 {"actor":"flow42","from":"blocked","reason":"owner-accepted-documented-gitlab-evidence-without-runner-pipeline","revision":4,"timestamp":"2026-08-28T10:54:31Z","to":"blocked"}
+{"actor":"flow42","from":"blocked","reason":"pr-5-merged-release-signing-finalization-awaits-tag-and-release-authorization","revision":5,"timestamp":"2026-08-28T11:00:52Z","to":"blocked"}

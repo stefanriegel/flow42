@@ -48,9 +48,8 @@
 ## Known gaps
 
 Version-changing upgrades, current-head authenticated Claude invocation, formal
-dogfood PR reviews, final release-branch CI/read-back, and release authorization
-remain open. The owner accepted the documented GitLab evidence without a runner
-pipeline. Issue #1 remains open; no tag or release has been published.
+dogfood PR reviews, and release authorization remain open. Issue #1 remains
+open; no tag or release has been published.
 
 ## 2026-08-28 release-candidate review remediation
 
@@ -60,6 +59,13 @@ pipeline. Issue #1 remains open; no tag or release has been published.
 - The checksum path now fails closed on anything except a Git-verified signed
   annotated `refs/tags/v1.0.0`, with all three tagged manifests bound to
   version `1.0.0`; portable ephemeral-signing tests cover the negative cases.
-- The final release candidate remains unmerged and blocked. No merge, tag,
-  release, issue close, PR, or push is authorized before all listed gates pass
-  and the owner explicitly authorizes release.
+- PR #5 merged the final release candidate as `5710926ca6af6abd3a6019d83e2d504ef6227cb7`.
+  No tag, release, or issue close is authorized before all listed gates pass and
+  the owner explicitly authorizes release.
+
+## 2026-08-28 release signing finalization
+
+- The repository now binds `v1.0.0` SSH tag verification to the committed
+  release public key and signer identity `flow42-release@stefanriegel`.
+- Tag and release publication remain pending; this change does not publish,
+  push, tag, release, merge, or close Issue #1.
