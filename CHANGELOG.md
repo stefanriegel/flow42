@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added a bounded adaptive intent interview with durable question resumption,
+  headless blocking, consent-safe recommendations, data minimization, and a
+  trivial-change fast path.
+
 ## 2.0.1 - 2026-08-28
 
 ### Removed

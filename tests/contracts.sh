@@ -6,6 +6,8 @@ workflow="$root/core/workflow.json"
 risk="$root/core/risk-policy.json"
 scenarios="$root/evals/scenarios.json"
 
+sh "$root/tests/intent.sh"
+
 test "$(jq '.transitions | length' "$workflow")" -eq 10
 test "$(jq '.side_transitions | length' "$workflow")" -eq 4
 jq -e '.transitions[] | select(.from == "draft-intent" and .to == "drafting-spec" and (has("gate") | not))' "$workflow" >/dev/null
