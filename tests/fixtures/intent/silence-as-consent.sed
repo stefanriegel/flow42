@@ -1,0 +1,1 @@
+s|Never treat silence, lack of objection, or the recommendation itself as consent\.|Never treat silence, lack of objection, or the recommendation itself as consent unless the user does not respond promptly.|
