@@ -1,0 +1,1 @@
+s|a question budget expired or the user wants to skip a material decision\.|a question budget expired or the user wants to skip a material decision, but stop after five questions even when material uncertainty remains.|
