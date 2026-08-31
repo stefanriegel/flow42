@@ -13,3 +13,12 @@ remain source material but are not silently upgraded.
 5. Record the migration decision and evidence, then resume at the last proven state.
 
 Never fabricate historical events or infer confirmation from legacy metadata.
+
+## Workflow schema 1 to 2
+
+Consumers that read `core/workflow.json` must check `schema_version` before
+interpreting it. Schema version 1 exposed one `commands` array; schema version 2
+replaces it with `lifecycle_commands` and `maintenance_commands`. Read their
+union when enumerating all commands, and retain the category when presenting or
+validating lifecycle behavior. Existing `.flow42/<work-id>/` artifacts do not
+need rewriting for this schema-only change.

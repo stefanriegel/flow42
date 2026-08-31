@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "stages": [
     "draft-intent",
     "drafting-spec",
@@ -31,7 +31,8 @@
     {"from": "any-non-final", "to": "abandoned", "gate": "human-authorization"},
     {"from": "any-non-final", "to": "superseded", "gate": "human-authorization-and-replacement-link"}
   ],
-  "commands": ["flow", "init", "update", "intent", "spec", "plan", "build", "verify", "pr", "maintain", "status", "resume"],
+  "lifecycle_commands": ["flow", "init", "intent", "spec", "plan", "build", "verify", "pr", "maintain", "status", "resume"],
+  "maintenance_commands": ["update"],
   "automatic_review_limit": 2,
   "mandatory_gates": ["high-risk-plan", "irreversible-action", "merge", "deploy"],
   "accountable_human_approvers_per_gate": 1,

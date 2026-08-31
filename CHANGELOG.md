@@ -1,12 +1,23 @@
 # Changelog
 
-## Unreleased
+## [Unreleased]
 
 ### Added
 
 - Added a bounded adaptive intent interview with durable question resumption,
   headless blocking, consent-safe recommendations, data minimization, and a
   trivial-change fast path.
+
+### Changed
+
+- Hardened trusted Flow42 updates so release verification completes before any
+  harness mutation, while preserving Claude marketplace and plugin scopes
+  through updates and rollbacks.
+- Documented first-upgrade recovery for pre-v2 installations and made local
+  harness installation idempotent and explicit about skipped preflight checks.
+- Split lifecycle and maintenance commands in workflow schema version 2 and
+  strengthened parity, contract, update-ordering, release-checksum, and CI
+  coverage against drift and false-green results.
 
 ## 2.0.1 - 2026-08-28
 

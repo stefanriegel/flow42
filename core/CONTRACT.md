@@ -5,6 +5,14 @@ Flow42 is versioned instructions and artifacts: no required executable, daemon,
 package manager, interpreter, or hidden state. Harnesses use native file/process
 capabilities plus Git and, for Forge operations, authenticated `gh` or `glab`.
 
+## Canonical workflow schema
+
+`core/workflow.json` uses schema version 2. `schema_version` identifies the JSON
+key contract, independently of the Flow42 release version. Version 2 replaces
+the version 1 `commands` array with the disjoint `lifecycle_commands` and
+`maintenance_commands` arrays; consumers must reject unsupported schema
+versions before interpreting the remaining fields.
+
 ## Durable work item
 
 Every work item lives at `.flow42/<work-id>/`, where `<work-id>` matches

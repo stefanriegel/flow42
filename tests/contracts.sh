@@ -57,8 +57,10 @@ grep -q 'frontier: auto' "$root/templates/config.yml"
 tr '\n' ' ' <"$root/skills/pr/SKILL.md" | grep -q 'do not create a comment solely to manufacture review provenance'
 grep -q 'change-request creation are reversible' "$root/core/CONTRACT.md"
 grep -q 'read-only onboarding preflight' "$root/skills/init/SKILL.md"
-grep -q 'all 12 canonical skill' "$root/skills/init/SKILL.md"
+tr '\n' ' ' <"$root/skills/init/SKILL.md" |
+  grep -Fq 'every directory in the canonical skill set'
 grep -q 'ready.*,.*optional.*,.*blocked' "$root/skills/init/SKILL.md"
+grep -Fq 'shellcheck scripts/*.sh scripts/install-local tests/*.sh' "$root/.github/workflows/ci.yml"
 
 for phrase in 'never use' 'explicit confirmation' 'coordinator owns those operations' 'immutable V1 tag'; do
   grep -qi "$phrase" "$root/core/SECURITY.md"
