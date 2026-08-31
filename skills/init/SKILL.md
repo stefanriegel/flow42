@@ -6,9 +6,9 @@ description: Initialize Flow42 locally in a repository by discovering its stack,
 # Initialize Flow42
 
 Begin with a read-only onboarding preflight. Confirm that this installed skill
-can resolve the Flow42 contract, templates, and all 12 canonical skill
-directories. Read the installed manifest version and report it. Do not ask the
-user to clone Flow42 or run repository maintainer scripts.
+can resolve the Flow42 contract, templates, and every directory in the
+canonical skill set. Read the installed manifest version and report it. Do not
+ask the user to clone Flow42 or run repository maintainer scripts.
 
 Confirm that the target is a Git worktree and report its root, current branch,
 working-tree state, repository instruction files, and any available redacted

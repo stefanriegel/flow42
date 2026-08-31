@@ -1,24 +1,26 @@
 #!/bin/sh
 set -eu
 
-root=$(CDPATH=''; export CDPATH; cd -- "$(dirname -- "$0")/.." && pwd)
+root=$(CDPATH=''; export CDPATH; cd -P -- "$(dirname -- "$0")/.." && pwd)
 target=${1:-}
 mode=${2:-}
 
 usage() {
-  echo 'usage: scripts/install-local <claude|codex|pi> [--dry-run]' >&2
+  echo 'usage: [FLOW42_SKIP_PREFLIGHT=1] scripts/install-local <claude|codex|pi> [--dry-run]' >&2
   exit 2
 }
 
 case "$target" in claude|codex|pi) ;; *) usage ;; esac
 case "$mode" in ''|--dry-run) ;; *) usage ;; esac
 
-sh "$root/scripts/validate.sh"
-sh "$root/scripts/check-parity.sh"
-for test_script in "$root"/tests/*.sh; do
-  test "$(basename "$test_script")" = update.sh && continue
-  sh "$test_script"
-done
+if test "${FLOW42_SKIP_PREFLIGHT:-}" != 1; then
+  sh "$root/scripts/validate.sh"
+  sh "$root/scripts/check-parity.sh"
+  for test_script in "$root"/tests/*.sh; do
+    test "$(basename "$test_script")" = update.sh && continue
+    sh "$test_script"
+  done
+fi
 
 run() {
   if test "$mode" = --dry-run; then
@@ -43,9 +45,64 @@ require_command() {
 case "$target" in
   claude)
     require_command claude
+    require_command jq
     run claude plugin validate --strict "$root"
-    run claude plugin marketplace add "$root" --scope local
-    run claude plugin install flow42@flow42 --scope local --yes
+    already_registered=false
+    if ! marketplace_json=$(claude plugin marketplace list --json); then
+      echo 'could not read Claude marketplace JSON' >&2
+      exit 1
+    fi
+    if ! flow42_entries=$(printf '%s\n' "$marketplace_json" | jq -ce '
+      if type != "array" then
+        error("expected an array")
+      elif any(.[]; type != "object" or (.name | type) != "string") then
+        error("expected marketplace objects with string names")
+      else
+        [.[] | select(.name == "flow42")]
+      end
+    '); then
+      echo 'Claude marketplace JSON has an unusable shape' >&2
+      exit 1
+    fi
+    flow42_count=$(printf '%s\n' "$flow42_entries" | jq 'length')
+    if test "$flow42_count" -gt 1; then
+      echo 'Claude marketplace JSON contains multiple flow42 entries' >&2
+      exit 1
+    fi
+    if test "$flow42_count" -eq 1; then
+      source_kind=$(printf '%s\n' "$flow42_entries" | jq -r '.[0].source // empty')
+      case "$source_kind" in
+        directory)
+          source_path=$(printf '%s\n' "$flow42_entries" | jq -r '
+            .[0] | if (.path | type) == "string" and .path != "" then .path else empty end
+          ')
+          if test -z "$source_path" || ! source_root=$(CDPATH=''; export CDPATH; cd -P -- "$source_path" 2>/dev/null && pwd); then
+            echo 'Claude flow42 directory marketplace has an unusable source path' >&2
+            exit 1
+          fi
+          test "$source_root" = "$root" && already_registered=true
+          ;;
+        github)
+          if ! printf '%s\n' "$flow42_entries" | jq -e '.[0].repo | type == "string" and length > 0' >/dev/null; then
+            echo 'Claude flow42 GitHub marketplace has unusable source data' >&2
+            exit 1
+          fi
+          ;;
+        *)
+          echo 'Claude flow42 marketplace has an unsupported source type' >&2
+          exit 1
+          ;;
+      esac
+    fi
+    if test "$already_registered" = true; then
+      run claude plugin marketplace update flow42
+      if ! run claude plugin update flow42@flow42 --scope local --yes; then
+        run claude plugin install flow42@flow42 --scope local --yes
+      fi
+    else
+      run claude plugin marketplace add "$root" --scope local
+      run claude plugin install flow42@flow42 --scope local --yes
+    fi
     ;;
   codex)
     require_command codex
@@ -59,7 +116,7 @@ case "$target" in
 esac
 
 if test "$mode" = --dry-run; then
-  echo "local $target installation plan verified"
+  echo "local $target installation plan generated; no harness mutation or install commands and no plugin validation were executed"
 else
   echo "local Flow42 installed for $target; restart the harness"
 fi

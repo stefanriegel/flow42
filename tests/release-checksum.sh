@@ -28,6 +28,7 @@ cp "$root/scripts/release-checksum.sh" scripts/release-checksum.sh
 fixture_fingerprint=$(ssh-keygen -lf "$tmp/signing-key.pub" | awk '{print $2}')
 sed "s|^trusted_fingerprint=.*|trusted_fingerprint=$fixture_fingerprint|" scripts/release-checksum.sh >scripts/release-checksum.sh.tmp
 mv scripts/release-checksum.sh.tmp scripts/release-checksum.sh
+cp scripts/release-checksum.sh "$tmp/trusted-release-checksum.sh"
 printf 'ambient@example.invalid %s\n' "$(cat "$tmp/signing-key.pub")" >"$tmp/ambient-signers"
 git config gpg.ssh.allowedSignersFile "$tmp/ambient-signers"
 
@@ -45,6 +46,38 @@ sh "$repo/scripts/release-checksum.sh" refs/tags/v1.0.1 "$tmp/one" >/dev/null
 sh "$repo/scripts/release-checksum.sh" refs/tags/v1.0.1 "$tmp/two" >/dev/null
 FLOW42_RELEASE_TRUST_REF=refs/tags/attacker \
   sh "$repo/scripts/release-checksum.sh" refs/tags/v1.0.1 "$tmp/ignored-override" >/dev/null
+
+# A candidate can make its own verifier accept its own key. The verifier retained
+# from the installed checkout must reject that same candidate while inspecting
+# the candidate repository's tag from the candidate repository's working tree.
+attacker_repo="$tmp/attacker-repo"
+git init -q "$attacker_repo"
+cd "$attacker_repo"
+git config user.name 'Flow42 attacker fixture'
+git config user.email 'attacker@example.invalid'
+git config gpg.format ssh
+ssh-keygen -q -t ed25519 -N '' -C attacker@example.invalid -f "$tmp/attacker-key"
+git config user.signingkey "$tmp/attacker-key"
+mkdir -p .github scripts .claude-plugin .codex-plugin
+awk -v identity="$identity" '{print identity, $0}' "$tmp/attacker-key.pub" >.github/allowed_signers
+cp "$root/scripts/release-checksum.sh" scripts/release-checksum.sh
+attacker_fingerprint=$(ssh-keygen -lf "$tmp/attacker-key.pub" | awk '{print $2}')
+sed "s|^trusted_fingerprint=.*|trusted_fingerprint=$attacker_fingerprint|" \
+  scripts/release-checksum.sh >scripts/release-checksum.sh.tmp
+mv scripts/release-checksum.sh.tmp scripts/release-checksum.sh
+for manifest in .claude-plugin/marketplace.json .claude-plugin/plugin.json .codex-plugin/plugin.json; do
+  printf '{"version":"1.0.1"}\n' >"$manifest"
+done
+git add .
+git commit -qm attacker-fixture
+git tag -s v1.0.1 -m 'attacker-controlled Flow42 1.0.1'
+sh scripts/release-checksum.sh refs/tags/v1.0.1 "$tmp/attacker-accepted" >/dev/null
+if sh "$tmp/trusted-release-checksum.sh" refs/tags/v1.0.1 \
+  "$tmp/attacker-rejected" >/dev/null 2>&1; then
+  echo 'trusted installed verifier accepted a candidate-controlled trust root' >&2
+  exit 1
+fi
+cd "$repo"
 
 first="$tmp/one/flow42-v1.0.1.tar"
 second="$tmp/two/flow42-v1.0.1.tar"

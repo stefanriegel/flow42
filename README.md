@@ -11,7 +11,9 @@ It has no executable or service of its own. You need an agent harness, Git, and
 `init → intent → spec → plan → build → verify → PR/MR → maintain`
 
 Use `update` to refresh Flow42 itself; it is a management command outside the
-work-item lifecycle.
+work-item lifecycle. An installation from before v2.0.0 has no `update` skill
+to run; remove its existing marketplace pin, then do that first upgrade by hand
+with the installation commands in [Installation](docs/INSTALLATION.md).
 
 ## Quickstart
 
@@ -44,6 +46,10 @@ Run `init` in the target repository, then pass the change you want to `flow`.
 Depending on the harness, commands appear as `/flow42:<stage>`,
 `flow42:<stage>`, or `/skill:<stage>`. Restart Claude Code or Codex after an
 install or update.
+
+For a development checkout, `scripts/install-local <harness> --dry-run` may
+run read-only discovery to select and print the real plan; no harness mutation
+or install commands and no plugin validation are executed.
 
 `init` checks the installation, repository, Git, and optional
 Orca readiness. It reports anything blocking before work begins.
