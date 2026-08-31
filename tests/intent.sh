@@ -58,10 +58,10 @@ check_intent_inventory() {
   intent_text=$(tr '\n' ' ' <"$1" | tr -s ' ')
   line_count=$(wc -l <"$1" | tr -d ' ')
 
-  test "$line_count" -ge 15 && test "$line_count" -le 60 || {
+  if test "$line_count" -lt 15 || test "$line_count" -gt 60; then
     echo "intent skill violates 15-60 line house style: $line_count" >&2
     intent_contract_failed=1
-  }
+  fi
   test "$(grep -c '^# ' "$1")" -eq 1 || {
     echo 'intent skill must have exactly one H1' >&2
     intent_contract_failed=1
