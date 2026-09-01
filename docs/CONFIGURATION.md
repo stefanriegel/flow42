@@ -33,16 +33,16 @@ are required. A command token that looks like a repository path must exist,
 unless the value is `[auto]`. `auto` values must be resolved into work-item
 evidence before build. Configuration does not require an approval artifact or
 Forge interaction. Never execute command strings through a shell; each array
-element is one argument, and empty or whitespace-bearing tokens are rejected as
-ambiguous. The command policy rejects shell evaluation, substitution and
-operators, declared mutation signatures, and any token whose ASCII-casefolded
-basename is `git`, `gh`, `glab`, or `terraform` in any argv position. This
-prevents a wrapper from reaching a control CLI it names. The mutation-signature
-matcher treats every token position as a potential executable, normalizes that
-token to its ASCII-casefolded basename, and rejects when the remaining signature
-tokens occur later in order. Authority-bearing executables and blocked launchers
-use the same normalization. This one rule catches named wrappers and
-intervening global options without parsing each CLI grammar. The
+element is one argument. Under the POSIX C locale, tokens are restricted to
+printable ASCII, while
+whitespace, commas, square brackets, and every dollar-bearing token are rejected.
+This excludes Unicode executable-name lookalikes and dollar-brace expansion.
+The command policy applies one ordered-signature matcher to authority-bearing
+executable singletons, blocked-launcher singletons, shell-evaluation signatures,
+and declared mutation signatures. Every token position is a potential
+executable; its basename is ASCII-casefolded, and the remaining signature tokens
+must occur later in order. This catches named wrappers and intervening global
+options without parsing each CLI grammar. The
 schema's shared read-only control-CLI allowlist is intentionally empty. Bare and
 path-qualified `xcrun` remains one blocked launcher because it can locate and
 execute a developer tool; this includes default run mode, `--run`/`-r`, SDK

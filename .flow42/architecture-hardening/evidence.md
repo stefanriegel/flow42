@@ -805,3 +805,72 @@ ShellCheck, JSON parsing, and `git diff --check` passed. The native-agent
 provenance probe remained opt-in and skipped; gitleaks, remote exact-head CI,
 authenticated Forge/provider observation, live harness/plugin mutation,
 release, and deployment remain separate unavailable proof tiers.
+
+### Final bounded remediation at `53e22ed`
+
+The pre-edit guard confirmed exact `HEAD`
+`53e22ed4d86badedfd1b6fd4aa07f8ed1c287ea5` and an empty
+`git status --short`. Baselines `sh tests/config-schema.sh`,
+`sh tests/ownership.sh`, and `sh tests/review-receipt.sh` all passed before the
+new adversarial coverage was introduced.
+
+The pre-implementation command reproducer accepted all of
+`[sh, -x, -c, echo]`, `[arch, -arm64, sh, -c, echo]`,
+`[arch, -arm64, Xcrun, --find, swift]`, long-s variants of `sh`, `bash`, and
+`shutdown`, and `[sh, tests/conformance.sh, ${IFS}git]`. After tests alone were
+added, the three focused reds were:
+
+- `CONFIG-SHELL-EVALUATION-SIGNATURE-ESCAPE: accepted [sh, -x, -c, echo]`;
+- `OWNERSHIP-BUILD-ORCA-EXACT-CONTEXT`; and
+- `review receipt accepted distinct NUL evidence bytes for digest extraction`.
+
+The repair routes blocked-launcher singletons, authority-bearing executable
+singletons, shell-evaluation signatures, and declared mutation signatures
+through `matches_ordered_signature` from any token with ASCII-casefolded
+basename and ordered remaining tokens. The inventories are unchanged; no
+launcher or full parser was added. Printable-ASCII tokens plus the bare-dollar
+rejection close long-s and `${IFS}` forms while preserving direct
+`[sh, tests/conformance.sh]`. APFS was only the reproducer: the implementation is
+portable POSIX C-locale matching with no Unicode library, OS branch, sandbox,
+extra launcher entry, or platform-specific runtime code.
+
+Primary-source disposition: Apple's APFS guide documents Unicode-aware
+normalization and case insensitivity on default macOS APFS, making the original
+lookalike an environment-specific reproducer. POSIX utility conventions keep
+portable utility names in the portable lowercase/digit set, while OWASP's
+command-injection guidance recommends positive character allowlists and
+separate argv. The implementation follows those portable principles rather
+than emulating any filesystem's Unicode folding.
+
+- Apple APFS filename behavior:
+  <https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/APFS_Guide/FAQ/FAQ.html>.
+- POSIX utility conventions:
+  <https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/V1_chap12.html>.
+- OWASP OS command-injection defense:
+  <https://cheatsheetseries.owasp.org/cheatsheets/OS_Command_Injection_Defense_Cheat_Sheet.html>.
+
+Receipt evidence and status files now pass through a checked `tr -d '\000'`
+copy plus `cmp` before marker extraction or YAML parsing. Executable mutations
+prove that distinct NUL-bearing evidence never reaches digest derivation and a
+NUL `change_request` cannot canonicalize as empty. The build skill now uses the
+exact Orca-provided context/worktree, requiring disjoint ownership and explicit
+scheduling/integration barriers for a current worktree. Ownership mutations
+cover isolated/separate-worktree drift plus permissive worker staging, push, and
+Forge writes without adding runtime enforcement or recursive snapshots.
+
+Green local evidence after implementation:
+
+- `sh tests/config-schema.sh`, `sh tests/ownership.sh`,
+  `sh tests/review-receipt.sh`, and `sh tests/contracts.sh` passed;
+- the focused configuration, ownership, and review-receipt suites also passed
+  under Dash and Ksh, exercising the same POSIX implementation;
+- `sh tests/security.sh` passed with the native-agent provenance probe explicitly
+  skipped, and `sh tests/update.sh` passed;
+- `sh scripts/validate.sh` and `sh scripts/check-parity.sh` passed;
+- `shellcheck scripts/*.sh scripts/install-local tests/*.sh` passed after the
+  intended literal `${IFS}` fixture received a local `SC2016` directive;
+- all repository JSON parsed with `jq -e .`, and `git diff --check` passed.
+
+This is local implementation evidence, not a fresh correctness/security review
+receipt. The worker did not stage, commit, change refs, push, mutate Forge,
+release, deploy, or delegate. `status.yml` was not transitioned.

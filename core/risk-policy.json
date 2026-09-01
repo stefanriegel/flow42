@@ -52,6 +52,12 @@
       "complete_nul_output_required": true,
       "downstream_success_may_mask_failure": false
     },
+    "nul_detection": {
+      "applies_to": ["evidence-section-extraction", "status-yaml-parsing"],
+      "method": "nul-stripped-copy-and-byte-compare",
+      "producer_exit_zero_required": true,
+      "reject_before_interpretation": true
+    },
     "review_expectation_derivation": {
       "review_kind": "caller-required-review-kind",
       "checks": "caller-required-exact-canonical-ordered-check-array-containing-policy-minimums",
@@ -64,6 +70,7 @@
       "end_marker": "<!-- flow42-review-section:<section-id>:end -->",
       "marker_cardinality": "exactly-one-ordered-pair",
       "digest_bytes": "exact-bytes-strictly-between-marker-lines-with-lf-line-terminators",
+      "nul_bytes": "reject-before-marker-extraction",
       "links": "reject"
     },
     "authenticated_derivation": {
@@ -84,6 +91,7 @@
       "quoted_keys": "reject",
       "unknown_keys": "reject",
       "unsupported_constructs": "reject",
+      "nul_bytes": "reject-before-parsing",
       "canonicalization": {
         "quoted_scalar": "unquote-without-escapes",
         "quoted_scalar_escapes": "reject",

@@ -215,3 +215,34 @@
   execution and ownership boundary.
 - Actor: coordinator, based on correctness task `task_b0c3ab54f3eb` and Claude
   Opus security task `task_d20d31e953ec` in Orca run `run_b5ab6e7b3014`.
+
+## 2026-09-01T15:40:23Z — close final parser and ownership alias gaps
+
+- Context: Review of clean head
+  `53e22ed4d86badedfd1b6fd4aa07f8ed1c287ea5` reproduced shell-signature
+  global-option escapes, `arch`-wrapped `sh`/`xcrun`, long-s executable
+  lookalikes first reproduced through APFS, dollar expansion, NUL evidence/status aliasing, and stale build
+  worktree wording. Ownership mutations also did not cover permissive worker
+  push and Forge-write statements.
+- Decision: Keep every executable/signature inventory unchanged and send all
+  authority, launcher, shell-evaluation, and mutation families through the
+  existing basename-casefolded ordered matcher. Restrict tokens to printable
+  ASCII and reject every dollar-bearing token. Reject NUL before evidence marker
+  extraction or status parsing with a checked NUL-stripped copy/byte comparison.
+  Bind build execution to Orca's exact selected context, and reject staging,
+  push, Forge-write, isolated-worktree, and separate-worktree prose drift.
+- Consequences: Safe direct `sh tests/...` argv remains valid. The command rule
+  remains a syntactic naming boundary, not a full parser or semantic sandbox;
+  the launcher list remains unchanged. The portable POSIX implementation uses
+  the C locale rather than Unicode normalization, OS branches, or platform-
+  specific runtime code. The NUL check is point-in-time input
+  validation and does not expand the existing file-identity claim. Recursive
+  Git snapshots and broader runtime enforcement remain out of scope.
+- Evidence basis: Apple documents Unicode-aware normalization and case
+  insensitivity for default macOS APFS, which explains the reproducer but is not
+  an implementation dependency. POSIX limits portable utility names to the
+  portable lowercase/digit character set, and OWASP recommends positive
+  character allowlists plus separate argv. These support the portable ASCII
+  boundary rather than OS-specific normalization.
+- Actor: dispatched Codex worker `task_b4787edf6b27` /
+  `ctx_91c404f68ce9`, under coordinator-owned integration.

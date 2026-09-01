@@ -564,10 +564,11 @@ validate_orca_context_and_delegation_claims() {
   architecture_contract=$2
   implementer_contract=$3
   threat_model_contract=$4
+  build_contract=$5
 
   for context_contract in "$ownership_contract" "$architecture_contract" \
-    "$implementer_contract" "$threat_model_contract"; do
-    if grep -Eiq 'isolated worktrees?' "$context_contract"; then
+    "$implementer_contract" "$threat_model_contract" "$build_contract"; do
+    if grep -Eiq '(isolated|separate)[ -]worktrees?' "$context_contract"; then
       printf '%s\n' 'OWNERSHIP-ORCA-ISOLATED-WORKTREE-CLAIM' >&2
       return 1
     fi
@@ -597,6 +598,17 @@ validate_orca_context_and_delegation_claims() {
     return 1
   }
 
+  tr '\n' ' ' <"$build_contract" |
+    grep -Eiq 'Orca-provided execution context.*exact worktree' || {
+    printf '%s\n' 'OWNERSHIP-BUILD-ORCA-EXACT-CONTEXT' >&2
+    return 1
+  }
+  tr '\n' ' ' <"$build_contract" |
+    grep -Eiq 'current worktree.*disjoint ownership.*barriers?' || {
+    printf '%s\n' 'OWNERSHIP-BUILD-CURRENT-WORKTREE-BARRIERS' >&2
+    return 1
+  }
+
   for delegation_contract in "$ownership_contract" "$architecture_contract" \
     "$threat_model_contract"; do
     tr '\n' ' ' <"$delegation_contract" |
@@ -621,6 +633,26 @@ validate_orca_context_and_delegation_claims() {
     printf '%s\n' 'OWNERSHIP-DELEGATION-FALSE-NATIVE-PROOF' >&2
     return 1
   fi
+}
+
+validate_worker_authority_claims() {
+  for authority_contract in "$@"; do
+    if tr '\n' ' ' <"$authority_contract" |
+      grep -Eiq 'workers? (may|can|are allowed to|are permitted to).*(stage|staging|git add)'; then
+      printf '%s\n' 'OWNERSHIP-WORKER-STAGING-EXCEPTION' >&2
+      return 1
+    fi
+    if tr '\n' ' ' <"$authority_contract" |
+      grep -Eiq 'workers? (may|can|are allowed to|are permitted to).*(push|force-push)'; then
+      printf '%s\n' 'OWNERSHIP-WORKER-PUSH-EXCEPTION' >&2
+      return 1
+    fi
+    if tr '\n' ' ' <"$authority_contract" |
+      grep -Eiq 'workers? (may|can|are allowed to|are permitted to).*(Forge write|write to Forge|Forge mutation)'; then
+      printf '%s\n' 'OWNERSHIP-WORKER-FORGE-WRITE-EXCEPTION' >&2
+      return 1
+    fi
+  done
 }
 
 git init -q "$repo"
@@ -1079,7 +1111,11 @@ validate_external_alternate_claims "$root/core/OWNERSHIP.md" \
   "$root/docs/ARCHITECTURE.md" "$root/evidence/security/threat-model.md"
 validate_orca_context_and_delegation_claims "$root/core/OWNERSHIP.md" \
   "$root/docs/ARCHITECTURE.md" "$root/agents/implementer.md" \
-  "$root/evidence/security/threat-model.md"
+  "$root/evidence/security/threat-model.md" "$root/skills/build/SKILL.md"
+validate_worker_authority_claims "$root/core/OWNERSHIP.md" \
+  "$root/docs/ARCHITECTURE.md" "$root/agents/implementer.md" \
+  "$root/evidence/security/threat-model.md" "$root/skills/build/SKILL.md" \
+  "$root/core/SECURITY.md"
 
 cp "$root/evidence/security/threat-model.md" \
   "$tmp/mutated-external-alternate-inert.md"
@@ -1096,8 +1132,19 @@ printf '%s\n' 'Workers receive bounded slices in isolated worktrees.' \
   >>"$tmp/mutated-isolated-worktree.md"
 if validate_orca_context_and_delegation_claims "$root/core/OWNERSHIP.md" \
   "$tmp/mutated-isolated-worktree.md" "$root/agents/implementer.md" \
-  "$root/evidence/security/threat-model.md" >/dev/null 2>&1; then
+  "$root/evidence/security/threat-model.md" "$root/skills/build/SKILL.md" \
+  >/dev/null 2>&1; then
   fail OWNERSHIP-MUTATION-ORCA-ISOLATED-WORKTREE-ACCEPTED
+fi
+
+cp "$root/skills/build/SKILL.md" "$tmp/mutated-separate-worktree.md"
+printf '%s\n' 'Assign workers to separate worktrees.' \
+  >>"$tmp/mutated-separate-worktree.md"
+if validate_orca_context_and_delegation_claims "$root/core/OWNERSHIP.md" \
+  "$root/docs/ARCHITECTURE.md" "$root/agents/implementer.md" \
+  "$root/evidence/security/threat-model.md" \
+  "$tmp/mutated-separate-worktree.md" >/dev/null 2>&1; then
+  fail OWNERSHIP-MUTATION-ORCA-SEPARATE-WORKTREE-ACCEPTED
 fi
 
 cp "$root/evidence/security/threat-model.md" \
@@ -1106,7 +1153,8 @@ printf '%s\n' 'Native execution always proves the worker did not delegate.' \
   >>"$tmp/mutated-native-delegation-proof.md"
 if validate_orca_context_and_delegation_claims "$root/core/OWNERSHIP.md" \
   "$root/docs/ARCHITECTURE.md" "$root/agents/implementer.md" \
-  "$tmp/mutated-native-delegation-proof.md" >/dev/null 2>&1; then
+  "$tmp/mutated-native-delegation-proof.md" "$root/skills/build/SKILL.md" \
+  >/dev/null 2>&1; then
   fail OWNERSHIP-MUTATION-NATIVE-DELEGATION-PROOF-ACCEPTED
 fi
 
@@ -1116,8 +1164,39 @@ printf '%s\n' 'Block integration when the worker launched a delegate.' \
 if validate_orca_context_and_delegation_claims \
   "$tmp/mutated-unqualified-delegation.md" "$root/docs/ARCHITECTURE.md" \
   "$root/agents/implementer.md" "$root/evidence/security/threat-model.md" \
+  "$root/skills/build/SKILL.md" \
   >/dev/null 2>&1; then
   fail OWNERSHIP-MUTATION-UNQUALIFIED-DELEGATION-ACCEPTED
+fi
+
+cp "$root/evidence/security/threat-model.md" "$tmp/mutated-worker-staging.md"
+printf '%s\n' 'Workers may stage an exact owned path after implementation.' \
+  >>"$tmp/mutated-worker-staging.md"
+if validate_worker_authority_claims "$root/core/OWNERSHIP.md" \
+  "$root/docs/ARCHITECTURE.md" "$root/agents/implementer.md" \
+  "$tmp/mutated-worker-staging.md" "$root/skills/build/SKILL.md" \
+  "$root/core/SECURITY.md" >/dev/null 2>&1; then
+  fail OWNERSHIP-MUTATION-WORKER-STAGING-ACCEPTED
+fi
+
+cp "$root/skills/build/SKILL.md" "$tmp/mutated-worker-push.md"
+printf '%s\n' 'Workers may push owned branches after local checks pass.' \
+  >>"$tmp/mutated-worker-push.md"
+if validate_worker_authority_claims "$root/core/OWNERSHIP.md" \
+  "$root/docs/ARCHITECTURE.md" "$root/agents/implementer.md" \
+  "$root/evidence/security/threat-model.md" "$tmp/mutated-worker-push.md" \
+  "$root/core/SECURITY.md" >/dev/null 2>&1; then
+  fail OWNERSHIP-MUTATION-WORKER-PUSH-ACCEPTED
+fi
+
+cp "$root/docs/ARCHITECTURE.md" "$tmp/mutated-worker-forge-write.md"
+printf '%s\n' 'Workers may perform Forge writes within owned scope.' \
+  >>"$tmp/mutated-worker-forge-write.md"
+if validate_worker_authority_claims "$root/core/OWNERSHIP.md" \
+  "$tmp/mutated-worker-forge-write.md" "$root/agents/implementer.md" \
+  "$root/evidence/security/threat-model.md" "$root/skills/build/SKILL.md" \
+  "$root/core/SECURITY.md" >/dev/null 2>&1; then
+  fail OWNERSHIP-MUTATION-WORKER-FORGE-WRITE-ACCEPTED
 fi
 
 cp "$root/core/OWNERSHIP.md" "$tmp/mutated-newline.md"

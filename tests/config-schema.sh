@@ -16,12 +16,18 @@ jq -e '.fields.base_branch.validation == "git-check-ref-format---branch" and
   .command_policy.blocked_launcher_executables == ["xcrun"] and
   .command_policy.blocked_launcher_executables_exhaustive == false and
   .command_policy.read_only_control_cli_allowlist == [] and
-  .command_policy.disallowed_mutation_signature_match == {
+  .command_policy.ordered_signature_match == {
     "executable_position": "any-token-position",
     "executable_normalization": "basename-ascii-casefold",
     "remaining_signature_tokens": "ordered-subsequence"
   } and
-  (.command_policy.token_pattern | type == "string" and length > 0) and
+  .command_policy.ordered_signature_families == [
+    "authority-bearing-executable-singletons",
+    "blocked-launcher-singletons",
+    "shell-evaluation-signatures",
+    "declared-mutation-signatures"
+  ] and
+  .command_policy.token_pattern == "^[!-~]+$" and
   (.command_policy.shell_evaluation_prefixes | type == "array" and length > 0) and
   (.command_policy.disallowed_mutation_prefixes | type == "array" and length > 0) and
   (.command_policy.forbidden_token_pattern | type == "string" and length > 0)' "$schema" >/dev/null || {
@@ -97,32 +103,25 @@ validate_command() {
   tokens=$(printf '%s\n' "$value" | sed 's/^\[//; s/\]$//' | tr ',' '\n' |
     sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
   token_pattern=$(jq -r '.command_policy.token_pattern' "$schema")
-  if printf '%s\n' "$tokens" | grep -Ev "$token_pattern" >/dev/null; then
+  if printf '%s\n' "$tokens" | LC_ALL=C grep -Ev "$token_pattern" >/dev/null; then
     fail CONFIG-COMMAND-TOKEN
     return
   fi
-  first=$(printf '%s\n' "$tokens" | sed -n '1p')
-  first=${first##*/}
-  first=$(printf '%s' "$first" | LC_ALL=C tr '[:upper:]' '[:lower:]')
-  canonical=$(printf '%s\n' "$tokens" | awk -v first="$first" 'NR == 1 {$0=first} {if (NR > 1) printf "\t"; printf "%s", $0} END {print ""}')
-
-  if jq -e --arg executable "$first" \
-    '.command_policy.blocked_launcher_executables | index($executable) != null' \
-    "$schema" >/dev/null; then
-    fail CONFIG-COMMAND-LAUNCHER
-    return
-  fi
-  while IFS= read -r token; do
-    executable=${token##*/}
-    executable=$(printf '%s' "$executable" | LC_ALL=C tr '[:upper:]' '[:lower:]')
-    if jq -e --arg executable "$executable" \
-      '.command_policy.authority_bearing_executables | index($executable) != null' \
-      "$schema" >/dev/null; then
+  while IFS= read -r signature; do
+    if matches_ordered_signature "$tokens" "$signature"; then
+      fail CONFIG-COMMAND-LAUNCHER
+      return
+    fi
+  done <<EOF
+$(jq -r '.command_policy.blocked_launcher_executables[]' "$schema")
+EOF
+  while IFS= read -r signature; do
+    if matches_ordered_signature "$tokens" "$signature"; then
       fail CONFIG-COMMAND-CONTROL-CLI
       return
     fi
   done <<EOF
-$tokens
+$(jq -r '.command_policy.authority_bearing_executables[]' "$schema")
 EOF
 
   forbidden_pattern=$(jq -r '.command_policy.forbidden_token_pattern' "$schema")
@@ -130,8 +129,11 @@ EOF
     fail CONFIG-COMMAND-SHELL-EVAL
     return
   fi
-  while IFS= read -r prefix; do
-    case "$canonical" in "$prefix" | "$prefix""$(printf '\t')"*) fail CONFIG-COMMAND-SHELL-EVAL; return ;; esac
+  while IFS= read -r signature; do
+    if matches_ordered_signature "$tokens" "$signature"; then
+      fail CONFIG-COMMAND-SHELL-EVAL
+      return
+    fi
   done <<EOF
 $(jq -r '.command_policy.shell_evaluation_prefixes[] | @tsv' "$schema")
 EOF
@@ -327,6 +329,56 @@ for control_cli_argv in \
   grep -Fxq CONFIG-COMMAND-CONTROL-CLI "$control_cli_log"
 done
 
+shell_evaluation_case=0
+for shell_evaluation_argv in \
+  '[sh, -x, -c, echo]' \
+  '[arch, -arm64, sh, -x, -c, echo]' \
+  '[arch, -arm64, bash, --noprofile, -c, echo]'; do
+  shell_evaluation_case=$((shell_evaluation_case + 1))
+  shell_evaluation_log="$tmp/shell-evaluation-signature-$shell_evaluation_case.log"
+  shell_evaluation_rc=0
+  (set +e; validate_command "$shell_evaluation_argv") >"$shell_evaluation_log" 2>&1 ||
+    shell_evaluation_rc=$?
+  if test "$shell_evaluation_rc" -eq 0; then
+    echo "CONFIG-SHELL-EVALUATION-SIGNATURE-ESCAPE: accepted $shell_evaluation_argv" >&2
+    exit 1
+  fi
+  test "$(grep -c '^CONFIG-' "$shell_evaluation_log")" -eq 1
+  grep -Fxq CONFIG-COMMAND-SHELL-EVAL "$shell_evaluation_log"
+done
+
+token_grammar_case=0
+for token_grammar_argv in \
+  '[ſh, -c, echo]' \
+  '[baſh, -c, echo]' \
+  '[ſhutdown, -h, now]'; do
+  token_grammar_case=$((token_grammar_case + 1))
+  token_grammar_log="$tmp/token-grammar-$token_grammar_case.log"
+  token_grammar_rc=0
+  (set +e; validate_command "$token_grammar_argv") >"$token_grammar_log" 2>&1 ||
+    token_grammar_rc=$?
+  if test "$token_grammar_rc" -eq 0; then
+    echo "CONFIG-NON-ASCII-TOKEN-ESCAPE: accepted $token_grammar_argv" >&2
+    exit 1
+  fi
+  test "$(grep -c '^CONFIG-' "$token_grammar_log")" -eq 1
+  grep -Fxq CONFIG-COMMAND-TOKEN "$token_grammar_log"
+done
+
+# Literal expansion syntax is the adversarial input.
+# shellcheck disable=SC2016
+dollar_expansion_argv='[sh, tests/conformance.sh, ${IFS}git]'
+dollar_expansion_log="$tmp/dollar-expansion.log"
+dollar_expansion_rc=0
+(set +e; validate_command "$dollar_expansion_argv") >"$dollar_expansion_log" 2>&1 ||
+  dollar_expansion_rc=$?
+if test "$dollar_expansion_rc" -eq 0; then
+  echo "CONFIG-DOLLAR-EXPANSION-ESCAPE: accepted $dollar_expansion_argv" >&2
+  exit 1
+fi
+test "$(grep -c '^CONFIG-' "$dollar_expansion_log")" -eq 1
+grep -Fxq CONFIG-COMMAND-SHELL-EVAL "$dollar_expansion_log"
+
 mutation_signature_case=0
 for mutation_signature_argv in \
   '[arch, -arm64, /bin/rm, -rf, build]' \
@@ -386,6 +438,8 @@ xcrun_case=0
 for xcrun_argv in \
   '[/usr/bin/xcrun, git, push]' \
   '[Xcrun, git, push]' \
+  '[arch, -arm64, Xcrun, --find, swift]' \
+  '[arch, -x86_64, /usr/bin/xcrun, --sdk, macosx, --find, swift]' \
   '[xcrun, --run, git, push]' \
   '[xcrun, -r, git, push]' \
   '[xcrun, --sdk, macosx, git, push]' \

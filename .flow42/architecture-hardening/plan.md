@@ -270,3 +270,34 @@ names or parse CLI grammars. One text-conformance mutation also binds the
 update instruction that rejects unexpected Git configuration and repository
 environment overrides. Fresh exact-head correctness and security reviews are
 required after this repair.
+
+### Final bounded remediation of the `53e22ed` review
+
+The next blocked exact-head review found adjacent gaps in the same bounded
+interfaces: shell and launcher signatures were not all routed through the
+ordered matcher; command tokens admitted Unicode executable lookalikes and
+dollar expansion; review evidence/status parsing admitted NUL aliasing; and the
+build skill plus ownership mutations did not fully bind Orca-selected context or
+worker staging, push, and Forge-write prohibitions.
+
+- Execution context: Orca-provided current worktree
+  `/Users/sr/orca/flow42`, exact base
+  `53e22ed4d86badedfd1b6fd4aa07f8ed1c287ea5`, task
+  `task_b4787edf6b27`, dispatch `ctx_91c404f68ce9`; one Codex worker,
+  `delegation_allowed: false`, no overlapping worker schedule.
+- Owned paths: only the command schema/docs/tests, receipt policy/verify/
+  contract/security/tests, build/ownership/threat-model/tests, and this work
+  item's `plan.md`, `decisions.md`, and `evidence.md`.
+- Inputs: the coordinator-supplied blocked findings, the unchanged command
+  inventories, the existing `matches_ordered_signature` matcher, and the exact
+  current ownership/review contracts. Output is an unstaged worker report with
+  exact changed paths and red/green local evidence.
+- Implementation boundary: reuse the ordered matcher for all four rejection
+  families; use printable-ASCII/direct-argv grammar rather than a parser or new
+  launcher entry; reject NUL before interpretation with a checked portable byte
+  comparison; bind the build skill to Orca's selected worktree and extend only
+  structural mutation coverage. Do not add recursive Git snapshots or broader
+  runtime enforcement.
+- Integration barrier: the coordinator owns staging and all later integration.
+  This repair records no lifecycle transition; `status.yml` remains unchanged
+  and fresh independent exact-head reviews are still required.
