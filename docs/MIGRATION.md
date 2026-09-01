@@ -37,3 +37,19 @@ commands to direct-argv token arrays, and remove or correct command path tokens
 that do not exist. Record the migration and its validation result in
 `decisions.md`; configuration migration itself needs no approval artifact or
 Forge interaction.
+
+## Review receipt schema 1 to 2
+
+Receipt schema version 2 adds caller-required `review_kind`, exact canonical
+ordered checks containing the policy minimums, exact in-work-item evidence
+section reference and byte digest, and resolver-bound `recorded_at` for every
+issuer. The local fallback additionally requires a resolver-observed distinct
+session. The evidence file is derived from canonical repository/work identity;
+the report is enclosed by one unique ordered literal marker pair, and the digest
+covers the LF-terminated bytes strictly between those lines. Version 1 receipts are
+not accepted or mechanically rewritten: rerun the independent correctness or
+security review against the current exact head and issue a new version 2
+receipt. Keep `status.yml.change_request` present but empty; persist provider,
+redacted canonical PR/MR URL, request ID, source branch, pushed/reviewed heads,
+observation time, and authenticated CLI readback in `evidence.md` only as a
+non-authoritative observation that must be revalidated live.

@@ -43,6 +43,16 @@ sync_settings_scope() {
 
 fail_phase=${FAKE_FAIL_PHASE:-before}
 command_line=$*
+if test -n "${FAKE_EXPECT_PROJECT_ROOT:-}"; then
+  fake_expected_project=$(CDPATH=''; export CDPATH
+    cd -- "$FAKE_EXPECT_PROJECT_ROOT" && pwd -P)
+else
+  fake_expected_project=
+fi
+if test -n "$fake_expected_project" && test "$PWD" != "$fake_expected_project"; then
+  printf '%s\n' "Claude command ran from $PWD instead of the selected project" >&2
+  exit 3
+fi
 if test -n "${FAKE_COMMAND_LOG:-}"; then
   printf '%s\n' "$command_line" >>"$FAKE_COMMAND_LOG"
 fi
@@ -178,14 +188,46 @@ case "$command_key" in
   'plugin marketplace list')
     fail_after_effect_if_requested
     jq '[.declarations | to_entries[] |
-      {name:"flow42", source:.value.source} + .value
+      {name:"flow42", source:.value.source,
+       installLocation:(env.FAKE_MARKETPLACE_INSTALL_PATH // "")} + .value
     ]' "$FAKE_STATE"
     ;;
   'plugin list --json')
     fail_after_effect_if_requested
-    jq '[.installs | to_entries[] |
-      {id:"flow42@flow42", scope:.key, version:.value}
-    ]' "$FAKE_STATE"
+    jq --arg current_project "${FAKE_CURRENT_PROJECT_PATH:-$PWD}" \
+      --arg foreign_project "${FAKE_FOREIGN_LOCAL_PROJECT_PATH:-}" \
+      --arg foreign_version "${FAKE_FOREIGN_LOCAL_VERSION:-1.0.1}" '
+      [.installs | to_entries[] |
+        {id:"flow42@flow42", scope:.key, version:.value,
+         installPath:(
+           if .key == "user" then
+             (env.FAKE_PLUGIN_INSTALL_PATH_USER // env.FAKE_PLUGIN_INSTALL_PATH // "")
+           else
+             (env.FAKE_PLUGIN_INSTALL_PATH_LOCAL // env.FAKE_PLUGIN_INSTALL_PATH // "")
+           end
+         )} +
+         (if (.key == "project" or .key == "local")
+          then {projectPath:$current_project} else {} end)
+      ] +
+      (if $foreign_project == "" then [] else [{
+        id:"flow42@flow42", scope:"local", version:$foreign_version,
+        projectPath:$foreign_project,
+        installPath:(env.FAKE_FOREIGN_PLUGIN_INSTALL_PATH // "")
+      }] end)
+    ' "$FAKE_STATE"
+    if test -n "${FAKE_PLUGIN_LIST_COUNTER:-}"; then
+      fake_list_count=0
+      if test -f "$FAKE_PLUGIN_LIST_COUNTER"; then
+        fake_list_count=$(sed -n '1p' "$FAKE_PLUGIN_LIST_COUNTER")
+      fi
+      fake_list_count=$((fake_list_count + 1))
+      printf '%s\n' "$fake_list_count" >"$FAKE_PLUGIN_LIST_COUNTER"
+      if test -n "${FAKE_MUTATE_PLUGIN_AFTER_LIST_COUNT:-}" &&
+         test "$fake_list_count" -eq "$FAKE_MUTATE_PLUGIN_AFTER_LIST_COUNT"; then
+        printf '%s\n' 'concurrent substituted cache bytes' \
+          >"${FAKE_MUTATE_PLUGIN_PAYLOAD_PATH:?set mutation payload path}"
+      fi
+    fi
     ;;
   *)
     printf 'unsupported fake Claude command:' >&2

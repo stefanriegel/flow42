@@ -69,3 +69,58 @@
 - Consequences: Unknown or unsupported syntax blocks execution; the migration
   creates no approval artifact and grants no Forge authority.
 - Actor: coordinator.
+
+## 2026-09-01T08:32:38Z — explicit human resume after review-limit block
+
+- Context: Revision 10 blocked the work item after two automatic verification
+  repair loops, with four independently reproduced HIGH findings.
+- Decision: The user's instruction to work on the discovered blockers explicitly
+  authorizes another reversible local repair cycle under Orca orchestration.
+- Constraints: Preserve `review_loops: 2`; keep lifecycle stage `blocked` until
+  every recorded blocker is resolved; use Codex workers with disjoint ownership;
+  require fresh exact-head independent correctness and security review.
+- Scope: Local files, disposable fixtures, read-only official documentation and
+  CLI discovery, tests, and normal commits. No push, PR/MR, merge, release,
+  deployment, destructive recovery, or Forge mutation is authorized.
+- Actor: user request, recorded by coordinator.
+
+## 2026-09-01T10:07:27Z — fail-closed blocker repair boundaries
+
+- Context: The resumed Codex implementations and three read-only adversarial
+  audits found that finite Git-admin manifests, self-asserted local receipts,
+  string-only update readback, and an undocumented blanket cache exclusion could
+  not support the claimed boundaries.
+- Decision: Snapshot complete Git administrative trees with no exclusions;
+  require independent resolver binding for every receipt tier; compare exact
+  fetched and installed trees to the verified candidate from the canonical
+  project identity; and allow only validated Claude decimal-PID JSON runtime
+  markers outside the installed plugin tree identity.
+- Evidence basis: Official Git documentation makes repository-local ignore,
+  attribute, alternates, reflog, hook, and other administrative surfaces
+  behavior-affecting. Official Claude documentation establishes copied,
+  versioned plugin caches and project/user/local scope semantics. The observed
+  `.in_use/<pid>` JSON shape is corroborating implementation evidence from the
+  Anthropic issue tracker, not a documented stable vendor API.
+- Consequences: Unknown Git-admin state and malformed runtime metadata fail
+  closed. Two consecutive cache observations close the reproduced update race
+  but are not described as atomic or durable immutability; a same-user writer
+  after the final observation remains a disclosed residual risk.
+- Actor: coordinator, based on Orca Codex implementation/audit results and
+  primary-source review.
+
+## 2026-09-01T10:24:09Z — integration self-review hardening
+
+- Context: Coordinator review before the exact-head commit found that a receipt
+  test could hash a separately supplied file while claiming an in-work-item
+  evidence reference, and that Claude source/settings/runtime-marker inputs had
+  adjacent link and grammar ambiguity not covered by the original blockers.
+- Decision: Derive the evidence file from canonical repository/work identity and
+  delimit each report by one unique ordered literal marker pair. Canonicalize the
+  Claude config root for every CLI call; reject linked/multiply linked settings,
+  irreproducible or option-shaped source objects, and linked, malformed, or
+  invalid-hour runtime markers.
+- Consequences: The receipt artifact has an executable reference-to-bytes
+  mapping, and preflight stops before candidate discovery or harness mutation
+  when rollback cannot reproduce the inspected declaration. These controls do
+  not turn the mutable vendor cache into an atomic store.
+- Actor: coordinator self-review; no additional worker or Forge mutation.

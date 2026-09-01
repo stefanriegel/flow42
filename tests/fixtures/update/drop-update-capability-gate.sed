@@ -1,1 +1,1 @@
-/^if ! claude plugin update --help/,/^fi$/d
+/^if ! flow42_claude_cli plugin update --help/,/^fi$/d

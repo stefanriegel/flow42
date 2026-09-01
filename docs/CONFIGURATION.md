@@ -37,12 +37,16 @@ element is one argument, and empty or whitespace-bearing tokens are rejected as
 ambiguous. The command policy rejects shell evaluation, substitution and
 operators, destructive or wrapper-obscured commands, and every bare or
 path-qualified `git`, `gh`, `glab`, or `terraform` executable. The schema's
-shared read-only control-CLI allowlist is intentionally empty; adding an
-exception requires a new executable proof that the exact argv cannot mutate
-Git, Forge, or infrastructure state. This syntactic policy does not make an
-arbitrary repository script trustworthy or semantically sandboxed; configured
-project tools still run inside the normal worker, ownership, and capability
-boundary.
+shared read-only control-CLI allowlist is intentionally empty. Bare and
+path-qualified `xcrun` is also blocked for every option form because it can
+locate and execute an authority-bearing developer tool such as `git`; this
+includes default run mode, `--run`/`-r`, SDK selection, and toolchain selection.
+Adding a control-CLI or launcher exception requires a new executable proof that
+the exact argv cannot mutate Git, Forge, or infrastructure state. This explicit
+launcher denylist is not a semantic sandbox: an arbitrary repository script,
+executable, or renamed launcher may still delegate or mutate state. Configured
+project tools therefore still run inside the normal worker, ownership, and
+capability boundary.
 
 The accepted YAML subset is deliberate: plain unquoted single-line scalars,
 two-space-indented mappings, inline comma-separated plain token arrays, and

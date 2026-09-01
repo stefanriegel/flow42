@@ -39,9 +39,13 @@ jq -e '.automatic_review_limit == 2' "$risk" >/dev/null
 jq -e '.human_approval.accountable_approvers_per_gate == 1 and .human_approval.second_human_required == false and (.human_approval | has("authenticated_provenance_required") | not)' "$risk" >/dev/null
 jq -e '
   .independent_review.implementer_may_review == false and
-  .independent_review.receipt_schema_version == 1 and
+  .independent_review.receipt_schema_version == 2 and
+  .independent_review.review_kinds == ["correctness", "security"] and
+  .independent_review.status_yaml_subset.change_request_policy == "reserved-empty-for-schema-compatibility" and
   .independent_review.strongest_available_issuer_required == true and
-  .independent_review.fallback_when_no_distinct_forge_reviewer == "local-independent-pass-receipt" and
+  .independent_review.fallback_when_no_distinct_forge_reviewer == "resolved-distinct-local-session-receipt" and
+  .independent_review.issuer_resolution.required_for == ["authenticated-forge", "trusted-orchestrator", "local-independent-pass"] and
+  .independent_review.forge_link_authority.persisted_observation_is_authority == false and
   .independent_review.receipt_neutral_paths == ["evidence.md", "decisions.md", "history.jsonl", "status.yml"] and
   .independent_review.grants_human_approval == false
 ' "$risk" >/dev/null

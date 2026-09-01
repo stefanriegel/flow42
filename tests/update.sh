@@ -38,7 +38,9 @@ assert_trusted_release_instructions() {
   grep -Fq 'shasum -a 256 -c "$(basename "$checksum_file")"' "$skill" || return 1
   grep -Fq 'verified_repository_url=$repository_url' "$skill" || return 1
   grep -Fq 'verified_candidate_commit=$(git -C "$candidate_repo" rev-parse' "$skill" || return 1
+  grep -Fq 'verified_candidate_tree=$(git -C "$candidate_repo" rev-parse' "$skill" || return 1
   grep -Fq 'verified_candidate_archive_digest=$(awk' "$skill" || return 1
+  test "$(grep -Fc 'find "$candidate_repo" -depth -delete' "$skill")" -eq 1 || return 1
   if grep -Fq 'FLOW42_VERIFIED_SOURCE_ID' "$skill"; then
     echo 'update skill: candidate repository identity is caller-supplied' >&2
     return 1
@@ -75,10 +77,10 @@ assert_trusted_release_instructions() {
         exit 1
       }
 
-      require_after_verification("claude plugin marketplace remove")
-      require_after_verification("claude plugin marketplace add")
-      require_after_verification("claude plugin install")
-      require_after_verification("claude plugin update")
+      require_after_verification("flow42_claude_cli plugin marketplace remove")
+      require_after_verification("flow42_claude_cli plugin marketplace add")
+      require_after_verification("flow42_claude_cli plugin install")
+      require_after_verification("flow42_claude_cli plugin update")
       require_after_verification("codex plugin marketplace remove")
       require_after_verification("codex plugin marketplace add")
       require_after_verification("codex plugin add")
@@ -114,19 +116,30 @@ assert_claude_scope_instructions() {
   grep -Fq '${recorded_marketplace_source:?run the Claude preflight in this same shell first}' "$skill" || return 1
   grep -Fq 'target_marketplace_source=${flow42_target_source_repo}@${flow42_target_source_ref}' "$skill" || return 1
   grep -Fq 'target_marketplace_source=${flow42_target_source_url}#${flow42_target_source_ref}' "$skill" || return 1
-  grep -Fq 'claude plugin marketplace add "$target_marketplace_source" --scope "$marketplace_scope"' "$skill" || return 1
-  grep -Fq 'claude plugin marketplace add "$recorded_marketplace_source" --scope "$marketplace_scope"' "$skill" || return 1
+  grep -Fq 'flow42_claude_cli plugin marketplace add "$target_marketplace_source" --scope "$marketplace_scope"' "$skill" || return 1
+  grep -Fq 'flow42_claude_cli plugin marketplace add "$recorded_marketplace_source" --scope "$marketplace_scope"' "$skill" || return 1
   grep -Fq 'recorded_marketplace_removed=false' "$skill" || return 1
   grep -Fq 'target_marketplace_added=false' "$skill" || return 1
   grep -Fq '${declaring_settings_file:?run the Claude preflight in this same shell first}' "$skill" || return 1
   grep -Fq 'if test "$target_marketplace_added" = true; then' "$skill" || return 1
   grep -Fq 'test "$recorded_marketplace_removed" = true; then' "$skill" || return 1
-  test "$(grep -Fc 'claude plugin marketplace remove flow42 --scope "$marketplace_scope"' "$skill")" -ge 2 || return 1
-  test "$(grep -Fc 'claude plugin install flow42@flow42 --scope "$plugin_scope" -y' "$skill")" -ge 2 || return 1
-  test "$(grep -Fc 'claude plugin update flow42@flow42 --scope "$plugin_scope" -y' "$skill")" -ge 2 || return 1
+  test "$(grep -Fc 'flow42_claude_cli plugin marketplace remove flow42 --scope "$marketplace_scope"' "$skill")" -ge 2 || return 1
+  test "$(grep -Fc 'flow42_claude_cli plugin install flow42@flow42 --scope "$plugin_scope" -y' "$skill")" -ge 2 || return 1
+  test "$(grep -Fc 'flow42_claude_cli plugin update flow42@flow42 --scope "$plugin_scope" -y' "$skill")" -ge 2 || return 1
   grep -Fq 'object to deep-equal the recorded source' "$skill" || return 1
   grep -Fq 'require every selected `version` to equal that target version' "$skill" || return 1
   grep -Fq 'A single marketplace pin cannot soundly restore' "$skill" || return 1
+  grep -Fq 'flow42_claude_attest_tree() {' "$skill" || return 1
+  grep -Fq '.installLocation' "$skill" || return 1
+  grep -Fq '.installPath' "$skill" || return 1
+  grep -Fq '"$verified_candidate_tree" marketplace' "$skill" || return 1
+  grep -Fq '"$verified_candidate_tree" plugin' "$skill" || return 1
+  grep -Fq 'recorded_plugin_targets_json=' "$skill" || return 1
+  grep -Fq '.projectPath == $project' "$skill" || return 1
+  grep -Fq 'cd -- "$project_root" && claude "$@"' "$skill" || return 1
+  grep -Fq -- '--template="$empty_git_template"' "$skill" || return 1
+  grep -Fq '* -text -filter -ident -working-tree-encoding' "$skill" || return 1
+  grep -Fq 'two consecutive point-in-time marketplace/plugin cache observations' "$skill" || return 1
   if grep -Fq '<owner>/<repo>#<tag>' "$skill"; then
     echo 'update skill: Claude GitHub shorthand uses obsolete #ref syntax' >&2
     return 1
@@ -140,6 +153,9 @@ assert_claude_declaration_safety() {
   grep -Fq 'Require exactly one declaring scope;' "$skill" || return 1
   grep -Fq 'stop before mutation and report the exact declaring scopes' "$skill" || return 1
   grep -Fq 'from the settings source object, not' "$skill" || return 1
+  grep -Fq 'Reject linked or multiply linked settings' "$skill" || return 1
+  grep -Fq 'Accept only the exact supported source object shapes' "$skill" || return 1
+  grep -Fq 'unsupported or invalid flow42 marketplace source declaration' "$skill" || return 1
 }
 
 assert_claude_declaration_safety "$root/skills/update/SKILL.md"
@@ -326,10 +342,13 @@ extract_claude_composed_flow() {
     # shellcheck disable=SC2016
     printf '%s\n' 'verified_repository_url=$repository_url' >>"$composed_output"
   fi
+  # shellcheck disable=SC2016
   printf '%s\n' \
     'verified_tag=v1.0.2' \
     'verified_candidate_plugin_version=1.0.2' \
     'verified_candidate_commit=2222222222222222222222222222222222222222' \
+    'verified_candidate_tree=${FLOW42_VERIFIED_CANDIDATE_TREE:?set the verified candidate tree fixture}' \
+    'verified_candidate_object_format=sha1' \
     'verified_candidate_archive_digest=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb' \
     >>"$composed_output"
   if test "$verified_repository_mode" = postcondition-failure; then
@@ -371,14 +390,13 @@ run_stateful_update_scenario() {
   }' >"$settings_file"
   update_output=$(FAKE_PRESERVE_INSTALLS_ON_REMOVE=$preserve_installs \
     CLAUDE_CONFIG_DIR=$config_root FLOW42_PROJECT_ROOT=$project_root \
+    FAKE_EXPECT_PROJECT_ROOT=$project_root \
     FAKE_SETTINGS_FILE=$settings_file \
     FAKE_STATE=$state \
     PATH="$stateful_bin:$PATH" \
     sh -e "$instructions")
   printf '%s\n' "$update_output" | grep -Fq \
-    'candidate commit 2222222222222222222222222222222222222222; candidate archive digest bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
-  printf '%s\n' "$update_output" | grep -Fq \
-    'do not claim those installed-artifact bindings'
+    "candidate commit 2222222222222222222222222222222222222222, candidate tree $FLOW42_VERIFIED_CANDIDATE_TREE, and candidate archive digest bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   plugin_listing=$(FAKE_STATE=$state PATH="$stateful_bin:$PATH" \
     claude plugin list --json)
   # shellcheck disable=SC2086
@@ -436,6 +454,7 @@ run_composed_candidate_mismatch_scenario() {
     "$instructions" mismatch
 
   if CLAUDE_CONFIG_DIR=$config_root FLOW42_PROJECT_ROOT=$project_root \
+    FAKE_EXPECT_PROJECT_ROOT=$project_root \
     FAKE_SETTINGS_FILE=$settings_file FAKE_COMMAND_LOG=$command_log \
     FAKE_STATE=$state PATH="$stateful_bin:$PATH" \
     sh -e "$instructions" >/dev/null 2>"$error_log"; then
@@ -452,6 +471,292 @@ run_composed_candidate_mismatch_scenario() {
   test "$(jq -S '{declarations, installs, available}' "$state")" = \
     "$expected_projection" || return 1
   test "$(jq -S . "$settings_file")" = "$expected_settings" || return 1
+}
+
+run_composed_force_moved_tag_scenario() {
+  scenario_root=$stateful_tmp/composed-force-moved-tag
+  config_root=$scenario_root/config
+  project_root=$scenario_root/project
+  moved_tree=$scenario_root/moved-tree
+  state=$scenario_root/state.json
+  settings_file=$config_root/settings.json
+  instructions=$scenario_root/composed.sh
+  command_log=$scenario_root/commands.log
+  error_log=$scenario_root/stderr.log
+  mkdir -p "$config_root" "$project_root/.claude" "$moved_tree/.claude-plugin"
+  cp "$stateful_verified_path/.claude-plugin/plugin.json" \
+    "$moved_tree/.claude-plugin/plugin.json"
+  cp "$stateful_verified_path/.claude-plugin/marketplace.json" \
+    "$moved_tree/.claude-plugin/marketplace.json"
+  printf '%s\n' 'substituted bytes behind the same tag and version' > \
+    "$moved_tree/payload.txt"
+  source_json='{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}'
+  jq -n --argjson source "$source_json" '{
+    declarations: {user:$source},
+    installs: {user:"1.0.1"},
+    available: "1.0.1"
+  }' >"$state"
+  jq -n --argjson source "$source_json" '{
+    extraKnownMarketplaces: {flow42: {source:$source}}
+  }' >"$settings_file"
+  expected_projection=$(jq -S '{declarations, installs, available}' "$state")
+  extract_claude_composed_flow "$root/skills/update/SKILL.md" "$instructions"
+
+  if CLAUDE_CONFIG_DIR=$config_root FLOW42_PROJECT_ROOT=$project_root \
+    FAKE_EXPECT_PROJECT_ROOT=$project_root \
+    FAKE_MARKETPLACE_INSTALL_PATH=$moved_tree \
+    FAKE_PLUGIN_INSTALL_PATH=$moved_tree \
+    FAKE_SETTINGS_FILE=$settings_file FAKE_COMMAND_LOG=$command_log \
+    FAKE_STATE=$state PATH="$stateful_bin:$PATH" \
+    sh -e "$instructions" >/dev/null 2>"$error_log"; then
+    echo 'composed update: force-moved tag bytes were accepted' >&2
+    return 1
+  fi
+  grep -Fq 'marketplace verified-tree attestation' "$error_log" || return 1
+  first_mutation_after_target=$(awk '
+    /^plugin marketplace add owner\/flow42@v1\.0\.2 --scope user$/ { target = 1; next }
+    target && /^plugin (marketplace (remove|add)|install|update)/ { print; exit }
+  ' "$command_log")
+  test "$first_mutation_after_target" = \
+    'plugin marketplace remove flow42 --scope user' || {
+      echo 'composed update: substituted marketplace reached target plugin installation' >&2
+      return 1
+    }
+  assert_stateful_restoration composed-force-moved-tag "$state" \
+    "$expected_projection" "$source_json" user "$settings_file"
+}
+
+run_composed_installed_tree_substitution_scenario() {
+  scenario_root=$stateful_tmp/composed-installed-tree-substitution
+  config_root=$scenario_root/config
+  project_root=$scenario_root/project
+  moved_tree=$scenario_root/moved-tree
+  state=$scenario_root/state.json
+  settings_file=$config_root/settings.json
+  instructions=$scenario_root/composed.sh
+  error_log=$scenario_root/stderr.log
+  mkdir -p "$config_root" "$project_root/.claude" "$moved_tree/.claude-plugin"
+  cp "$stateful_verified_path/.claude-plugin/plugin.json" \
+    "$moved_tree/.claude-plugin/plugin.json"
+  cp "$stateful_verified_path/.claude-plugin/marketplace.json" \
+    "$moved_tree/.claude-plugin/marketplace.json"
+  printf '%s\n' 'substituted plugin cache bytes' >"$moved_tree/payload.txt"
+  source_json='{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}'
+  jq -n --argjson source "$source_json" '{
+    declarations: {user:$source},
+    installs: {user:"1.0.1"},
+    available: "1.0.1"
+  }' >"$state"
+  jq -n --argjson source "$source_json" '{
+    extraKnownMarketplaces: {flow42: {source:$source}}
+  }' >"$settings_file"
+  expected_projection=$(jq -S '{declarations, installs, available}' "$state")
+  extract_claude_composed_flow "$root/skills/update/SKILL.md" "$instructions"
+
+  if CLAUDE_CONFIG_DIR=$config_root FLOW42_PROJECT_ROOT=$project_root \
+    FAKE_EXPECT_PROJECT_ROOT=$project_root \
+    FAKE_MARKETPLACE_INSTALL_PATH=$stateful_verified_path \
+    FAKE_PLUGIN_INSTALL_PATH=$moved_tree \
+    FAKE_SETTINGS_FILE=$settings_file FAKE_STATE=$state \
+    PATH="$stateful_bin:$PATH" sh -e "$instructions" \
+    >/dev/null 2>"$error_log"; then
+    echo 'composed update: substituted installed bytes were accepted' >&2
+    return 1
+  fi
+  grep -Fq 'plugin scope user verified-tree attestation' "$error_log" || return 1
+  assert_stateful_restoration composed-installed-tree-substitution "$state" \
+    "$expected_projection" "$source_json" user "$settings_file"
+}
+
+run_composed_git_template_filter_scenario() {
+  scenario_root=$stateful_tmp/composed-git-template-filter
+  config_root=$scenario_root/config
+  project_root=$scenario_root/project
+  moved_tree=$scenario_root/moved-tree
+  hostile_template=$scenario_root/hostile-template
+  unsafe_repo=$scenario_root/unsafe-repo
+  filter_script=$scenario_root/clean-filter
+  state=$scenario_root/state.json
+  settings_file=$config_root/settings.json
+  instructions=$scenario_root/composed.sh
+  error_log=$scenario_root/stderr.log
+  mkdir -p "$config_root" "$project_root/.claude" \
+    "$moved_tree/.claude-plugin" "$hostile_template/info" "$unsafe_repo"
+  cp "$stateful_verified_path/.claude-plugin/plugin.json" \
+    "$moved_tree/.claude-plugin/plugin.json"
+  cp "$stateful_verified_path/.claude-plugin/marketplace.json" \
+    "$moved_tree/.claude-plugin/marketplace.json"
+  printf '%s\n' 'substituted bytes behind template filter' >"$moved_tree/payload.txt"
+  printf '%s\n' '#!/bin/sh' \
+    "sed 's/^substituted bytes behind template filter\$/verified release bytes/'" \
+    >"$filter_script"
+  chmod +x "$filter_script"
+  printf '%s\n' 'payload.txt filter=flow42' >"$hostile_template/info/attributes"
+  git config --file "$hostile_template/config" filter.flow42.clean "$filter_script"
+  git config --file "$hostile_template/config" filter.flow42.required true
+
+  GIT_TEMPLATE_DIR=$hostile_template git -C "$unsafe_repo" init -q
+  GIT_TEMPLATE_DIR=$hostile_template \
+    git --git-dir="$unsafe_repo/.git" --work-tree="$moved_tree" add -f --all
+  unsafe_tree=$(GIT_TEMPLATE_DIR=$hostile_template \
+    git --git-dir="$unsafe_repo/.git" write-tree)
+  test "$unsafe_tree" = "$FLOW42_VERIFIED_CANDIDATE_TREE" || {
+    echo 'composed update: hostile Git template fixture did not reproduce the filter bypass' >&2
+    return 1
+  }
+
+  source_json='{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}'
+  jq -n --argjson source "$source_json" '{
+    declarations: {user:$source}, installs: {user:"1.0.1"}, available:"1.0.1"
+  }' >"$state"
+  jq -n --argjson source "$source_json" '{
+    extraKnownMarketplaces: {flow42: {source:$source}}
+  }' >"$settings_file"
+  expected_projection=$(jq -S '{declarations, installs, available}' "$state")
+  extract_claude_composed_flow "$root/skills/update/SKILL.md" "$instructions"
+
+  if GIT_TEMPLATE_DIR=$hostile_template \
+    CLAUDE_CONFIG_DIR=$config_root FLOW42_PROJECT_ROOT=$project_root \
+    FAKE_EXPECT_PROJECT_ROOT=$project_root \
+    FAKE_MARKETPLACE_INSTALL_PATH=$moved_tree \
+    FAKE_PLUGIN_INSTALL_PATH=$moved_tree \
+    FAKE_SETTINGS_FILE=$settings_file FAKE_STATE=$state \
+    PATH="$stateful_bin:$PATH" sh -e "$instructions" \
+    >/dev/null 2>"$error_log"; then
+    echo 'composed update: GIT_TEMPLATE_DIR clean-filter injection was accepted' >&2
+    return 1
+  fi
+  grep -Fq 'marketplace verified-tree attestation' "$error_log" || return 1
+  assert_stateful_restoration composed-git-template-filter "$state" \
+    "$expected_projection" "$source_json" user "$settings_file"
+}
+
+run_composed_runtime_metadata_scenarios() {
+  scenario_root=$stateful_tmp/composed-runtime-metadata
+  config_root=$scenario_root/config
+  project_root=$scenario_root/project
+  user_tree=$scenario_root/user-tree
+  local_tree=$scenario_root/local-tree
+  state=$scenario_root/state.json
+  settings_file=$config_root/settings.json
+  instructions=$scenario_root/composed.sh
+  mkdir -p "$config_root" "$project_root/.claude" "$user_tree" "$local_tree"
+  cp -R "$stateful_verified_path/." "$user_tree"
+  cp -R "$stateful_verified_path/." "$local_tree"
+  mkdir "$local_tree/.in_use"
+  printf '%s\n' '{"pid":4242,"procStart":"Thu Jun 18 14:15:10 2026"}' \
+    >"$local_tree/.in_use/4242"
+  source_json='{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}'
+  jq -n --argjson source "$source_json" '{
+    declarations:{user:$source},
+    installs:{user:"1.0.1",local:"1.0.1"}, available:"1.0.1"
+  }' >"$state"
+  jq -n --argjson source "$source_json" '{
+    extraKnownMarketplaces:{flow42:{source:$source}}
+  }' >"$settings_file"
+  extract_claude_composed_flow "$root/skills/update/SKILL.md" "$instructions"
+  update_output=$(CLAUDE_CONFIG_DIR=$config_root FLOW42_PROJECT_ROOT=$project_root \
+    FAKE_EXPECT_PROJECT_ROOT=$project_root \
+    FAKE_MARKETPLACE_INSTALL_PATH=$stateful_verified_path \
+    FAKE_PLUGIN_INSTALL_PATH_USER=$user_tree \
+    FAKE_PLUGIN_INSTALL_PATH_LOCAL=$local_tree \
+    FAKE_SETTINGS_FILE=$settings_file FAKE_STATE=$state \
+    PATH="$stateful_bin:$PATH" sh -e "$instructions")
+  printf '%s\n' "$update_output" |
+    grep -Fq 'two consecutive point-in-time marketplace/plugin cache observations'
+  test "$(jq -r '.installs.user' "$state")" = 1.0.2
+  test "$(jq -r '.installs.local' "$state")" = 1.0.2
+
+  for invalid_metadata_case in invalid-name invalid-hour hardlink; do
+    invalid_root=$stateful_tmp/composed-invalid-runtime-metadata-$invalid_metadata_case
+    invalid_config=$invalid_root/config
+    invalid_project=$invalid_root/project
+    invalid_tree=$invalid_root/plugin-tree
+    invalid_state=$invalid_root/state.json
+    invalid_settings=$invalid_config/settings.json
+    invalid_instructions=$invalid_root/composed.sh
+    invalid_error=$invalid_root/stderr.log
+    mkdir -p "$invalid_config" "$invalid_project/.claude" "$invalid_tree"
+    cp -R "$stateful_verified_path/." "$invalid_tree"
+    mkdir "$invalid_tree/.in_use"
+    case "$invalid_metadata_case" in
+      invalid-name)
+        printf '%s\n' payload >"$invalid_tree/.in_use/not-a-pid"
+        ;;
+      invalid-hour)
+        printf '%s\n' '{"pid":4242,"procStart":"Thu Jun 18 25:15:10 2026"}' \
+          >"$invalid_tree/.in_use/4242"
+        ;;
+      hardlink)
+        printf '%s\n' '{"pid":4242,"procStart":"Thu Jun 18 14:15:10 2026"}' \
+          >"$invalid_root/marker-source"
+        ln "$invalid_root/marker-source" "$invalid_tree/.in_use/4242"
+        ;;
+    esac
+    jq -n --argjson source "$source_json" '{
+      declarations:{user:$source}, installs:{local:"1.0.1"}, available:"1.0.1"
+    }' >"$invalid_state"
+    jq -n --argjson source "$source_json" '{
+      extraKnownMarketplaces:{flow42:{source:$source}}
+    }' >"$invalid_settings"
+    invalid_expected=$(jq -S '{declarations, installs, available}' "$invalid_state")
+    extract_claude_composed_flow "$root/skills/update/SKILL.md" "$invalid_instructions"
+    if CLAUDE_CONFIG_DIR=$invalid_config FLOW42_PROJECT_ROOT=$invalid_project \
+      FAKE_EXPECT_PROJECT_ROOT=$invalid_project \
+      FAKE_MARKETPLACE_INSTALL_PATH=$stateful_verified_path \
+      FAKE_PLUGIN_INSTALL_PATH_LOCAL=$invalid_tree \
+      FAKE_SETTINGS_FILE=$invalid_settings FAKE_STATE=$invalid_state \
+      PATH="$stateful_bin:$PATH" sh -e "$invalid_instructions" \
+      >/dev/null 2>"$invalid_error"; then
+      echo "composed update: invalid .in_use $invalid_metadata_case was ignored" >&2
+      return 1
+    fi
+    grep -Fq 'plugin scope local verified-tree attestation' "$invalid_error" ||
+      return 1
+    assert_stateful_restoration \
+      "composed-invalid-runtime-metadata-$invalid_metadata_case" "$invalid_state" \
+      "$invalid_expected" "$source_json" local "$invalid_settings"
+  done
+}
+
+run_composed_cache_change_between_observations_scenario() {
+  scenario_root=$stateful_tmp/composed-cache-change-between-observations
+  config_root=$scenario_root/config
+  project_root=$scenario_root/project
+  plugin_tree=$scenario_root/plugin-tree
+  state=$scenario_root/state.json
+  settings_file=$config_root/settings.json
+  instructions=$scenario_root/composed.sh
+  counter=$scenario_root/plugin-list-count
+  error_log=$scenario_root/stderr.log
+  mkdir -p "$config_root" "$project_root/.claude" "$plugin_tree"
+  cp -R "$stateful_verified_path/." "$plugin_tree"
+  source_json='{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}'
+  jq -n --argjson source "$source_json" '{
+    declarations:{user:$source}, installs:{user:"1.0.1"}, available:"1.0.1"
+  }' >"$state"
+  jq -n --argjson source "$source_json" '{
+    extraKnownMarketplaces:{flow42:{source:$source}}
+  }' >"$settings_file"
+  expected_projection=$(jq -S '{declarations, installs, available}' "$state")
+  extract_claude_composed_flow "$root/skills/update/SKILL.md" "$instructions"
+  if CLAUDE_CONFIG_DIR=$config_root FLOW42_PROJECT_ROOT=$project_root \
+    FAKE_EXPECT_PROJECT_ROOT=$project_root \
+    FAKE_MARKETPLACE_INSTALL_PATH=$stateful_verified_path \
+    FAKE_PLUGIN_INSTALL_PATH=$plugin_tree \
+    FAKE_PLUGIN_LIST_COUNTER=$counter \
+    FAKE_MUTATE_PLUGIN_AFTER_LIST_COUNT=3 \
+    FAKE_MUTATE_PLUGIN_PAYLOAD_PATH=$plugin_tree/payload.txt \
+    FAKE_SETTINGS_FILE=$settings_file FAKE_STATE=$state \
+    PATH="$stateful_bin:$PATH" sh -e "$instructions" \
+    >/dev/null 2>"$error_log"; then
+    echo 'composed update: cache change between final observations was accepted' >&2
+    return 1
+  fi
+  grep -Fq 'second plugin scope user verified-tree attestation' "$error_log" ||
+    return 1
+  assert_stateful_restoration composed-cache-change-between-observations "$state" \
+    "$expected_projection" "$source_json" user "$settings_file"
 }
 
 run_composed_directory_stop_scenario() {
@@ -480,6 +785,7 @@ run_composed_directory_stop_scenario() {
   extract_claude_composed_flow "$root/skills/update/SKILL.md" "$instructions"
 
   if CLAUDE_CONFIG_DIR=$config_root FLOW42_PROJECT_ROOT=$project_root \
+    FAKE_EXPECT_PROJECT_ROOT=$project_root \
     FLOW42_CANDIDATE_DISCOVERY_MARKER=$discovery_marker \
     FAKE_SETTINGS_FILE=$settings_file FAKE_COMMAND_LOG=$command_log \
     FAKE_STATE=$state PATH="$stateful_bin:$PATH" \
@@ -525,6 +831,7 @@ run_composed_postcondition_failure_scenario() {
     "$instructions" postcondition-failure
 
   if CLAUDE_CONFIG_DIR=$config_root FLOW42_PROJECT_ROOT=$project_root \
+    FAKE_EXPECT_PROJECT_ROOT=$project_root \
     FAKE_FAIL_MARKER=$fail_marker FAKE_SETTINGS_FILE=$settings_file \
     FAKE_STATE=$state PATH="$stateful_bin:$PATH" \
     sh -e "$instructions" >/dev/null 2>&1; then
@@ -553,7 +860,7 @@ assert_stateful_restoration() {
     claude plugin marketplace list --json)
   actual_source_json=$(printf '%s\n' "$marketplace_listing" | jq -c '
     [.[] | select(.name == "flow42")] |
-    if length == 1 then .[0] | del(.name) else error("ambiguous readback") end
+    if length == 1 then .[0] | del(.name, .installLocation) else error("ambiguous readback") end
   ')
   if ! jq -en --argjson actual "$actual_source_json" \
     --argjson expected "$expected_source_json" '$actual == $expected' >/dev/null; then
@@ -635,6 +942,7 @@ run_stateful_mutation_failures() {
       FAKE_FAIL_PHASE=$failure_phase \
       FAKE_DIRECTORY_VERSION=$directory_version \
       CLAUDE_CONFIG_DIR=$config_root FLOW42_PROJECT_ROOT=$project_root \
+      FAKE_EXPECT_PROJECT_ROOT=$project_root \
       FAKE_SETTINGS_FILE=$settings_file \
       FAKE_COMMAND_LOG=$command_log FAKE_STATE=$state \
       PATH="$stateful_bin:$PATH" sh -e "$update_instructions" \
@@ -677,6 +985,8 @@ run_stateful_preflight_scenario() {
   fail_update_help=${6:-false}
   skill=${7:-$root/skills/update/SKILL.md}
   expected_error=${8:-}
+  foreign_project=${9:-}
+  settings_link=${10:-false}
   scenario_root=$stateful_tmp/preflight\ scenarios/$scenario
   config_root=$scenario_root/config
   project_root=$scenario_root/project
@@ -706,11 +1016,24 @@ run_stateful_preflight_scenario() {
       extraKnownMarketplaces: {flow42: {source: .[$scope]}}
     }' >"$settings_file"
   done
+  case "$settings_link" in
+    true)
+      settings_target=$scenario_root/settings-target.json
+      mv "$settings_file" "$settings_target"
+      ln -s "$settings_target" "$settings_file"
+      ;;
+    hardlink)
+      ln "$settings_file" "$scenario_root/settings-hardlink.json"
+      ;;
+  esac
   expected_projection=$(jq -S '{declarations, installs, available}' "$state")
   extract_claude_preflight_block "$skill" "$extracted"
   render_claude_preflight "$extracted" "$instructions"
 
   if CLAUDE_CONFIG_DIR=$config_root FLOW42_PROJECT_ROOT=$project_root \
+    FAKE_EXPECT_PROJECT_ROOT=$project_root \
+    FAKE_FOREIGN_LOCAL_PROJECT_PATH=$foreign_project \
+    FAKE_FOREIGN_PLUGIN_INSTALL_PATH=$stateful_verified_path \
     FLOW42_PREFLIGHT_RESULT=$result \
     FAKE_FAIL_UPDATE_HELP=$fail_update_help FAKE_STATE=$state \
     PATH="$stateful_bin:$PATH" sh -e "$instructions" \
@@ -745,7 +1068,26 @@ run_stateful_preflight_scenario() {
 
 stateful_tmp=$(mktemp -d "${TMPDIR:-/tmp}/flow42-update-stateful.XXXXXX")
 stateful_bin=$stateful_tmp/bin
-mkdir "$stateful_bin"
+stateful_verified_path=$stateful_tmp/verified-tree
+stateful_tree_repo=$stateful_tmp/tree-repo
+mkdir "$stateful_bin" "$stateful_verified_path" "$stateful_tree_repo"
+mkdir "$stateful_verified_path/.claude-plugin"
+printf '%s\n' '{"name":"flow42","version":"1.0.2"}' > \
+  "$stateful_verified_path/.claude-plugin/plugin.json"
+printf '%s\n' '{"name":"flow42","version":"1.0.2","plugins":[]}' > \
+  "$stateful_verified_path/.claude-plugin/marketplace.json"
+printf '%s\n' 'verified release bytes' >"$stateful_verified_path/payload.txt"
+git -C "$stateful_tree_repo" init -q
+GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_COUNT=0 \
+  git --git-dir="$stateful_tree_repo/.git" --work-tree="$stateful_verified_path" \
+    -c core.autocrlf=false add -f --all
+FLOW42_VERIFIED_CANDIDATE_TREE=$(GIT_CONFIG_NOSYSTEM=1 \
+  GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_COUNT=0 \
+  git --git-dir="$stateful_tree_repo/.git" write-tree)
+FAKE_MARKETPLACE_INSTALL_PATH=$stateful_verified_path
+FAKE_PLUGIN_INSTALL_PATH=$stateful_verified_path
+export FLOW42_VERIFIED_CANDIDATE_TREE FAKE_MARKETPLACE_INSTALL_PATH \
+  FAKE_PLUGIN_INSTALL_PATH
 cp "$root/tests/fixtures/update/fake-claude" "$stateful_bin/claude"
 chmod +x "$stateful_bin/claude"
 
@@ -768,10 +1110,40 @@ run_stateful_preflight_scenario multiple-declarations fail \
 run_stateful_preflight_scenario heterogeneous-versions fail \
   '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
   '{"user":"1.0.1","local":"0.9.9"}' '' false '' \
-  'user=1.0.1, local=0.9.9'
+  'flow42 installations have heterogeneous versions:'
 run_stateful_preflight_scenario capability-unavailable fail \
   '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
   '{"local":"1.0.1"}' '' true '' 'does not expose plugin update'
+run_stateful_preflight_scenario current-plus-foreign-local pass \
+  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
+  '{"user":"1.0.1","local":"1.0.1"}' \
+  'user\tgithub\towner/flow42@v1.0.1\t1.0.1' false '' '' \
+  "$stateful_tmp/foreign-project"
+run_stateful_preflight_scenario foreign-local-only fail \
+  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
+  '{}' '' false '' \
+  'missing, managed, invalid, or duplicate for this project identity' \
+  "$stateful_tmp/foreign-project"
+run_stateful_preflight_scenario invalid-github-source fail \
+  '{"user":{"source":"github","repo":"--help","ref":"v1.0.1"}}' \
+  '{"local":"1.0.1"}' '' false '' \
+  'unsupported or invalid flow42 marketplace source declaration'
+run_stateful_preflight_scenario invalid-git-source fail \
+  '{"user":{"source":"git","url":"--upload-pack=attacker","ref":"v1.0.1"}}' \
+  '{"local":"1.0.1"}' '' false '' \
+  'unsupported or invalid flow42 marketplace source declaration'
+run_stateful_preflight_scenario source-with-unpreserved-field fail \
+  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1","sparsePaths":["plugins"]}}' \
+  '{"local":"1.0.1"}' '' false '' \
+  'unsupported or invalid flow42 marketplace source declaration'
+run_stateful_preflight_scenario linked-settings-file fail \
+  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
+  '{"local":"1.0.1"}' '' false '' 'settings file must be a regular non-link' \
+  '' true
+run_stateful_preflight_scenario hardlinked-settings-file fail \
+  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
+  '{"local":"1.0.1"}' '' false '' 'settings file must be a regular non-link' \
+  '' hardlink
 
 mutated_skill=$stateful_tmp/drop-update-capability-gate.md
 sed -f "$root/tests/fixtures/update/drop-update-capability-gate.sed" \
@@ -832,6 +1204,11 @@ run_stateful_update_scenario git-ssh-source-convergence "$root/skills/update/SKI
   '{"local":"1.0.1"}' 'local' false \
   '{"source":"git","url":"git@example.invalid:flow42.git","ref":"v1.0.2"}'
 run_composed_candidate_mismatch_scenario
+run_composed_force_moved_tag_scenario
+run_composed_installed_tree_substitution_scenario
+run_composed_git_template_filter_scenario
+run_composed_runtime_metadata_scenarios
+run_composed_cache_change_between_observations_scenario
 run_composed_directory_stop_scenario
 run_composed_postcondition_failure_scenario
 run_stateful_mutation_failures github \

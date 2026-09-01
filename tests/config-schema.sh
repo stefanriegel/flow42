@@ -12,6 +12,7 @@ jq -e '.schema_version == 1 and .unknown_fields == "block" and .extra_gates == "
 jq -e '.fields.base_branch.validation == "git-check-ref-format---branch" and
   .command_policy.fail_closed == true and
   .command_policy.authority_bearing_executables == ["git", "gh", "glab", "terraform"] and
+  .command_policy.blocked_launcher_executables == ["xcrun"] and
   .command_policy.read_only_control_cli_allowlist == [] and
   (.command_policy.token_pattern | type == "string" and length > 0) and
   (.command_policy.shell_evaluation_prefixes | type == "array" and length > 0) and
@@ -78,6 +79,12 @@ validate_command() {
     '.command_policy.authority_bearing_executables | index($executable) != null' \
     "$schema" >/dev/null; then
     fail CONFIG-COMMAND-CONTROL-CLI
+    return
+  fi
+  if jq -e --arg executable "$first" \
+    '.command_policy.blocked_launcher_executables | index($executable) != null' \
+    "$schema" >/dev/null; then
+    fail CONFIG-COMMAND-LAUNCHER
     return
   fi
 
@@ -253,6 +260,68 @@ for fixture in retired-gate missing-canonical-gate unknown-field scalar-command 
   if test "$validation_rc" -eq 0; then echo "config mutation survived: $fixture" >&2; exit 1; fi
   test "$(grep -c '^CONFIG-' "$log")" -eq 1
   grep -Fxq "$expected" "$log"
+done
+
+xcrun_config="$tmp/xcrun-git-push.yml"
+sed 's#^  lint: .*$#  lint: [xcrun, git, push]#' "$fixtures/valid.yml" >"$xcrun_config"
+xcrun_log="$tmp/xcrun-git-push.log"
+xcrun_validation_rc=0
+(set +e; validate_config "$xcrun_config") >"$xcrun_log" 2>&1 || xcrun_validation_rc=$?
+
+xcrun_authority_proof=unavailable
+if command -v xcrun >/dev/null 2>&1 && xcrun --find git >/dev/null 2>&1; then
+  xcrun_repo="$tmp/xcrun-git-repo"
+  xcrun_remote="$tmp/xcrun-git-remote.git"
+  git init -q "$xcrun_repo"
+  git init -q --bare "$xcrun_remote"
+  git -C "$xcrun_repo" config user.name 'Flow42 xcrun fixture'
+  git -C "$xcrun_repo" config user.email 'xcrun-fixture@example.invalid'
+  git -C "$xcrun_repo" checkout -qb main
+  printf '%s\n' fixture >"$xcrun_repo/file.txt"
+  git -C "$xcrun_repo" add file.txt
+  git -C "$xcrun_repo" commit -qm baseline
+  git -C "$xcrun_repo" remote add origin "$xcrun_remote"
+  git -C "$xcrun_repo" config push.default current
+  if git --git-dir="$xcrun_remote" show-ref --verify --quiet refs/heads/main; then
+    echo CONFIG-XCRUN-PRECONDITION >&2
+    exit 1
+  fi
+  (cd "$xcrun_repo" && xcrun git push >/dev/null 2>&1)
+  git --git-dir="$xcrun_remote" show-ref --verify --quiet refs/heads/main || {
+    echo CONFIG-XCRUN-GIT-AUTHORITY-NOT-REACHED >&2
+    exit 1
+  }
+  xcrun_authority_proof=temporary-remote-ref-created
+else
+  echo 'SKIP xcrun-git-authority: xcrun with git is unavailable'
+fi
+
+if test "$xcrun_validation_rc" -eq 0; then
+  echo "CONFIG-XCRUN-LAUNCHER-ESCAPE: accepted [xcrun,git,push]; proof=$xcrun_authority_proof" >&2
+  exit 1
+fi
+test "$(grep -c '^CONFIG-' "$xcrun_log")" -eq 1
+grep -Fxq CONFIG-COMMAND-LAUNCHER "$xcrun_log"
+
+xcrun_case=0
+for xcrun_argv in \
+  '[/usr/bin/xcrun, git, push]' \
+  '[xcrun, --run, git, push]' \
+  '[xcrun, -r, git, push]' \
+  '[xcrun, --sdk, macosx, git, push]' \
+  '[xcrun, --toolchain, default, --no-cache, git, push]'; do
+  xcrun_case=$((xcrun_case + 1))
+  xcrun_case_config="$tmp/xcrun-launcher-$xcrun_case.yml"
+  sed "s#^  lint: .*\$#  lint: $xcrun_argv#" "$fixtures/valid.yml" >"$xcrun_case_config"
+  xcrun_case_log="$tmp/xcrun-launcher-$xcrun_case.log"
+  xcrun_case_rc=0
+  (set +e; validate_config "$xcrun_case_config") >"$xcrun_case_log" 2>&1 || xcrun_case_rc=$?
+  if test "$xcrun_case_rc" -eq 0; then
+    echo "CONFIG-XCRUN-LAUNCHER-ESCAPE: accepted $xcrun_argv" >&2
+    exit 1
+  fi
+  test "$(grep -c '^CONFIG-' "$xcrun_case_log")" -eq 1
+  grep -Fxq CONFIG-COMMAND-LAUNCHER "$xcrun_case_log"
 done
 
 alias_repo="$tmp/git-alias-repo"

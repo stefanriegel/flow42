@@ -2,15 +2,15 @@ schema_version: 1
 work_id: "architecture-hardening"
 title: "Architecture hardening"
 work_type: "bugfix-refactor"
-stage: blocked
+stage: verifying
 risk: medium
-state_revision: 10
+state_revision: 11
 created_at: "2026-09-01T05:37:26Z"
-updated_at: "2026-09-01T08:20:05Z"
+updated_at: "2026-09-01T10:27:39Z"
 review_loops: 2
-blockers: [final-config-xcrun-wrapper-escape,final-git-admin-exclude-bypass,final-review-receipt-purpose-and-artifact-underbinding,final-update-verified-to-installed-toctou]
-resume_stage: verifying
+blockers: []
+resume_stage: ""
 forge_item: ""
 change_request: ""
 ci_state: unknown
-next_actions: [human-resume-required-after-automatic-review-limit,resolve-final-exact-head-blockers,rerun-complete-local-matrix,rerun-final-exact-head-reviews]
+next_actions: [commit-exact-review-subject,run-final-exact-head-correctness-review,run-final-exact-head-security-review]

@@ -231,11 +231,82 @@
   resume is required before another implementation loop. The exact reviewed
   subject remains `bac4ad95e3d9d46fb60c275e6c526cfea7407abd`; no PASS receipt
   is issued.
+- 2026-09-01T08:32:38Z; explicit human resume; expected the exhausted automatic
+  review counter to remain unchanged while another reversible local cycle became
+  authorized; actual the item stayed `blocked` at revision 10 with
+  `review_loops: 2`, three disjoint Codex implementation tasks and three read-only
+  adversarial audits were dispatched through Orca run `run_700a4d3f5bac`, and no
+  worker staged, committed, mutated Forge state, or launched a delegate.
+- 2026-09-01T10:07:27Z; resumed blocker reds and adversarial audit; expected the
+  four recorded HIGH findings to reproduce and owner-green tests to receive an
+  independent challenge; actual disposable execution reproduced the `xcrun git
+  push` authority escape, hidden `.git/info/exclude` path, spellcheck-only local
+  receipt with an unrelated artifact, and same-tag verified-to-installed cache
+  substitution. The audits additionally exposed omitted reflog/recovery state,
+  trailing-newline and invalid-byte effective config paths, link/hardlink
+  retargeting, swallowed archive/hash failures, hostile Git clean-filter
+  templates, wrong-project plugin entries, and the absence of a vendor cache
+  lock.
+- 2026-09-01T10:07:27Z; primary-source repair check; expected the generalized
+  controls to match provider behavior rather than only the four examples;
+  actual [Git repository layout](https://git-scm.com/docs/gitrepository-layout)
+  documents `info/exclude`, `info/attributes`, alternates, refs, reflogs, hooks,
+  index, and other administrative state, while
+  [Git attributes](https://git-scm.com/docs/gitattributes/2.50.0.html) documents
+  highest-precedence `$GIT_DIR/info/attributes`. [Claude plugin
+  reference](https://code.claude.com/docs/en/plugins-reference) documents copied,
+  versioned cache directories and user/project/local scopes. Anthropic tracker
+  [issue 69626](https://github.com/anthropics/claude-code/issues/69626) reports
+  the currently observed `.in_use/<pid>` JSON and UTC-asctime shape; it is
+  corroborating implementation evidence, not a stable documented API.
+- 2026-09-01T10:07:27Z; resumed blocker greens; expected all focused adversarial
+  suites to pass under every supported local shell; actual `tests/config-schema.sh`,
+  `tests/ownership.sh`, `tests/review-receipt.sh`, and `tests/update.sh` passed
+  under `sh`, `dash`, and `ksh`. The update cases include hostile templates and
+  filters, exact current-project selection with foreign entries ignored, fetched
+  and installed tree substitution, valid and malformed runtime markers, and a
+  mutation between the first and second full observation. The result is two
+  consecutive point-in-time observations, not a durable cache-immutability
+  claim.
+- 2026-09-01T10:07:27Z; correction to the 2026-09-01T06:18:00Z durable entry;
+  the directory-source cases prove a fail-closed stop before candidate discovery
+  or mutation, not mutation-time rollback. GitHub, Git, and GitHub-mirror
+  fixtures provide the before/after-effect rollback evidence. The earlier phrase
+  grouping directory sources with mutation rollback was overbroad; this appended
+  correction is authoritative and preserves the evidence log's append-only
+  history.
+- 2026-09-01T10:24:09Z; coordinator receipt-artifact self-review; expected a
+  receipt's digest bytes to be forced by its in-work-item reference; actual red
+  `tests/review-receipt.sh` exit 1 reported `accepted bytes that were not
+  extracted from its evidence reference` when a different repository evidence
+  file was paired with a caller-supplied matching fixture. Green under `sh`,
+  `dash`, and `ksh` derives `.flow42/<work-id>/evidence.md`, requires one ordered
+  marker pair, hashes only the exact enclosed LF-terminated bytes, and rejects
+  substitute bytes and duplicate markers.
+- 2026-09-01T10:24:09Z; coordinator update-boundary self-review; expected
+  settings/source/runtime metadata to be safe inputs to later Git and Claude
+  argv; actual reds showed an option-shaped GitHub source, a linked settings
+  file, and a marker with hour 25 were accepted. Green `tests/update.sh` under
+  `sh`, `dash`, and `ksh` now canonicalizes and exports the config root, rejects
+  linked or multiply linked settings, validates exact reproducible GitHub/Git/
+  directory source shapes before discovery, and rejects malformed, invalid-hour,
+  symlinked, or hardlinked runtime markers.
+- 2026-09-01T10:27:39Z; human-resumed post-repair complete local matrix;
+  expected all available gates to pass at one integrated snapshot before the
+  resume transition; actual validation, parity, conformance, contracts, intent,
+  prelude, ownership, receipt, configuration, lifecycle, update, release
+  checksum, security, dependencies, 12-check eval index, eight case evals,
+  ShellCheck, `sh`/Dash/Ksh syntax, JSON parsing, `git diff --check`, and the
+  opt-in native Codex instruction-delivery observation passed. Focused config,
+  ownership, receipt, and update suites also passed behaviorally under `sh`,
+  Dash, and Ksh. `gitleaks` is unavailable; no result is claimed for it.
 
 ## Known gaps
 
-The final exact-head correctness and security reviews are BLOCKED after the
-second and final automatic repair loop. Human resume is required before another
-implementation loop. `gitleaks` is unavailable, so no gitleaks result is claimed. No
-remote CI, Forge, merge, release, deployment, or live normal-harness mutation
-proof has been run.
+The human-resumed local repair is implemented, the item resumed to `verifying`,
+and focused/aggregate local checks are green; fresh correctness and security
+review of one final clean exact head is still required. `gitleaks` is unavailable,
+so no gitleaks result is claimed. Two
+consecutive Claude cache observations do not provide a vendor lock or durable
+immutability against a later same-user writer. No remote CI, authenticated Forge,
+merge, release, deployment, or live normal-harness mutation proof has been run.

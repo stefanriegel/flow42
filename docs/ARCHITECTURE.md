@@ -17,14 +17,23 @@ cannot authorize their own implementation. Independence is role separation: a
 separate review pass or agent did not implement the change. Its durable JSON
 receipt uses the strongest issuer available: authenticated Forge, trusted
 orchestrator, or a distinct local independent pass when neither stronger source
-is available. The local fallback is explicitly lower-tier. Forge and orchestrator
-records require independent authenticated resolution that binds repository and
-work identity, baseline/reviewed heads, scope/diff/subject, reviewer/checks, and
-artifact digest as well as verdict. The receipt binds that review subject while
-exact bookkeeping leaves, plus declared lifecycle/CI fields and a grammar-valid
-`change_request` in `status.yml`,
-remain receipt-neutral. Rename sources, nested lookalikes, risk changes, and
-non-ancestor heads invalidate it. This does not add a second human gate or grant authorization authority. The
+is available. The local fallback is explicitly lower-tier. Every record requires
+independent resolution: Forge and orchestrator results are authenticated, while
+the local fallback is a resolver-observed distinct session. Resolution binds
+repository and work identity, baseline/reviewed heads, scope/diff/subject,
+caller-required correctness or security purpose and policy-minimum-bearing exact
+checks, reviewer, exact in-work-item evidence section and digest, valid UTC time,
+and verdict. The evidence path is repository/work-derived, and one unique
+ordered literal marker pair defines the exact report bytes; links and
+caller-selected substitute files fail closed. The receipt binds that review
+subject while exact bookkeeping leaves plus declared lifecycle/CI fields remain
+receipt-neutral. The required `status.yml.change_request` stays empty; provider,
+redacted request URL, request ID, source branch, pushed/reviewed heads, observation
+time, and authenticated CLI readback live in `evidence.md` only as a
+non-authoritative observation that is revalidated before action. Rename sources,
+nested lookalikes, quoted scalar escapes, risk
+changes, and non-ancestor heads invalidate the receipt. This does not add a
+second human gate or grant authorization authority. The
 trusted endpoint is an independently reviewed, CI-green PR/MR.
 
 Orca orchestration is used only through its live CLI-served contract. A real
@@ -45,3 +54,12 @@ specialist review, and utility models own mechanical transformations. See
 
 Trust boundaries are the human confirmation channel, repository and worktrees,
 agent harness, Forge CLI credential store, CI, and untrusted external text.
+Git worker ownership binds the complete common/worktree administrative trees
+without a finite filename allowlist, plus external behavior paths; workers never
+commit or stage. Release updates bind the signed candidate to Claude's fetched
+marketplace and exact current-project plugin identities with canonical config/
+settings targets, exact reproducible source shapes, and two sanitized
+point-in-time cache observations, so demonstrated template/filter, wrong-project,
+mutable-tag, and same-version substitution failures close. Claude exposes no
+documented atomic multi-cache lock, so post-observation same-user mutation remains
+an explicit residual boundary rather than a durable installed-byte claim.

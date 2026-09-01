@@ -3,13 +3,20 @@
 ## Functional requirements
 
 1. The Claude update and rollback flows reach the requested installed version
-   whether marketplace removal preserves or removes the installed plugin.
+   whether marketplace removal preserves or removes the installed plugin, and
+   bind both fetched marketplace bytes and installed cache bytes to the exact
+   verified signed candidate tree from canonical project/config identities,
+   exact reproducible source shapes, and non-linked settings state.
 2. Exact-head independent review has a coherent durable receipt model without a
-   commit-after-review fixed point.
+   commit-after-review fixed point; correctness/security purpose, exact required
+   checks, expected artifact bytes/reference, and authenticated time are
+   caller/provider-bound, with artifact bytes extracted only from a uniquely
+   delimited section of the repository/work-derived evidence file.
 3. Active and template configuration are validated against one versioned schema;
    configured command paths and canonical gates cannot drift silently.
 4. Worker ownership snapshots are NUL-safe, include rename endpoints, preserve a
-   dirty baseline, and reject unowned overlap.
+   dirty baseline, reject unowned overlap, and detect behavior-affecting Git
+   administrative state including ignore, attributes, and alternates surfaces.
 5. Every directly invokable skill reaches the canonical contract and security
    authority; inert or competing rule copies are removed or made load-bearing.
 6. Update, lifecycle, ownership, and eval tests exercise observable behavior,
@@ -41,9 +48,11 @@ the failed invariant.
 ## Interfaces and data
 
 The update Interface is requested immutable source plus recorded scopes in, and
-observed installed version plus rollback state out. Configuration and lifecycle
-Interfaces remain machine-readable JSON/YAML. Review receipts must not require
-editing the reviewed code identity after attestation.
+observed installed version, verified candidate tree, fetched/installed tree
+attestations, plus rollback state out. Configuration and lifecycle Interfaces
+remain machine-readable JSON/YAML. Review receipts must not require editing the
+reviewed code identity after attestation; Forge linkage is receipt-neutral
+evidence while the schema-compatible status change-request field stays empty.
 
 ## Security considerations
 
@@ -56,12 +65,14 @@ Do not persist secrets or raw authenticated CLI output.
 - Assets: repository integrity; the reviewed repository, baseline, head, scope,
   diff, and artifact identities; worker path and Git-administration ownership;
   human confirmation state; configured command argv; plugin source, version,
-  installation scopes, and rollback state; and review provenance.
+  candidate and installed byte identity, installation scopes, and rollback
+  state; and review provenance.
 - Actors: the accountable human; the coordinating agent; non-implementing
   reviewers; bounded implementation workers; authenticated Forge and
   orchestrator principals; vendor CLIs; and an attacker able to control
   repository text, issue/review text, configuration values, Git pathnames or
-  administrative state, a harness-elevated repository instruction, or a
+  administrative state including ignore/attributes/alternates files, a mutable
+  release tag or cache path, a harness-elevated repository instruction, or a
   replayed/unauthenticated receipt claim.
 - Trust boundaries: human request to coordinator; repository data to executable
   agent instructions; configuration tokens to process execution; coordinator
@@ -70,10 +81,11 @@ Do not persist secrets or raw authenticated CLI output.
   authenticated record to local receipt validation; and host instruction
   precedence to Flow42's later interpreted policy.
 - Abuse cases: hide a push behind a Git alias or generic Forge API command;
-  substitute a Git marketplace with an unrelated GitHub source after candidate
-  verification; redirect a coordinator push through remote/hook mutation while
-  leaving the worktree clean; replay a valid receipt across work items/scopes or
-  add unauthenticated review claims; use a quoted duplicate status key; smuggle an
+  substitute same-tag/same-version marketplace or installed bytes after
+  candidate verification; redirect a coordinator push through remote/hook or
+  ignore-file mutation while leaving the worktree clean; replay a valid receipt
+  across work items/scopes/purposes or substitute its checks/artifact/time; use a
+  quoted duplicate key or escaped scalar in status; smuggle an
   unowned source through a committed rename; claim a forged trusted review;
   resume from `blocked` directly to a final state; make update rollback delete
   the only usable marketplace declaration; use malicious path bytes to evade
@@ -81,11 +93,13 @@ Do not persist secrets or raw authenticated CLI output.
   receipt.
 - Mitigations: fail-closed direct-argv validation with no control-CLI allowlist;
   Git's NUL-delimited name-status records plus pre/post Git-administration
-  identities; authenticated receipt resolution and expected repository/work/
-  scope/diff/artifact binding; strict status-subset parsing; non-final, recorded
-  resume targets; source-kind-preserving update convergence and rollback with
-  exact state readback; literal pathspec staging; and receipt currency restricted
-  to the reviewed work item's bookkeeping paths.
+  identities covering behavior-affecting info trees and effective external
+  files; authenticated receipt resolution and caller-expected repository/work/
+  scope/diff/purpose/check/artifact plus provider-time binding; strict
+  escape-free status-subset parsing; non-final, recorded resume targets;
+  source-kind-preserving update convergence and rollback with candidate,
+  marketplace, and installed Git-tree equality; literal pathspec staging; and
+  receipt currency restricted to the reviewed work item's bookkeeping paths.
 - Residual risk: local independent review cannot authenticate an external
   principal and remains a lower proof tier; vendor CLI semantics can change;
   custom validators can drift from their prose contracts; Flow42 cannot demote
@@ -98,7 +112,9 @@ Do not persist secrets or raw authenticated CLI output.
 ## Acceptance criteria
 
 - Stateful update fixtures cover both plugin-preserved and plugin-removed
-  marketplace semantics and prove final/rollback versions.
+  marketplace semantics, same-tag byte substitution, installed-cache
+  substitution, linked settings/runtime metadata, invalid source shapes, and
+  final/rollback versions.
 - Adversarial configuration, transition, ownership, and receipt fixtures fail
   for the intended reason.
 - Direct entrypoints demonstrably load the canonical contract prelude.

@@ -8,10 +8,16 @@
 6. `verify` independently checks acceptance, security, and repository gates.
 7. `pr` idempotently opens or updates a PR/MR and waits for a current independent
    review receipt plus green CI. The receipt binds repository, work ID, baseline
-   and reviewed heads, scope/diff digests, subject, reviewer/checks, and artifact
-   digest; commits that change exact bookkeeping leaves or the permitted
-   lifecycle/CI fields plus a grammar-valid change-request URL in status are
-   receipt-neutral. Renames, nested lookalikes, risk changes,
+   and reviewed heads, scope/diff digests, subject, required correctness or
+   security purpose, exact checks, reviewer, expected artifact, and authenticated
+   time. The report digest comes from one unique ordered marker pair in the
+   repository/work-derived evidence file, never a caller-selected path. Commits
+   that change exact bookkeeping leaves or the permitted
+   lifecycle/CI fields are receipt-neutral. Every issuer is independently
+   resolved; local fallback must be a resolver-observed distinct session. Keep
+   `status.yml.change_request` empty and record the fully bound authenticated
+   provider readback only as a non-authoritative observation in `evidence.md`.
+   Requery it before acting. Renames, nested lookalikes, risk changes,
    and any other changed path require fresh review.
 8. `maintain` converts relevant CI and review signals into deduplicated work.
 
