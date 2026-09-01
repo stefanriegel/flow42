@@ -57,7 +57,7 @@
     "read_only_control_cli_allowlist": [],
     "disallowed_mutation_signature_match": {
       "executable_position": "any-token-position",
-      "executable_normalization": "basename",
+      "executable_normalization": "basename-ascii-casefold",
       "remaining_signature_tokens": "ordered-subsequence"
     },
     "forbidden_token_pattern": "([$][(]|`|&&|[|][|]|[;<>]|(^|[^|])[|]([^|]|$))",

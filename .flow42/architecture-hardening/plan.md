@@ -258,3 +258,15 @@ isolated-worktree claim inconsistent with Orca-selected current-worktree use.
   full local matrix, creates a new exact subject, and requires fresh independent
   correctness and security reviews. The blocked reports do not become pass
   receipts.
+
+### Final macOS casefold remediation
+
+The second review subject `6b31d2491e2adfa59295eff08cd4f3c2a6c4d8ad`
+passed correctness review but security review reproduced one remaining named-
+executable escape on a case-insensitive macOS filesystem. The final bounded
+repair ASCII-casefolds executable basenames before the existing authority,
+blocked-launcher, and mutation-signature comparisons. It does not add launcher
+names or parse CLI grammars. One text-conformance mutation also binds the
+update instruction that rejects unexpected Git configuration and repository
+environment overrides. Fresh exact-head correctness and security reviews are
+required after this repair.

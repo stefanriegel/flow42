@@ -781,3 +781,27 @@ conformance, security, dependency, ShellCheck, and `git diff --check` gates all
 passed. The opt-in native-agent provenance probe remained skipped. A new exact
 subject and fresh independent reviews are still required before this work item
 can leave `blocked`.
+
+### Second exact-head review and final bounded repair
+
+At clean subject `6b31d2491e2adfa59295eff08cd4f3c2a6c4d8ad`, Codex
+`gpt-5.6-sol`/xhigh task `task_b0c3ab54f3eb` returned PASS and Claude Opus/high
+task `task_d20d31e953ec` returned BLOCKED. Claude reproduced a macOS-specific
+case-insensitive executable-name escape in the otherwise bounded command-name
+policy. The PATH-resolved verifier-tool observation was retained as a LOW
+trusted-tools residual rather than expanded into another verifier design.
+
+The final repair casefolds executable basenames under the C locale before the
+existing comparisons. Portable adversarial cases now reject `[Git, push, ...]`,
+`[GH, pr, merge]`, `[arch, -arm64, Git, push, ...]`, `[RM, -rf, ...]`, and
+`[Kubectl, ..., delete, ...]`. The existing executable and signature inventories
+are unchanged. `tests/update.sh` also removes the documented Git-environment
+rule in a mutation and requires the intended `UPDATE-GIT-ENVIRONMENT`
+diagnostic.
+
+Before freezing a new subject, the complete local matrix passed under `sh`, and
+the focused configuration and update gates also passed under `dash` and `ksh`.
+ShellCheck, JSON parsing, and `git diff --check` passed. The native-agent
+provenance probe remained opt-in and skipped; gitleaks, remote exact-head CI,
+authenticated Forge/provider observation, live harness/plugin mutation,
+release, and deployment remain separate unavailable proof tiers.

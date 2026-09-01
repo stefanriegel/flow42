@@ -51,6 +51,10 @@ check_skill() {
   contains 'empty template' || fail UPDATE-EMPTY-TEMPLATE || return 1
   contains 'replacement objects' || fail UPDATE-NO-REPLACE || return 1
   contains 'alternate object stores' || fail UPDATE-NO-ALTERNATES || return 1
+  contains "Reject unexpected \`GIT_CONFIG_*\`" ||
+    fail UPDATE-GIT-ENVIRONMENT || return 1
+  contains 'object-directory, worktree, or repository environment overrides' ||
+    fail UPDATE-GIT-ENVIRONMENT || return 1
   contains 'Compare the fetched tag object with the exact remote advertisement' ||
     fail UPDATE-TAG-BINDING || return 1
   contains "Do not run scripts from the candidate before this verification succeeds" ||
@@ -102,6 +106,12 @@ if check_skill "$tmp/false-rollback.md" 2>"$tmp/false-rollback.err"; then
   fail UPDATE-MUTATION-ROLLBACK-ACCEPTED
 fi
 grep -Fq UPDATE-HONEST-ROLLBACK "$tmp/false-rollback.err"
+
+sed "/Reject unexpected \`GIT_CONFIG_\\*\`/,+1d" "$skill" >"$tmp/no-git-environment.md"
+if check_skill "$tmp/no-git-environment.md" 2>"$tmp/no-git-environment.err"; then
+  fail UPDATE-MUTATION-GIT-ENVIRONMENT-ACCEPTED
+fi
+grep -Fq UPDATE-GIT-ENVIRONMENT "$tmp/no-git-environment.err"
 
 sed 's/^record_pass text-conformance update-instructions$/record_pass behavioural-reference update-convergence/' \
   "$eval_runner" >"$tmp/false-eval-tier.sh"
