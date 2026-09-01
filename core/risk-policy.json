@@ -46,6 +46,12 @@
       "diff_digest": "sha256-nul-safe-no-renames-baseline-to-head-path-content-diff",
       "review_subject": "caller-expected-subject"
     },
+    "diff_producer_status": {
+      "applies_to": ["receipt-neutral-diff-validation", "diff-digest-derivation"],
+      "git_exit_zero_required": true,
+      "complete_nul_output_required": true,
+      "downstream_success_may_mask_failure": false
+    },
     "review_expectation_derivation": {
       "review_kind": "caller-required-review-kind",
       "checks": "caller-required-exact-canonical-ordered-check-array-containing-policy-minimums",

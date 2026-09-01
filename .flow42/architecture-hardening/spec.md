@@ -22,8 +22,11 @@
    value, origin, and scope; external alternate stores are declaration-bound.
 5. Every directly invokable skill reaches the canonical contract and security
    authority; inert or competing rule copies are removed or made load-bearing.
-6. Update, lifecycle, ownership, and eval tests exercise observable behavior,
-   while text-only checks are labelled as such.
+6. Ownership and review-receipt fixtures exercise observable temporary-Git and
+   resolver behavior. Update instructions have structural/text-conformance
+   coverage, and release verification has a local signed-tag/archive fixture;
+   neither is live harness update-convergence proof. Lifecycle and other eval
+   simulations are labelled at their actual structural tier.
 7. Review/CI repair loops are legal transitions and every transition endpoint is
    part of a declared grammar.
 8. Claude GitHub shorthand uses the documented `owner/repo@ref` form from one
@@ -117,10 +120,11 @@ Do not persist secrets or raw authenticated CLI output.
 
 ## Acceptance criteria
 
-- Stateful update fixtures cover both plugin-preserved and plugin-removed
-  marketplace semantics, same-tag byte substitution, installed-cache
-  substitution, linked settings/runtime metadata, invalid source shapes, and
-  final/rollback versions.
+- Update instruction tests enforce ordering, trust/recovery boundaries, and
+  their text-conformance label. The separate local release-checksum fixture
+  exercises trusted-verifier rejection and deterministic signed-tag archive and
+  checksum generation; no local fixture claims live harness installation,
+  scope convergence, recovery, or private-cache-byte behavior.
 - Adversarial configuration, transition, ownership, and receipt fixtures fail
   for the intended reason.
 - Direct entrypoints demonstrably load the canonical contract prelude.
@@ -128,6 +132,8 @@ Do not persist secrets or raw authenticated CLI output.
 
 ## Verification strategy
 
-Observe red-green behavior in temporary fixtures for each slice; run focused
-tests after every integration; then run the entire validation/test/eval matrix,
-ShellCheck, `git diff --check`, and an independent exact-head Orca review.
+Observe red-green behavior or mutation rejection at the applicable proof tier
+for each slice; run focused tests after every integration; then run the entire
+validation/test/eval matrix, ShellCheck, `git diff --check`, and an independent
+exact-head Orca review. Keep local signed-tag/archive evidence separate from
+temporary-Git behavioral fixtures and native-harness evidence.

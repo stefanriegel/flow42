@@ -34,9 +34,13 @@ substitution, or concatenated shell strings. Pass `--` before user-controlled
 positional values when supported. Validate work IDs, branches, paths, URLs, and
 Forge identifiers against the narrow grammar required by the operation.
 Schema validation rejects empty or whitespace-ambiguous tokens, shell syntax,
-known destructive command prefixes, and any token equal to a bare or
+declared mutation signatures, and any token equal to a bare or
 path-qualified `git`, `gh`, `glab`, or `terraform` executable in any argv
 position, so a wrapper cannot reach an authority-bearing control CLI it names.
+For each mutation signature, every token position is a potential executable;
+normalize that token to its basename and reject when the remaining signature
+tokens occur later in order. The same rule therefore catches named wrappers
+and intervening global options without parsing each CLI grammar.
 These control CLIs remain forbidden unless a future shared explicit allowlist
 can prove a specific argv is read-only; the current allowlist is empty and
 no named control-CLI token is allowed by exception. Safe direct script argv such as
@@ -96,7 +100,11 @@ The receipt binds `reviewed_head` and remains current only when it is ancestral
 to `HEAD`. Inspect the NUL-safe diff with rename detection disabled so a rename
 into a neutral filename retains its non-neutral source path. Neutral leaf names
 apply only directly inside the reviewed work item, never in nested or unrelated
-paths. For `status.yml`, only `stage`, `state_revision`, `updated_at`, `blockers`,
+paths. Receipt-neutral diff validation and diff digest derivation fail closed
+unless the Git diff producer exits successfully and its complete NUL-delimited
+output is consumed without parse or hash failure. A successful downstream
+parser, filter, or hasher never masks producer failure. For `status.yml`, only
+`stage`, `state_revision`, `updated_at`, `blockers`,
 `resume_stage`, `ci_state`, and `next_actions` are neutral; a change
 to identity, work type, risk, review-loop count, or any other field requires
 fresh review. Before comparing fields, require the canonical status key set with
@@ -118,8 +126,11 @@ Record allowed paths before dispatch. Tell workers not to perform Forge writes;
 the coordinator owns those operations. Before dispatch and integration apply
 the NUL-delimited snapshots, rename-endpoint checks, literal pathspec rules, and
 pre-existing dirty-content identity procedure in `core/OWNERSHIP.md`. Any
-out-of-scope path, undeclared dirty-path overlap, recursive delegation, or
+out-of-scope path, undeclared dirty-path overlap, observed delegation, or
 unapproved external effect blocks integration while preserving the worktree.
+Delegation is observed through Orca records or worker reporting in native
+execution; an unreported launch by a non-cooperative native worker remains a
+disclosed residual.
 
 Treat the complete common and worktree Git directories plus effective external
 hooks, ignore, and attributes paths as coordinator-owned administrative state.
@@ -130,23 +141,29 @@ covers the two Git directories and the enumerated external behavior paths
 (`core.hooksPath`, `core.excludesFile`, and `core.attributesFile`). Configuration
 reached through `include` or `includeIf` outside those trees is bound by
 effective value and origin, not by file identity. External alternate object
-stores are declaration-bound only. Reject lossy configured-path decoding, links
-within the bound surfaces, unreadable state, and partial producer output. A
-worker commit, staging operation, or any other Git-admin change is forbidden
-even when all changed working-tree paths are otherwise owned.
+stores are declaration-bound only. Their contents can change the resolvability
+of a pre-existing latent ref without changing the bound ref stream, so snapshot
+equality is not object-availability proof; integration may rely only on objects
+and identities explicitly resolved for its actual baseline, `HEAD`, index, and
+owned worktree decision. Reject lossy configured-path decoding, links within the
+bound surfaces, unreadable state, and partial producer output. A worker commit,
+staging operation, or any other Git-admin change is forbidden even when all
+changed working-tree paths are otherwise owned.
 
 Prefer the least-capable suitable worker profile. Do not print or pass credentials
 to a worker. If the runtime provides capability isolation, use it; otherwise keep
 sensitive or Forge-writing work with the coordinator.
 
-When Orca is selected and ready, Orca owns worktree creation, terminal and
-process identity, worker settlement, and cleanup. Flow42 supplies scope,
-ownership, checks, and integration policy; it does not recreate Orca's resource
-lifecycle. Flow42 therefore makes no independent process-identity claim;
+When Orca is selected and ready, Orca owns execution-context and worktree
+selection, terminal and process identity, worker settlement, and cleanup.
+Flow42 records the exact worktree that Orca supplies; a current-worktree choice
+requires disjoint ownership plus explicit task-schedule and integration
+barriers. Flow42 supplies scope, ownership, checks, and integration policy; it
+does not recreate Orca's resource lifecycle. Flow42 makes no independent process-identity claim;
 settlement is observed only through Orca's Run, Task, Dispatch, and
-`worker_done` records. In the native path Flow42 does not enumerate processes.
-`core/OWNERSHIP.md` governs path, content, and Git-administration decisions in
-both paths; it does not govern resource lifecycle.
+`worker_done` records. In the native path Flow42 does
+not enumerate processes. `core/OWNERSHIP.md` governs path, content, and
+Git-administration decisions in both paths. The worker boundary does not govern resource lifecycle.
 
 ## Release provenance
 

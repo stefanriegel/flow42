@@ -528,6 +528,101 @@ validate_contract() {
   }
 }
 
+validate_external_alternate_claims() {
+  ownership_contract=$1
+  architecture_contract=$2
+  threat_model_contract=$3
+
+  for alternate_contract in "$ownership_contract" "$architecture_contract" \
+    "$threat_model_contract"; do
+    tr '\n' ' ' <"$alternate_contract" |
+      grep -Eiq 'pre-existing latent ref.*resolvable or unresolvable.*without changing (the )?bound ref stream' || {
+      printf '%s\n' 'OWNERSHIP-EXTERNAL-ALTERNATE-LATENT-REF' >&2
+      return 1
+    }
+    tr '\n' ' ' <"$alternate_contract" |
+      grep -Eiq 'snapshot equality is not object-availability proof' || {
+      printf '%s\n' 'OWNERSHIP-EXTERNAL-ALTERNATE-AVAILABILITY' >&2
+      return 1
+    }
+    if grep -Eiq 'external (alternate )?object.*inert|cannot affect integration on its own' \
+      "$alternate_contract"; then
+      printf '%s\n' 'OWNERSHIP-EXTERNAL-ALTERNATE-FALSE-INERTNESS' >&2
+      return 1
+    fi
+  done
+
+  tr '\n' ' ' <"$ownership_contract" |
+    grep -Eiq 'Integration may rely only on objects and identities explicitly resolved for (its|the) actual baseline, HEAD, index, and owned worktree decision' || {
+    printf '%s\n' 'OWNERSHIP-EXTERNAL-ALTERNATE-INTEGRATION-INPUTS' >&2
+    return 1
+  }
+}
+
+validate_orca_context_and_delegation_claims() {
+  ownership_contract=$1
+  architecture_contract=$2
+  implementer_contract=$3
+  threat_model_contract=$4
+
+  for context_contract in "$ownership_contract" "$architecture_contract" \
+    "$implementer_contract" "$threat_model_contract"; do
+    if grep -Eiq 'isolated worktrees?' "$context_contract"; then
+      printf '%s\n' 'OWNERSHIP-ORCA-ISOLATED-WORKTREE-CLAIM' >&2
+      return 1
+    fi
+  done
+
+  for context_contract in "$ownership_contract" "$architecture_contract"; do
+    tr '\n' ' ' <"$context_contract" |
+      grep -Eiq 'Orca-provided execution context' || {
+      printf '%s\n' 'OWNERSHIP-ORCA-PROVIDED-CONTEXT' >&2
+      return 1
+    }
+    tr '\n' ' ' <"$context_contract" |
+      grep -Eiq 'record(s|ed)? (the )?exact worktree' || {
+      printf '%s\n' 'OWNERSHIP-ORCA-EXACT-WORKTREE' >&2
+      return 1
+    }
+    tr '\n' ' ' <"$context_contract" |
+      grep -Eiq 'current worktree.*disjoint ownership.*barriers?' || {
+      printf '%s\n' 'OWNERSHIP-ORCA-CURRENT-WORKTREE-BARRIERS' >&2
+      return 1
+    }
+  done
+
+  tr '\n' ' ' <"$implementer_contract" |
+    grep -Eiq 'assigned execution context.*exact worktree' || {
+    printf '%s\n' 'OWNERSHIP-IMPLEMENTER-ASSIGNED-CONTEXT' >&2
+    return 1
+  }
+
+  for delegation_contract in "$ownership_contract" "$architecture_contract" \
+    "$threat_model_contract"; do
+    tr '\n' ' ' <"$delegation_contract" |
+      grep -Eiq 'observed through Orca records or (through )?worker reporting (in|on|under) native execution' || {
+      printf '%s\n' 'OWNERSHIP-DELEGATION-OBSERVATION-BOUNDARY' >&2
+      return 1
+    }
+    if grep -Eiq 'Block integration when .*worker launched a delegate' \
+      "$delegation_contract"; then
+      printf '%s\n' 'OWNERSHIP-DELEGATION-UNQUALIFIED-BLOCK' >&2
+      return 1
+    fi
+  done
+
+  tr '\n' ' ' <"$threat_model_contract" |
+    grep -Eiq 'non-cooperative native worker.*residual|residual.*non-cooperative native worker' || {
+    printf '%s\n' 'OWNERSHIP-DELEGATION-NATIVE-RESIDUAL' >&2
+    return 1
+  }
+  if tr '\n' ' ' <"$threat_model_contract" |
+    grep -Eiq 'native execution (always )?proves.*(did not delegate|absence of delegation)'; then
+    printf '%s\n' 'OWNERSHIP-DELEGATION-FALSE-NATIVE-PROOF' >&2
+    return 1
+  fi
+}
+
 git init -q "$repo"
 git -C "$repo" config user.name 'Flow42 ownership fixture'
 git -C "$repo" config user.email 'ownership@example.invalid'
@@ -738,24 +833,37 @@ admin_snapshot "$admin_repo" "$tmp/admin-after-alternates"
 cmp -s "$tmp/admin-before-alternates" "$tmp/admin-after-alternates" &&
   fail OWNERSHIP-ADMIN-ALTERNATES-UNDETECTED
 
-# External alternate contents are intentionally outside the snapshot. A new
-# object is inert until a separately bound ref, HEAD, index, or worktree surface
-# references it.
+# External alternate contents are intentionally outside the snapshot. Pin the
+# residual: adding external content changes whether a pre-existing latent ref
+# resolves even though the complete snapshot and bound ref stream stay equal.
+latent_payload='alternate-latent-ref-object'
+latent_object=$(printf '%s\n' "$latent_payload" | git hash-object --stdin)
+latent_ref_name=refs/flow42/latent-alternate
+latent_ref_path="$admin_common/$latent_ref_name"
+mkdir -p "${latent_ref_path%/*}"
+printf '%s\n' "$latent_object" >"$latent_ref_path"
+if git -C "$admin_repo" cat-file -e "$latent_ref_name^{blob}" \
+  >/dev/null 2>&1; then
+  fail OWNERSHIP-EXTERNAL-ALTERNATE-LATENT-REF-ALREADY-RESOLVABLE
+fi
 admin_snapshot "$admin_repo" "$tmp/admin-before-external-alternate-object"
-external_object=$(printf '%s\n' alternate-only-object |
+external_object=$(printf '%s\n' "$latent_payload" |
   git --git-dir="$admin_remote" hash-object -w --stdin)
-git -C "$admin_repo" cat-file -e "$external_object" ||
-  fail OWNERSHIP-EXTERNAL-ALTERNATE-OBJECT-NOT-READABLE
+test "$external_object" = "$latent_object" ||
+  fail OWNERSHIP-EXTERNAL-ALTERNATE-LATENT-REF-OID-MISMATCH
+git -C "$admin_repo" cat-file -e "$latent_ref_name^{blob}" ||
+  fail OWNERSHIP-EXTERNAL-ALTERNATE-LATENT-REF-NOT-RESOLVABLE
 admin_snapshot "$admin_repo" "$tmp/admin-after-external-alternate-object"
 cmp -s "$tmp/admin-before-external-alternate-object" \
   "$tmp/admin-after-external-alternate-object" ||
-  fail OWNERSHIP-EXTERNAL-ALTERNATE-OBJECT-UNEXPECTEDLY-BOUND
+  fail OWNERSHIP-EXTERNAL-ALTERNATE-LATENT-REF-SNAPSHOT-CHANGED
 git -C "$admin_repo" update-ref refs/flow42/external-alternate "$external_object"
 admin_snapshot "$admin_repo" "$tmp/admin-after-external-alternate-ref"
 cmp -s "$tmp/admin-after-external-alternate-object" \
   "$tmp/admin-after-external-alternate-ref" &&
   fail OWNERSHIP-EXTERNAL-ALTERNATE-REF-UNDETECTED
 git -C "$admin_repo" update-ref -d refs/flow42/external-alternate
+delete_paths "$latent_ref_path"
 find "$admin_alternates" -delete
 
 external_include="$tmp/external-include.config"
@@ -967,6 +1075,50 @@ fi
 delete_paths "$producer_bin"
 
 validate_contract "$root/core/OWNERSHIP.md"
+validate_external_alternate_claims "$root/core/OWNERSHIP.md" \
+  "$root/docs/ARCHITECTURE.md" "$root/evidence/security/threat-model.md"
+validate_orca_context_and_delegation_claims "$root/core/OWNERSHIP.md" \
+  "$root/docs/ARCHITECTURE.md" "$root/agents/implementer.md" \
+  "$root/evidence/security/threat-model.md"
+
+cp "$root/evidence/security/threat-model.md" \
+  "$tmp/mutated-external-alternate-inert.md"
+printf '%s\n' 'An external alternate object is inert for integration.' \
+  >>"$tmp/mutated-external-alternate-inert.md"
+if validate_external_alternate_claims "$root/core/OWNERSHIP.md" \
+  "$root/docs/ARCHITECTURE.md" \
+  "$tmp/mutated-external-alternate-inert.md" >/dev/null 2>&1; then
+  fail OWNERSHIP-MUTATION-EXTERNAL-ALTERNATE-INERT-ACCEPTED
+fi
+
+cp "$root/docs/ARCHITECTURE.md" "$tmp/mutated-isolated-worktree.md"
+printf '%s\n' 'Workers receive bounded slices in isolated worktrees.' \
+  >>"$tmp/mutated-isolated-worktree.md"
+if validate_orca_context_and_delegation_claims "$root/core/OWNERSHIP.md" \
+  "$tmp/mutated-isolated-worktree.md" "$root/agents/implementer.md" \
+  "$root/evidence/security/threat-model.md" >/dev/null 2>&1; then
+  fail OWNERSHIP-MUTATION-ORCA-ISOLATED-WORKTREE-ACCEPTED
+fi
+
+cp "$root/evidence/security/threat-model.md" \
+  "$tmp/mutated-native-delegation-proof.md"
+printf '%s\n' 'Native execution always proves the worker did not delegate.' \
+  >>"$tmp/mutated-native-delegation-proof.md"
+if validate_orca_context_and_delegation_claims "$root/core/OWNERSHIP.md" \
+  "$root/docs/ARCHITECTURE.md" "$root/agents/implementer.md" \
+  "$tmp/mutated-native-delegation-proof.md" >/dev/null 2>&1; then
+  fail OWNERSHIP-MUTATION-NATIVE-DELEGATION-PROOF-ACCEPTED
+fi
+
+cp "$root/core/OWNERSHIP.md" "$tmp/mutated-unqualified-delegation.md"
+printf '%s\n' 'Block integration when the worker launched a delegate.' \
+  >>"$tmp/mutated-unqualified-delegation.md"
+if validate_orca_context_and_delegation_claims \
+  "$tmp/mutated-unqualified-delegation.md" "$root/docs/ARCHITECTURE.md" \
+  "$root/agents/implementer.md" "$root/evidence/security/threat-model.md" \
+  >/dev/null 2>&1; then
+  fail OWNERSHIP-MUTATION-UNQUALIFIED-DELEGATION-ACCEPTED
+fi
 
 cp "$root/core/OWNERSHIP.md" "$tmp/mutated-newline.md"
 printf '%s\n' 'As an exception, path snapshots may be split on newline.' >>"$tmp/mutated-newline.md"

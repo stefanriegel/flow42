@@ -8,21 +8,25 @@
   headless blocking, consent-safe recommendations, data minimization, and a
   trivial-change fast path.
 - Added a versioned configuration authority, legal lifecycle repair transitions,
-  receipt-subject review evidence, and behavioral tests for update convergence,
-  NUL-safe ownership, configuration, lifecycle, and review currency.
+  receipt-subject review evidence, behavioral temporary-Git fixtures for NUL-safe
+  ownership and review currency, and structural/text-conformance coverage for
+  configuration, lifecycle, and update instructions.
 
 ### Changed
 
 - Added a clarification and conservative-default fallback before intent blocking,
   while keeping high-risk or irreversible choices fail-closed.
 - Made every direct skill load one canonical contract prelude and hardened Claude
-  updates with install-then-update convergence, exact scope/version readback,
-  source-kind-preserving rollback, and canonical `owner/repo@ref` syntax.
-- Hardened trusted Flow42 updates so release verification completes before any
-  harness mutation, while preserving Claude marketplace and plugin scopes
-  through updates and rollbacks.
-- Documented first-upgrade recovery for pre-v2 installations and made local
-  harness installation idempotent and explicit about skipped preflight checks.
+  marketplace syntax with canonical `owner/repo@ref` grammar.
+- Narrowed update instructions to trusted signed-release verification before
+  mutation, documented harness-native installation and native readback, and
+  honest best-effort recovery without private-cache or byte-identical rollback
+  claims.
+- Kept update proof claims at their actual tiers: local signed-tag/archive and
+  checksum verification plus structural/text conformance, not live harness
+  update convergence.
+- Made local harness installation idempotent and explicit about skipped
+  preflight checks.
 - Split lifecycle and maintenance commands in workflow schema version 2 and
   strengthened parity, contract, update-ordering, release-checksum, and CI
   coverage against drift and false-green results.

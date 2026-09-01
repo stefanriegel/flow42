@@ -55,6 +55,11 @@
     "blocked_launcher_executables": ["xcrun"],
     "blocked_launcher_executables_exhaustive": false,
     "read_only_control_cli_allowlist": [],
+    "disallowed_mutation_signature_match": {
+      "executable_position": "any-token-position",
+      "executable_normalization": "basename",
+      "remaining_signature_tokens": "ordered-subsequence"
+    },
     "forbidden_token_pattern": "([$][(]|`|&&|[|][|]|[;<>]|(^|[^|])[|]([^|]|$))",
     "shell_evaluation_prefixes": [
       ["sh", "-c"], ["sh", "--command"],

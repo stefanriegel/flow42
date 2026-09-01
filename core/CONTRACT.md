@@ -34,8 +34,11 @@ missing repository command paths block use with a migration instruction. Parse
 only the declared YAML subset and reject duplicate keys. A literal base branch
 must satisfy both the schema pattern and `git check-ref-format --branch`;
 `worktree_parent` and protected paths reject absolute, home-relative, and parent
-traversal forms. Normalize path-qualified executables and recognized CLI global
-options before applying the fail-closed command policy.
+traversal forms. For each declared disallowed mutation signature, treat every
+token position as a potential executable, normalize that token to its basename,
+and reject when the remaining signature tokens occur later in order. This one
+rule covers named wrappers and intervening global options without claiming a
+full CLI parser.
 Configuration changes do not require a separate approval artifact or Forge
 interaction.
 
@@ -144,7 +147,12 @@ A receipt for `reviewed_head` remains current at `HEAD` only when
 `reviewed_head` is an ancestor of or equal to `HEAD`. Every NUL-delimited path
 from `git diff --name-only --no-renames -z "$reviewed_head" HEAD --` must be an
 exact receipt-neutral leaf in the work item under review. Renames retain both endpoints;
-nested and unrelated lookalike paths are invalid. `evidence.md`, `decisions.md`,
+nested and unrelated lookalike paths are invalid. Receipt-neutral diff
+validation and diff digest derivation fail closed unless the Git diff producer
+exits successfully and its complete NUL-delimited output is consumed without
+parse or hash failure. A successful downstream parser, filter, or hasher never
+masks producer failure.
+`evidence.md`, `decisions.md`,
 and `history.jsonl` are neutral bookkeeping artifacts. In `status.yml`, neutrality
 is field-level and limited to `stage`, `state_revision`, `updated_at`, `blockers`,
 `resume_stage`, `ci_state`, and `next_actions`; changing `risk`, `forge_item`,

@@ -171,3 +171,27 @@
   `task_fc6b5967bd16`, Codex implementation tasks `task_819979b284fa`,
   `task_ccacd8bb7cb4`, and `task_85c8f2c16fb7`, coordinated in Orca run
   `run_b5ab6e7b3014`.
+
+## 2026-09-01T14:20:00Z — accept exact-head review blockers and narrow again
+
+- Context: Fresh independent reviews of `9a112d64f7677ce0148b42f45b98d5a49738ca56`
+  returned BLOCKED. The counterexamples covered named mutation signatures with
+  wrappers/global options, a producer-status requirement missing from normative
+  instructions, stale update proof labels and fixtures, external-alternate
+  latent refs, and per-worker isolation wording inconsistent with Orca-selected
+  current-worktree execution.
+- Decision: Accept and remediate every material finding without expanding the
+  launcher list or recursively inspecting external stores. Match the existing
+  mutation signatures as simple ordered token sequences from any executable
+  position; make producer failure normative; explicitly de-claim alternate
+  object availability, native non-cooperative delegation detection, and
+  per-worker isolated worktrees; and remove obsolete fake-update artifacts.
+- Consequences: The schema remains syntactic and may conservatively reject a
+  harmless argv that contains a declared mutation signature in order. External
+  alternate equality is not object-availability proof. Orca chooses the
+  execution context; Flow42 records it and applies ownership/barriers. Update
+  coverage is no longer presented as live harness convergence.
+- Actor: coordinator, based on correctness task `task_152eb018de10`, security
+  task `task_e5ea5198d28b`, and remediation tasks `task_0ea95ccbf085`,
+  `task_2f550b2a490e`, and `task_e0eeca0cffe7` in Orca run
+  `run_b5ab6e7b3014`.
