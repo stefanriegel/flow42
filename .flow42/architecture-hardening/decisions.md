@@ -195,3 +195,23 @@
   task `task_e5ea5198d28b`, and remediation tasks `task_0ea95ccbf085`,
   `task_2f550b2a490e`, and `task_e0eeca0cffe7` in Orca run
   `run_b5ab6e7b3014`.
+
+## 2026-09-01T15:02:21Z — close case-insensitive executable-name escape
+
+- Context: The second exact-head correctness review of
+  `6b31d2491e2adfa59295eff08cd4f3c2a6c4d8ad` passed. Claude Opus security
+  review reproduced `Git`, `GH`, `RM`, `Kubectl`, and wrapper-plus-case variants
+  resolving to real tools on case-insensitive macOS while bypassing lowercase
+  policy comparisons.
+- Decision: ASCII-casefold only the candidate executable basename before the
+  existing authority-bearing executable, blocked-launcher, and declared
+  mutation-signature comparisons. Keep the inventories unchanged. Bind the
+  update skill's unexpected Git-environment rejection with one structural
+  mutation. Leave PATH-resolved trusted release tools within the already
+  disclosed trusted-installed-tools boundary.
+- Consequences: Named case variants fail closed on every supported shell without
+  a launcher denylist or full command parser. Arbitrary renamed binaries and
+  repository scripts remain an explicit semantic residual inside Orca's
+  execution and ownership boundary.
+- Actor: coordinator, based on correctness task `task_b0c3ab54f3eb` and Claude
+  Opus security task `task_d20d31e953ec` in Orca run `run_b5ab6e7b3014`.

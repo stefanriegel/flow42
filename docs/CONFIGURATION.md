@@ -35,13 +35,14 @@ evidence before build. Configuration does not require an approval artifact or
 Forge interaction. Never execute command strings through a shell; each array
 element is one argument, and empty or whitespace-bearing tokens are rejected as
 ambiguous. The command policy rejects shell evaluation, substitution and
-operators, declared mutation signatures, and any token equal to a bare or
-path-qualified `git`, `gh`, `glab`, or `terraform` executable in any argv
-position. This prevents a wrapper from reaching a control CLI it names. The
-mutation-signature matcher treats every token position as a potential
-executable, normalizes that token to its basename, and rejects when the
-remaining signature tokens occur later in order. This one rule catches named
-wrappers and intervening global options without parsing each CLI grammar. The
+operators, declared mutation signatures, and any token whose ASCII-casefolded
+basename is `git`, `gh`, `glab`, or `terraform` in any argv position. This
+prevents a wrapper from reaching a control CLI it names. The mutation-signature
+matcher treats every token position as a potential executable, normalizes that
+token to its ASCII-casefolded basename, and rejects when the remaining signature
+tokens occur later in order. Authority-bearing executables and blocked launchers
+use the same normalization. This one rule catches named wrappers and
+intervening global options without parsing each CLI grammar. The
 schema's shared read-only control-CLI allowlist is intentionally empty. Bare and
 path-qualified `xcrun` remains one blocked launcher because it can locate and
 execute a developer tool; this includes default run mode, `--run`/`-r`, SDK

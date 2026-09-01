@@ -34,13 +34,15 @@ substitution, or concatenated shell strings. Pass `--` before user-controlled
 positional values when supported. Validate work IDs, branches, paths, URLs, and
 Forge identifiers against the narrow grammar required by the operation.
 Schema validation rejects empty or whitespace-ambiguous tokens, shell syntax,
-declared mutation signatures, and any token equal to a bare or
-path-qualified `git`, `gh`, `glab`, or `terraform` executable in any argv
-position, so a wrapper cannot reach an authority-bearing control CLI it names.
+declared mutation signatures, and any token whose ASCII-casefolded basename is
+`git`, `gh`, `glab`, or `terraform` in any argv position, so a wrapper cannot
+reach an authority-bearing control CLI it names.
 For each mutation signature, every token position is a potential executable;
-normalize that token to its basename and reject when the remaining signature
-tokens occur later in order. The same rule therefore catches named wrappers
-and intervening global options without parsing each CLI grammar.
+normalize that token to its ASCII-casefolded basename and reject when the
+remaining signature tokens occur later in order. Authority-bearing executables
+and blocked launchers use the same normalization. The same rule therefore
+catches named wrappers and intervening global options without parsing each CLI
+grammar.
 These control CLIs remain forbidden unless a future shared explicit allowlist
 can prove a specific argv is read-only; the current allowlist is empty and
 no named control-CLI token is allowed by exception. Safe direct script argv such as

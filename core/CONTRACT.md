@@ -35,10 +35,11 @@ only the declared YAML subset and reject duplicate keys. A literal base branch
 must satisfy both the schema pattern and `git check-ref-format --branch`;
 `worktree_parent` and protected paths reject absolute, home-relative, and parent
 traversal forms. For each declared disallowed mutation signature, treat every
-token position as a potential executable, normalize that token to its basename,
-and reject when the remaining signature tokens occur later in order. This one
-rule covers named wrappers and intervening global options without claiming a
-full CLI parser.
+token position as a potential executable, normalize that token to its
+ASCII-casefolded basename, and reject when the remaining signature tokens occur
+later in order. The authority-bearing executable and blocked-launcher checks use
+the same normalization. This one rule covers named wrappers and intervening
+global options without claiming a full CLI parser.
 Configuration changes do not require a separate approval artifact or Forge
 interaction.
 

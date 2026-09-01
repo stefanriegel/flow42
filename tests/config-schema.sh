@@ -18,7 +18,7 @@ jq -e '.fields.base_branch.validation == "git-check-ref-format---branch" and
   .command_policy.read_only_control_cli_allowlist == [] and
   .command_policy.disallowed_mutation_signature_match == {
     "executable_position": "any-token-position",
-    "executable_normalization": "basename",
+    "executable_normalization": "basename-ascii-casefold",
     "remaining_signature_tokens": "ordered-subsequence"
   } and
   (.command_policy.token_pattern | type == "string" and length > 0) and
@@ -38,13 +38,14 @@ fail() { echo "$1" >&2; return 1; }
 matches_ordered_signature() {
   token_stream=$1
   signature=$2
-  printf '%s\n' "$token_stream" | awk -v signature="$signature" '
+  printf '%s\n' "$token_stream" | LC_ALL=C awk -v signature="$signature" '
     BEGIN {signature_length=split(signature, signature_tokens, "\t")}
     {command_tokens[NR]=$0}
     END {
       for (start=1; start<=NR; start++) {
         executable=command_tokens[start]
         sub(/^.*\//, "", executable)
+        executable=tolower(executable)
         if (executable != signature_tokens[1]) continue
         wanted=2
         for (position=start+1; position<=NR && wanted<=signature_length; position++) {
@@ -102,6 +103,7 @@ validate_command() {
   fi
   first=$(printf '%s\n' "$tokens" | sed -n '1p')
   first=${first##*/}
+  first=$(printf '%s' "$first" | LC_ALL=C tr '[:upper:]' '[:lower:]')
   canonical=$(printf '%s\n' "$tokens" | awk -v first="$first" 'NR == 1 {$0=first} {if (NR > 1) printf "\t"; printf "%s", $0} END {print ""}')
 
   if jq -e --arg executable "$first" \
@@ -112,6 +114,7 @@ validate_command() {
   fi
   while IFS= read -r token; do
     executable=${token##*/}
+    executable=$(printf '%s' "$executable" | LC_ALL=C tr '[:upper:]' '[:lower:]')
     if jq -e --arg executable "$executable" \
       '.command_policy.authority_bearing_executables | index($executable) != null' \
       "$schema" >/dev/null; then
@@ -304,7 +307,10 @@ control_cli_case=0
 for control_cli_argv in \
   '[arch, -arm64, git, push, origin, HEAD:main]' \
   '[stdbuf, -o0, gh, pr, merge]' \
-  '[/usr/bin/arch, -x86_64, /usr/bin/git, push]'; do
+  '[/usr/bin/arch, -x86_64, /usr/bin/git, push]' \
+  '[Git, push, origin, HEAD:main]' \
+  '[arch, -arm64, Git, push, origin, HEAD:main]' \
+  '[GH, pr, merge]'; do
   control_cli_case=$((control_cli_case + 1))
   control_cli_config="$tmp/control-cli-any-position-$control_cli_case.yml"
   sed "s#^  lint: .*\$#  lint: $control_cli_argv#" "$fixtures/valid.yml" \
@@ -324,7 +330,9 @@ done
 mutation_signature_case=0
 for mutation_signature_argv in \
   '[arch, -arm64, /bin/rm, -rf, build]' \
+  '[arch, -arm64, RM, -rf, build]' \
   '[/usr/bin/kubectl, --context, production, delete, pod, demo]' \
+  '[Kubectl, --context, production, delete, pod, demo]' \
   '[stdbuf, -o0, /usr/local/bin/helm, --namespace, demo, upgrade, release, chart]' \
   '[docker, --context, production, push, example/image]' \
   '[cargo, +stable, publish]'; do
@@ -377,6 +385,7 @@ grep -Fxq CONFIG-COMMAND-LAUNCHER "$xcrun_log"
 xcrun_case=0
 for xcrun_argv in \
   '[/usr/bin/xcrun, git, push]' \
+  '[Xcrun, git, push]' \
   '[xcrun, --run, git, push]' \
   '[xcrun, -r, git, push]' \
   '[xcrun, --sdk, macosx, git, push]' \
