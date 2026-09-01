@@ -2,15 +2,15 @@ schema_version: 1
 work_id: "architecture-hardening"
 title: "Architecture hardening"
 work_type: "bugfix-refactor"
-stage: blocked
+stage: pr-ready
 risk: medium
-state_revision: 12
+state_revision: 14
 created_at: "2026-09-01T05:37:26Z"
-updated_at: "2026-09-01T10:50:54Z"
+updated_at: "2026-09-01T17:01:14Z"
 review_loops: 2
-blockers: [candidate-git-environment-substitution,configured-argv-arch-launcher-escape,external-git-config-origin-unbound,external-alternate-object-store-unbound,claude-effective-source-unbound,claude-rollback-byte-identity-unbound,correctness-review-result-underbound]
-resume_stage: verifying
+blockers: []
+resume_stage: ""
 forge_item: ""
 change_request: ""
 ci_state: unknown
-next_actions: [request-human-resume,remediate-final-review-blockers,run-fresh-exact-head-reviews]
+next_actions: [open-change-request]

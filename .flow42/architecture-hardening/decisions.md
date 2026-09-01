@@ -263,3 +263,20 @@
   unlisted launchers and arbitrary repository executables remain residual.
 - Actor: dispatched Codex implementation worker under coordinator-owned
   integration; no staging, lifecycle transition, remote, or Forge authority.
+
+## 2026-09-01T17:01:14Z — accept exact-head reviews and advance to PR-ready
+
+- Context: At exact subject
+  `739f5b86df0430e5712a0c370c84c3c2bb9b14b4`, independent Codex correctness,
+  Claude Opus security, and Claude Opus architecture reviews all returned PASS
+  with empty porcelain before and after. Correctness and security reports and
+  schema-v2 receipts are persisted byte-for-byte in `evidence.md`.
+- Decision: Resume the recorded `verifying` stage, clear the superseded blocker
+  list, and advance through the configured `verification-passed` gate to
+  `pr-ready` without opening a change request.
+- Consequences: Local repository behavior and contracts satisfy the work-item
+  gate. Remote exact-head CI, authenticated Forge/provider state, live harness
+  convergence, release, and deployment remain separate unavailable proof tiers.
+  Optional architecture cleanup is not expanded into this bounded repair.
+- Actor: coordinator using trusted Orca task results; no push, PR/MR, merge,
+  release, deployment, or Forge mutation.

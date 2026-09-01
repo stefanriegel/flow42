@@ -10,3 +10,5 @@
 {"actor":"coordinator","from":"verifying","reason":"final-exact-head-reviews-blocked-after-automatic-review-limit-exhausted","revision":10,"timestamp":"2026-09-01T08:20:05Z","to":"blocked"}
 {"actor":"coordinator","from":"blocked","reason":"human-resumed-blockers-resolved-and-complete-local-matrix-green","revision":11,"timestamp":"2026-09-01T10:27:39Z","to":"verifying"}
 {"actor":"coordinator","from":"verifying","reason":"human-resumed-final-exact-head-reviews-recorded-blocking-findings","revision":12,"timestamp":"2026-09-01T10:50:54Z","to":"blocked"}
+{"actor":"coordinator","from":"blocked","reason":"human-resumed-architecture-blockers-cleared-and-fresh-exact-head-reviews-passed","revision":13,"timestamp":"2026-09-01T17:01:13Z","to":"verifying"}
+{"actor":"coordinator","from":"verifying","reason":"exact-head-correctness-and-security-reviews-passed","revision":14,"timestamp":"2026-09-01T17:01:14Z","to":"pr-ready"}
