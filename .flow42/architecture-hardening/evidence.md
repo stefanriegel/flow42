@@ -310,3 +310,344 @@ so no gitleaks result is claimed. Two
 consecutive Claude cache observations do not provide a vendor lock or durable
 immutability against a later same-user writer. No remote CI, authenticated Forge,
 merge, release, deployment, or live normal-harness mutation proof has been run.
+
+## Human-resumed final exact-head reviews
+
+Both non-implementing Orca/Codex reviewers inspected exact subject
+`bfcb565670e572a977b26296fdc84d11347e94dd` against baseline
+`65a7910b9b2ec1d44aa5724b13a319633d69bcc3`, independently matched the
+173-path scope digest and raw no-renames diff digest, and confirmed a clean
+tree before and after. Correctness returned `BLOCKED` with three HIGH and one
+MEDIUM finding. Security returned `BLOCKED` with one CRITICAL, three HIGH,
+and three MEDIUM findings. All configured local gates were green; `gitleaks`
+was unavailable, and neither reviewer mutated repository, Forge, live Claude
+marketplace, release, or deployment state.
+
+The reproduced blocking boundaries are ambient Git template/replacement-object
+substitution during candidate verification, an `arch`-wrapped Git authority
+escape, unbound external included-config and alternate-object state, mismatch
+between Claude's effective marketplace source and the declaration selected for
+verification, and rollback success without prior-byte attestation. Git's
+[replace documentation](https://git-scm.com/docs/git-replace) confirms that
+replacement refs affect Git commands by default and identifies
+`GIT_NO_REPLACE_OBJECTS`/`--no-replace-objects` as the opt-out; its
+[init documentation](https://git-scm.com/docs/git-init) confirms that
+repository initialization consumes templates unless explicitly overridden.
+
+### Final correctness report
+
+<!-- flow42-review-section:final-correctness-bfcb565:begin -->
+# Independent final correctness review: architecture-hardening
+
+## Review identity
+
+- Review kind: `correctness`
+- Reviewer: non-implementing Orca worker `orca:task_135ee22b123a`
+- Repository: `https://github.com/stefanriegel/flow42`
+- Work ID: `architecture-hardening`
+- Branch observed: `fix/architecture-hardening`
+- Baseline: `65a7910b9b2ec1d44aa5724b13a319633d69bcc3`
+- Reviewed exact head: `bfcb565670e572a977b26296fdc84d11347e94dd`
+- Review subject: `architecture-hardening final exact-head verification`
+- Scope: complete baseline-to-subject diff, 173 canonical NUL-sorted paths, 7,728 insertions and 267 deletions.
+- Scope digest: `sha256:334ee617e165f8ca051980ae92d9888cc1d6279f9f188f5045fd2ba3beadaa35` (matched the required digest).
+- Diff digest: `sha256:251270c075a90541caf8a7fc1122a04025373286bfb9edbdc54485bc5e511123` (matched the required raw no-renames digest).
+
+## Findings
+
+### HIGH — External alternate object databases escape the claimed complete Git-admin snapshot
+
+`core/OWNERSHIP.md:46-65` requires a complete identity that binds alternates and the object database, and `core/OWNERSHIP.md:73-80` says any Git-administration change must block integration. The executable reference hashes only the common and per-worktree Git directories at `tests/ownership.sh:330-340`; its separate external-path collection at `tests/ownership.sh:308-317` covers only excludes and attributes, not the object directories named by `objects/info/alternates`.
+
+A disposable reproducer created an alternate object directory, captured `admin_snapshot`, wrote a new blob only into the external alternate, proved the blob became visible through `git cat-file`, and captured the snapshot again. Both snapshots compared equal and the reproducer printed:
+
+```text
+UNDETECTED: external alternate object 3ad725a5dc13b211825788547bde2ba5046691fd became visible while the ownership snapshot stayed identical
+```
+
+This leaves worker-visible Git object storage outside the ownership decision even though the contract claims complete object-database coverage. Fail closed when an alternate points outside the captured admin trees, or recursively resolve, canonicalize, link-check, and snapshot every reachable alternate object directory with cycle and producer-failure handling; add the disposable regression to `tests/ownership.sh`.
+
+### HIGH — Claude preflight does not bind the effective marketplace listing to the declaration used for verification and rollback
+
+`skills/update/SKILL.md:104-124` says the marketplace listing identifies the effective source, but the executable preflight only verifies that the listing is an array at `skills/update/SKILL.md:175-178`. It then selects a settings declaration at `skills/update/SKILL.md:180-220` and derives `repository_url` and rollback input from that declaration at `skills/update/SKILL.md:250-268` without comparing the effective listing entry to it. Rollback later re-adds the declaration-derived source at `skills/update/SKILL.md:656-670`; its listing reconciliation at `skills/update/SKILL.md:614-620` checks only the number of `flow42` entries.
+
+A disposable fake returned an effective marketplace entry for `effective-other/flow42@v9.9.9`, a settings declaration for `declared/flow42@v1.0.1`, and a valid current-project plugin entry. The shipped preflight exited zero, selected `https://github.com/declared/flow42.git`, and printed:
+
+```text
+ACCEPTED: effective marketplace source differs from the declaration selected for verification and rollback
+```
+
+The updater can therefore verify one repository, remove a different effective marketplace, and call restoration complete after adding the declaration-derived source rather than the original effective source. Canonicalize the listing's exact source object and require it to equal the uniquely selected settings declaration before candidate discovery or mutation; cover GitHub, Git, scope/project, and mismatch cases behaviorally.
+
+### HIGH — Rollback success is not bound to restored plugin bytes
+
+Target convergence now attests marketplace and plugin trees, but rollback verification at `skills/update/SKILL.md:623-653` checks only the declaration, selected identities, and reported prior version. It never reads each restored `installPath` or compares a restored tree with a pre-mutation identity. `flow42_claude_abort_update` nevertheless reports `recorded state restored` at `skills/update/SKILL.md:695-702`, and the explanatory contract at `skills/update/SKILL.md:798-815` likewise treats source and version readback as restoration.
+
+A disposable reproducer supplied the expected prior source, scope, project path, and version while returning `installPath: /tmp/substituted-old-version-cache`. `flow42_claude_verify_recorded_state` exited zero and printed:
+
+```text
+ACCEPTED: rollback verification reported restored state without reading or attesting the restored installPath bytes
+```
+
+If the prior semver ref or cache is substituted during failure recovery, rollback can accept attacker-controlled or corrupt code carrying the expected version string. Before mutation, capture a sanitized tree identity for every selected installed prior cache and the effective prior marketplace; after rollback, require exact identity restoration, or explicitly fail closed and report rollback incomplete when exact prior-byte restoration cannot be established.
+
+### MEDIUM — The persisted threat model still grants a worker staging exception that the canonical ownership contract removed
+
+`evidence/security/threat-model.md:33` states that workers may not mutate Git administration “except an explicitly authorized exact staging operation.” The repaired canonical rule forbids worker staging and reserves exact staging to the coordinator only at `core/OWNERSHIP.md:73-80` and `core/OWNERSHIP.md:94-98`; `skills/build/SKILL.md:43-48` and `docs/ARCHITECTURE.md:57-60` agree with the canonical rule.
+
+This is stale security evidence for the same boundary revision 10 repaired, and the current suites do not compare the threat-model statement with the load-bearing contract. Remove the worker exception or explicitly name coordinator-only post-worker staging, then add a cross-document mutation check so the persisted threat model cannot regress independently.
+
+## Revision-10 and adjacent repair assessment
+
+- xcrun authority: repaired for the documented forms. `tests/config-schema.sh` used the available Xcode `xcrun` to create a ref in a disposable bare remote, then proved bare/path-qualified and option-bearing xcrun argv are rejected. The broader command policy remains explicitly a syntactic boundary, not a semantic sandbox.
+- Git-admin ownership and producer failures: the in-tree common/worktree, reflog/recovery, external hook/ignore/attribute, link, malformed-path, tar-failure, and hash-failure cases pass under all supported local shells. External alternate object storage remains a blocking omission.
+- Receipt v2: current fixtures pass purpose, exact-check-array, artifact reference-to-bytes, real calendar time, issuer resolution, local-session distinction, status grammar/currency, and evidence-only Forge-link tests. No live authenticated Forge or provider receipt was resolved in this review.
+- Claude candidate/fetched/installed identity: candidate, fetched marketplace, current-project selection, settings links, hostile templates/filters, runtime markers, installed cache substitution, and two point-in-time target observations pass the shipped fixtures. Effective-source mismatch and rollback byte identity remain blocking.
+- Project/config/source/link handling: canonical roots, exact `projectPath`, one declaration, supported source shapes, linked settings, and runtime-marker links are covered. The effective listing is not compared with that declaration.
+- Rollback: before/after-effect command failures and source/version restoration pass the fake harness matrix, but the success predicate remains byte-blind.
+- Portability: all focused suites passed under macOS `/bin/sh`, Dash, and Ksh; ShellCheck and syntax checks passed. This is supported-shell proof on Darwin, not Linux execution proof.
+- Residual claims: the post-observation same-user Claude cache race is disclosed honestly. The threat-model staging exception is not aligned with the repaired contract.
+
+## Exact checks run
+
+### Identity and diff
+
+```text
+git rev-parse HEAD
+  bfcb565670e572a977b26296fdc84d11347e94dd
+git symbolic-ref --short HEAD
+  fix/architecture-hardening
+git status --porcelain=v2 -z | wc -c
+  0
+git config --get remote.origin.url
+  https://github.com/stefanriegel/flow42
+git merge-base --is-ancestor 65a7910b9b2ec1d44aa5724b13a319633d69bcc3 bfcb565670e572a977b26296fdc84d11347e94dd
+  exit 0
+git rev-list --count 65a7910b9b2ec1d44aa5724b13a319633d69bcc3..bfcb565670e572a977b26296fdc84d11347e94dd
+  5
+git diff --name-only --no-renames -z BASE HEAD | LC_ALL=C sort -z | shasum -a 256
+  334ee617e165f8ca051980ae92d9888cc1d6279f9f188f5045fd2ba3beadaa35
+git diff --name-only --no-renames -z BASE HEAD | tr -cd '\000' | wc -c
+  173
+git diff --raw --no-renames -z --abbrev=64 BASE HEAD | shasum -a 256
+  251270c075a90541caf8a7fc1122a04025373286bfb9edbdc54485bc5e511123
+git diff --check BASE HEAD
+  exit 0
+```
+
+### Repository and configured gates
+
+All of these exited zero:
+
+```text
+sh scripts/check-parity.sh
+sh scripts/validate.sh
+sh tests/conformance.sh
+sh tests/contracts.sh
+sh tests/update.sh
+sh tests/release-checksum.sh
+sh tests/security.sh
+sh tests/dependencies.sh
+sh evals/run.sh
+sh evals/cases/run.sh
+sh evals/cases/run.sh --dry-run
+shellcheck scripts/*.sh scripts/install-local tests/*.sh
+sh -n scripts/*.sh scripts/install-local tests/*.sh evals/*.sh evals/cases/*.sh
+dash -n scripts/*.sh scripts/install-local tests/*.sh evals/*.sh evals/cases/*.sh
+ksh -n scripts/*.sh scripts/install-local tests/*.sh evals/*.sh evals/cases/*.sh
+jq -e . core/*.json evals/*.json evals/cases/*.json .claude-plugin/*.json .codex-plugin/*.json
+```
+
+The configured lint command is covered by the broader ShellCheck invocation, and the configured test command `sh tests/conformance.sh` passed directly.
+
+### Focused supported-shell matrix
+
+Each of the following passed under both `dash` and `ksh`; the same suites also passed under `/bin/sh` through the direct and aggregate runs:
+
+```text
+tests/config-schema.sh
+tests/ownership.sh
+tests/review-receipt.sh
+tests/update.sh
+```
+
+### Independent adversarial reproducers
+
+These disposable `/tmp` scripts exited zero only because they demonstrated the named acceptance bug; they did not touch the reviewed repository or a real Forge/harness:
+
+```text
+sh /tmp/flow42-external-alternate-reproducer.sh
+sh /tmp/flow42-update-source-mismatch-reproducer.sh
+sh /tmp/flow42-rollback-byte-reproducer.sh
+```
+
+The exact observed outputs are quoted in the findings above. The temporary fixtures and reproducer scripts were deleted after capture.
+
+## Clean-state evidence
+
+- Before review: `HEAD` was exactly `bfcb565670e572a977b26296fdc84d11347e94dd`; `git status --porcelain=v2 -z` contained zero bytes.
+- After all repository gates and disposable reproducers: `HEAD` was still exactly `bfcb565670e572a977b26296fdc84d11347e94dd`; `git status --porcelain=v2 -z` still contained zero bytes.
+- No repository file, index, ref, Git administration, Forge object, harness cache, or installed plugin state was changed.
+
+## Proof limitations
+
+- `gitleaks` is unavailable locally, so no local gitleaks result is claimed. Dependency and static ShellCheck baselines passed; the full diff was manually inspected for correctness and credential exposure.
+- The native-agent provenance probe remained opt-in and was not run. No normal Claude/Codex/Pi agent compliance or harness-parity claim is made.
+- Execution was on Darwin 25.4.0 arm64 with Git 2.54.0, jq 1.7.1-apple, ShellCheck 0.11.0, macOS `/bin/sh`, Dash, Ksh 93u+, and zsh 5.9. Ubuntu/macOS CI configuration was inspected, but no remote CI run was observed.
+- No internet research, authenticated Forge readback, provider receipt resolution, release, deployment, merge, push, or live marketplace mutation was performed.
+- Green repository gates do not override the three executable blockers above or the stale threat-model statement.
+
+VERDICT: BLOCKED
+<!-- flow42-review-section:final-correctness-bfcb565:end -->
+
+Coordinator readback immediately after Orca task
+`task_135ee22b123a` completed observed SHA-256
+`d128e928dc6d8639af7116b17b20aabe18f7185606c5e6f17ee364d1517683ba`
+for the exact report above. The trusted task result bound the task, dispatch,
+report path, completion time, and `BLOCKED` subject, but its `worker_done` body
+was empty and therefore did not bind the artifact digest or the complete
+review record required by schema version 2. Resolution fails closed, so no
+correctness receipt is issued and this report cannot satisfy the verification
+gate.
+
+### Final security report
+
+<!-- flow42-review-section:final-security-bfcb565:begin -->
+# Independent final security review — architecture-hardening
+
+## Review identity
+
+- Review kind: `security`
+- Repository: `https://github.com/stefanriegel/flow42`
+- Work item: `architecture-hardening`
+- Baseline: `65a7910b9b2ec1d44aa5724b13a319633d69bcc3`
+- Reviewed exact head: `bfcb565670e572a977b26296fdc84d11347e94dd`
+- Scope digest: `sha256:334ee617e165f8ca051980ae92d9888cc1d6279f9f188f5045fd2ba3beadaa35`
+- Diff digest: `sha256:251270c075a90541caf8a7fc1122a04025373286bfb9edbdc54485bc5e511123`
+- Review subject: `architecture-hardening final exact-head verification`
+- Required checks: `threat-model`, `baseline-checks`, `configured-repository-security-gates`, `independent-security-review`
+- Reviewer: `orca:task_c075cf062c46`, role `independent-reviewer`, implementer `false`
+- Artifact reference: `evidence:.flow42/architecture-hardening/evidence.md#final-security-bfcb565`
+
+## Findings
+
+### CRITICAL — Ambient Git templates can substitute attacker content beneath a valid signed tag
+
+**Evidence:** `skills/update/SKILL.md:47-77`, especially the unsanitized `git init`, fetch, verifier invocation, and subsequent `rev-parse`/`git show`; compare the later, sanitized installed-tree repository at `skills/update/SKILL.md:473-503`. This also contradicts the exact signed-candidate-tree requirement at `.flow42/architecture-hardening/spec.md:5-9` and the stated template/config neutralization at `.flow42/architecture-hardening/plan.md:186-190`.
+
+The candidate repository inherits ambient Git template, configuration, object, and replacement-ref state. A disposable signed-tag reproducer placed a malicious commit and `refs/replace/<signed-commit>` in the init template. `git verify-tag` passed for the authentic signed tag, but `refs/tags/v1.0.0^{tree}` resolved to the attacker's tree and `git show refs/tags/v1.0.0:payload.txt` returned attacker content. Observed output was `verify-tag=passed`, good tree `924329ac26dc1761143133e6b4db3f78a7bf66c5`, resolved attacker tree `4ad18adf0a456f962752c93b9e8f3d609caa93d5`, payload `attacker`.
+
+The later marketplace and cache comparisons use `verified_candidate_tree`; after this substitution they prove equality to attacker-selected bytes, not to the tree named by the signed tag. Initialize with an explicitly empty template under a comprehensively sanitized Git environment, disable replacement objects for every verification command (including the trusted verifier subprocess), disable global/system/config injection and alternate object stores, and add a signed-tag replacement-ref regression before treating the trust boundary as closed.
+
+### HIGH — The configured-argv predicate accepts the supported macOS `arch` launcher around `git push`
+
+**Evidence:** `core/config-schema.json:50-80` lists only `xcrun` as a blocked launcher, and `tests/config-schema.sh:61-105` examines only the first executable plus finite prefixes. The threat model claims configured argv cannot hide control-CLI authority at `evidence/security/threat-model.md:30`.
+
+A disposable config using `[arch, -arm64, git, push, origin, HEAD:main]` passed `validate_config`. Executing that exact direct argv against a disposable bare repository changed its ref count from zero to one. Thus a supported-platform launcher bypasses the supposedly shared fail-closed control-CLI predicate and can perform an external Git write with whatever credentials/network authority the configured gate process has.
+
+At minimum, unwrap and reject `arch` with adversarial execution coverage. More generally, a finite launcher denylist cannot support the broad fail-closed claim while arbitrary executables remain allowed; either narrow the claim and isolate configured tools from network/credentials/Git administration, or enforce a structurally bounded executable allowlist at the actual launcher interface.
+
+### HIGH — External included Git config can be changed to a symlink without changing the ownership snapshot
+
+**Evidence:** `core/OWNERSHIP.md:46-71` requires complete Git-admin identity and says the effective config stream keeps included configuration attributable. The behavioral implementation hashes only `git config --null --show-origin --show-scope --list` at `tests/ownership.sh:360-365`; the separately metadata-checked external surfaces are limited to excludes and attributes at `tests/ownership.sh:308-318`.
+
+In a disposable repository with an absolute `[include] path`, replacing the included regular config file with a symlink to an equal-content target produced `admin_snapshot_identical=true` while `included_config_is_symlink=true`. The common/worktree Git trees and effective config bytes/origin strings remain unchanged, so the worker's prohibited external Git-behavior mutation is missed and a later target change becomes an untracked control channel.
+
+Parse every file origin in the exact NUL-delimited effective-config result, canonicalize it without lossy decoding, and bind each origin's type, device/inode/link count, mode, and content before and after dispatch. Reject symlinked or multiply linked external config origins and add this executable regression.
+
+### HIGH — Claude rollback can report restoration without restoring or attesting prior bytes
+
+**Evidence:** `skills/update/SKILL.md:623-653` validates only the recorded source object, selected scope/project identities, and version strings after rollback. `skills/update/SKILL.md:656-700` re-adds the recorded mutable tag and then prints `recorded state restored`; no marketplace or plugin tree attestation is performed on the restored state. The current rollback tests likewise assert declaration/install/version state at `tests/update.sh:846-890`, not restored bytes.
+
+If the recorded old tag moves, or the restored marketplace/plugin cache is substituted while retaining the old version string, rollback can return success with different bytes. The target-path two-observation defense does not repair this because it is not called by `flow42_claude_verify_recorded_state`.
+
+Capture and independently verify the pre-update marketplace and every selected plugin tree, retain immutable old-release identity through the transaction, and attest each restored path to that identity before claiming restoration. If the vendor cannot reproduce and attest the previous bytes, report rollback as incomplete rather than restored.
+
+### MEDIUM — Receipt-currency path collection swallows a failing Git producer
+
+**Evidence:** `tests/review-receipt.sh:450-466` pipes `git diff --name-only --no-renames -z` directly into `jq` under POSIX `sh`; the pipeline status is the consumer's status.
+
+A disposable descendant commit referencing a missing subtree produced `git diff` exit 128 and zero path bytes, while the implemented pipeline exited 0 and the later status-only diff exited 0. The receipt can therefore remain current when the complete changed-path set was not produced, contrary to the fail-closed and NUL-safe claims.
+
+Capture the Git output into a temporary file with the producer's exit status checked directly, then run the NUL parser. Add truncated, unreadable-tree, and partial-producer regressions.
+
+### MEDIUM — Receipt artifact extraction rejects symlinks but accepts hardlinks
+
+**Evidence:** `core/CONTRACT.md:111-116`, `core/SECURITY.md:73-75`, and `skills/verify/SKILL.md:54-60` say links are rejected. `tests/review-receipt.sh:44-63` checks only `test -f` and `test ! -L`.
+
+A disposable two-link evidence file passed the implemented link predicate (`implemented_link_check=true`, `hardlink_count=2`). An external hardlink writer can therefore change the canonical work-item evidence bytes outside the repository path and create a reference-to-bytes TOCTOU that the stated link policy was intended to reject.
+
+Require a regular single-linked evidence file, bind metadata before and after extraction/hash, and add hardlink plus swap regressions. If atomic file identity cannot be maintained through acceptance, disclose and fail closed on the race.
+
+### MEDIUM — Claude settings link validation is not retained across candidate verification
+
+**Evidence:** `skills/update/SKILL.md:138-220` validates the settings file once during preflight and retains only its path/source values. Candidate discovery, fetch, signature, archive, and checksum work then occurs before the transaction at `skills/update/SKILL.md:32-97`; mutations start at `skills/update/SKILL.md:714-725` without rechecking the settings file's device/inode/link count/content identity.
+
+A same-user writer can swap the validated settings path to a link or different file during that interval. Later `jq` readbacks follow the current path, and the Claude CLI may mutate a file different from the one that established scope and source identity. The disclosed cache race at `skills/update/SKILL.md:833-838` does not cover this settings authority race.
+
+Bind the declaring settings file identity and exact relevant bytes through candidate verification, revalidate immediately before every marketplace mutation and readback, and stop on any path/type/link/inode/content change. Record an explicit residual if the vendor provides no settings lock.
+
+## Checks run
+
+The pre-review guard confirmed exact `HEAD` `bfcb565670e572a977b26296fdc84d11347e94dd`, branch `fix/architecture-hardening`, normalized origin `https://github.com/stefanriegel/flow42`, and zero bytes from `git status --porcelain=v2 -z`. Independent recomputation matched the required 173-path canonical NUL-sorted scope digest and the required `git diff --raw --no-renames -z --abbrev=64` digest. The complete 173-path baseline-to-subject diff, work-item artifacts, and persisted threat model were inspected.
+
+All available repository checks below passed locally at the reviewed head:
+
+- `sh scripts/check-parity.sh`
+- `sh scripts/validate.sh`
+- `sh tests/conformance.sh`
+- `sh tests/contracts.sh`
+- `sh tests/prelude.sh`
+- `sh tests/ownership.sh`
+- `sh tests/review-receipt.sh`
+- `sh tests/config-schema.sh`
+- `sh tests/lifecycle-transitions.sh`
+- `sh tests/update.sh`
+- `sh tests/release-checksum.sh`
+- `sh tests/security.sh`
+- `sh evals/run.sh`
+- `sh evals/cases/run.sh`
+- `shellcheck scripts/*.sh scripts/install-local tests/*.sh`
+- `sh tests/dependencies.sh`
+- `git diff --check 65a7910b9b2ec1d44aa5724b13a319633d69bcc3 bfcb565670e572a977b26296fdc84d11347e94dd`
+- `tests/config-schema.sh`, `tests/ownership.sh`, `tests/review-receipt.sh`, and `tests/update.sh` under both `/bin/dash` and `/bin/ksh`
+
+The repository-configured lint/test argv were therefore covered, and the security-sensitive behavioral suites were run beyond that minimum. A bounded added-line secret heuristic found zero private-key/common-token-pattern matches. `gitleaks` was not installed, so no gitleaks result is claimed.
+
+Disposable adversarial reproducers exercised: the `arch`-wrapped external push; authentic signed-tag verification plus init-template replacement-object substitution; external included-config regular-file-to-symlink replacement; real Git missing-tree producer failure through the receipt pipeline; and a hardlinked evidence artifact. No real remote, Forge, normal Claude/plugin installation, or user repository was mutated by these reproducers.
+
+## Proof limitations
+
+- Local execution was on macOS only. Dash and Ksh portability runs passed locally; no Linux runner or remote exact-head CI was observed.
+- The native Codex instruction-delivery probe remained opt-in and was skipped. No native Claude/Codex policy-compliance claim is made.
+- `gitleaks` was unavailable. The zero-match heuristic is not a substitute for the pinned CI scanner.
+- No authenticated Forge/provider observation, PR/MR, release publication, deployment, or live Claude/plugin mutation was performed.
+- Stateful fake-CLI and temporary-Git tests establish only the named local behaviors. They do not authenticate a provider or prove undocumented vendor cache/rollback semantics.
+- The two Claude cache observations remain point-in-time observations, not a durable lock. The findings above show additional trust-boundary gaps before that residual is reached.
+
+## Clean-state evidence
+
+Before review: exact subject `bfcb565670e572a977b26296fdc84d11347e94dd` matched and `git status --porcelain=v2 -z` contained zero bytes. After all read-only inspection, local checks, disposable reproducers, and report creation: exact subject `bfcb565670e572a977b26296fdc84d11347e94dd` still matched and `git status --porcelain=v2 -z` still contained zero bytes. No repository file, index entry, ref, Git administration, Forge state, or live plugin state was changed by this review.
+
+## SECURITY VERDICT: BLOCKED
+
+The green configured and aggregate suites do not overcome the reproduced signed-candidate substitution, configured-launcher external-write bypass, undetected external Git-config link mutation, or unverified rollback bytes. These are material trust-boundary blockers at the exact reviewed head.
+<!-- flow42-review-section:final-security-bfcb565:end -->
+
+The independent Orca task record for `task_c075cf062c46` resolved the exact
+task/dispatch, reviewer, subject fields, checks, blocked verdict, report path,
+digest, and orchestrator completion time. Coordinator readback matched the
+recorded digest before persistence.
+
+```json
+{"schema_version":2,"review_kind":"security","issuer_kind":"trusted-orchestrator","issuer_receipt_ref":"orca:run_700a4d3f5bac/task_c075cf062c46","repository_id":"https://github.com/stefanriegel/flow42","work_id":"architecture-hardening","baseline_head":"65a7910b9b2ec1d44aa5724b13a319633d69bcc3","reviewed_head":"bfcb565670e572a977b26296fdc84d11347e94dd","scope_digest":"sha256:334ee617e165f8ca051980ae92d9888cc1d6279f9f188f5045fd2ba3beadaa35","diff_digest":"sha256:251270c075a90541caf8a7fc1122a04025373286bfb9edbdc54485bc5e511123","review_subject":"architecture-hardening final exact-head verification","reviewer_principal":"orca:task_c075cf062c46","reviewer_role":"independent-reviewer","dispatch_or_session_ref":"orca:ctx_7a80c72205d6","stronger_issuer_unavailable_reason":"not-applicable","implementer":false,"verdict":"blocked","checks":["threat-model","baseline-checks","configured-repository-security-gates","independent-security-review"],"artifact_ref":"evidence:.flow42/architecture-hardening/evidence.md#final-security-bfcb565","artifact_digest":"sha256:678d00ddfa66a6988c2e61b4396899afdfaf991413d939e7bc17ca0a246da67c","recorded_at":"2026-09-01T10:45:48Z"}
+```
+
+## Final blocked disposition
+
+The human-resumed cycle returns from `verifying` to `blocked`. The configured
+automatic repair limit remains exhausted and the final two allowed workers
+have been released after transcript archival. Another repair cycle requires
+fresh human resume authority and fresh independent exact-head correctness and
+security reviews. No push, PR/MR, merge, release, deployment, or live normal-
+harness mutation was performed.
