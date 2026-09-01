@@ -24,6 +24,7 @@ extract_prelude() {
 
 first_skill=
 skill_count=0
+expected_skill_count=12
 for skill in "$root"/skills/*/SKILL.md; do
   skill_count=$((skill_count + 1))
   extract="$tmp/skill-$skill_count.prelude"
@@ -42,7 +43,14 @@ for skill in "$root"/skills/*/SKILL.md; do
     fail "prelude drift: ${skill#"$root/"}"
   fi
 done
-test "$skill_count" -gt 0 || fail no-skills
+test "$skill_count" -eq "$expected_skill_count" ||
+  fail "direct-skill count: expected $expected_skill_count, found $skill_count"
+grep -Fq "this file's great-grandparent directory" "$first_skill" ||
+  fail 'skill bundle-root resolution does not reach <bundle>'
+declared_skill_count=$(jq '([.lifecycle_commands[], .maintenance_commands[]] | unique) | length' \
+  "$root/core/workflow.json")
+test "$declared_skill_count" -eq "$expected_skill_count" ||
+  fail "declared direct-skill count: expected $expected_skill_count, found $declared_skill_count"
 
 grep -oE '<bundle>/core/[A-Za-z0-9._-]+' "$first_skill" |
   sed 's#<bundle>/##' | sort -u >"$tmp/authorities"
@@ -61,6 +69,10 @@ done <"$tmp/authorities"
 agent_pointer='Apply the invoking skill'
 for agent in "$root"/agents/*.md; do
   grep -Fq "$agent_pointer" "$agent" || fail "agent authority pointer missing: ${agent#"$root/"}"
+  grep -Fq "invoking skill file's great-grandparent" "$agent" ||
+    fail "agent bundle-root resolution missing: ${agent#"$root/"}"
+  grep -Fq 'not the working directory' "$agent" ||
+    fail "agent working-directory rejection missing: ${agent#"$root/"}"
   while IFS= read -r authority; do
     grep -Fq "$authority" "$agent" || fail "agent authority missing $authority: ${agent#"$root/"}"
   done <"$tmp/authorities"
@@ -75,4 +87,4 @@ if cmp -s "$first_skill" "$tmp/prelude-drift.prelude"; then
   fail PRELUDE-MUTATION-ACCEPTED
 fi
 
-echo "prelude ok: $skill_count byte-identical skill blocks and agent authority pointers"
+echo "prelude ok: $skill_count canonical direct-skill blocks and agent authority pointers"

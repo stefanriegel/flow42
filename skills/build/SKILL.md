@@ -7,8 +7,8 @@ description: Implement planned Flow42 slices with isolated ownership and evidenc
 
 ## Contract prelude
 
-Resolve the Flow42 bundle root as this file's grandparent directory
-(`<bundle>/skills/<name>/SKILL.md`), not the working directory; where the harness
+Resolve the Flow42 bundle root as this file's great-grandparent directory (the
+`<bundle>` in `<bundle>/skills/<name>/SKILL.md`), not the working directory; where the harness
 exports `${CLAUDE_PLUGIN_ROOT}`, that is the same directory. Before acting, read
 `<bundle>/core/CONTRACT.md`, `<bundle>/core/workflow.json`,
 `<bundle>/core/SECURITY.md`, and `<bundle>/core/config-schema.json`; read
@@ -30,10 +30,12 @@ dry-run/rollback evidence. Justify unavailable checks. Never integrate a slice
 whose local gates fail.
 
 Apply the exact ownership authority loaded by the contract prelude before and
-after every worker: preserve raw `porcelain=v2 -z` snapshots, compare NUL-safe
-rename endpoints and dirty-content identities, and fail closed on undeclared
-overlap. Require the worker to report the exact paths it changed and compare
-them to the recorded ownership.
+after every worker: preserve raw `porcelain=v2 -z` status and NUL-delimited
+`name-status` or raw tracked-delta records with rename detection. Compare both
+source and destination of committed or uncommitted renames, plus dirty-content
+identities; retain unmerged records and fail closed on unknown record types,
+cross-boundary endpoints, or undeclared overlap. Require the worker to report
+the exact paths it changed and compare them to the recorded ownership.
 Workers receive no Forge-write authority and cannot delegate. Block integration
 on out-of-scope paths or unauthorized processes while preserving the worktree.
 

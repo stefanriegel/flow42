@@ -17,9 +17,12 @@ cannot authorize their own implementation. Independence is role separation: a
 separate review pass or agent did not implement the change. Its durable JSON
 receipt uses the strongest issuer available: authenticated Forge, trusted
 orchestrator, or a distinct local independent pass when neither stronger source
-is available. The receipt binds the reviewed code head while four bookkeeping
-paths remain receipt-neutral, so persisting the receipt does not make itself
-stale. This does not add a second human gate or grant authorization authority. The
+is available. The local fallback is explicitly lower-tier. Forge and orchestrator
+records require independent authenticated resolution that binds the complete
+receipt identity and verdict. The receipt binds the reviewed code head while
+exact bookkeeping leaves, plus only eight lifecycle/CI fields in `status.yml`,
+remain receipt-neutral. Rename sources, nested lookalikes, risk changes, and
+non-ancestor heads invalidate it. This does not add a second human gate or grant authorization authority. The
 trusted endpoint is an independently reviewed, CI-green PR/MR.
 
 Orca orchestration is used only through its live CLI-served contract. A real

@@ -7,8 +7,8 @@ description: Advance a Flow42 work item through the next safe SDLC phase. Use wh
 
 ## Contract prelude
 
-Resolve the Flow42 bundle root as this file's grandparent directory
-(`<bundle>/skills/<name>/SKILL.md`), not the working directory; where the harness
+Resolve the Flow42 bundle root as this file's great-grandparent directory (the
+`<bundle>` in `<bundle>/skills/<name>/SKILL.md`), not the working directory; where the harness
 exports `${CLAUDE_PLUGIN_ROOT}`, that is the same directory. Before acting, read
 `<bundle>/core/CONTRACT.md`, `<bundle>/core/workflow.json`,
 `<bundle>/core/SECURITY.md`, and `<bundle>/core/config-schema.json`; read
@@ -58,8 +58,10 @@ Orca is unavailable, fall back to the single-agent flow.
 Delegate only bounded vertical slices with disjoint ownership. Keep the task
 schedule graph separate from the data flow graph, cap workers at configured
 concurrency, forbid recursive delegation, and apply the NUL-safe ownership
-authority loaded by the contract prelude. The orchestrator owns integration,
-recovery, and any Forge writes.
+authority loaded by the contract prelude, including rename-aware tracked-delta
+records that retain both endpoints after a worker commit and unmerged records
+that cannot be silently dropped. The orchestrator owns integration, recovery,
+and any Forge writes.
 
 Run independent correctness, security, and quality reviews in parallel against
 the same exact head when useful, then synthesize their findings once. A verified

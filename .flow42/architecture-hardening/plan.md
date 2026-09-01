@@ -65,6 +65,29 @@ independent review; remediation and fresh review if needed.
   Flow config validation; review security wording; safe unanswered-intent
   fallback; adversarial receipt, lifecycle, and configuration repairs.
 
+## Independent-review remediation
+
+- Update rollback runs as one transaction with live state, strict failure
+  handling, settings-backed source reconciliation, homogeneous-version
+  preflight, and before/after-effect failure fixtures for supported source kinds.
+- Configuration delegates branch grammar to Git while retaining a literal-name
+  guard, accepts only the documented YAML subset, and normalizes wrappers,
+  path-qualified executables, and control-CLI options before policy checks.
+- Ownership uses NUL-safe name-status records for committed rename/copy
+  endpoints, retains unmerged records, and fails closed on unknown or truncated
+  records.
+- Strong receipt issuers require independently authenticated exact binding;
+  currency disables rename folding, validates ancestry, and permits only exact
+  bookkeeping leaves plus field-level status changes with unique canonical keys.
+- Resume binds to the actual pre-block stage, excludes final/self-loop targets,
+  and the third automatic verification repair blocks and escalates.
+- Proof labels distinguish behavioural reference fixtures from structural and
+  text-conformance checks; environment probes and literal read-backs are not
+  counted as Flow42 behavior.
+- The security-sensitive control work has a persisted threat model, and every
+  direct skill and worker pointer resolves authority from the bundle's actual
+  great-grandparent root.
+
 ## Risks and rollback
 
 Each worker owns exact paths and makes no commits or Forge writes. A failed slice

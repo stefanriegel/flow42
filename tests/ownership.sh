@@ -33,18 +33,57 @@ parse_status_paths() {
        else
          $records[$index] as $record |
          if $record | startswith("2 ") then
-           .paths += [
-             ($record | capture("(?s)^2(?: [^ ]+){8} (?<path>.*)$").path),
-             $records[$index + 1]
-           ] | .skip = true
+           if ($index + 1) >= ($records | length) then
+             error("missing porcelain-v2 rename/copy endpoint")
+           else
+             .paths += [
+               ($record | capture("(?s)^2(?: [^ ]+){8} (?<path>.*)$").path),
+               $records[$index + 1]
+             ] | .skip = true
+           end
          elif $record | startswith("1 ") then
            .paths += [
              ($record | capture("(?s)^1(?: [^ ]+){7} (?<path>.*)$").path)
            ]
+         elif $record | startswith("u ") then
+           .paths += [
+             ($record | capture("(?s)^u(?: [^ ]+){9} (?<path>.*)$").path)
+           ]
          elif $record | startswith("? ") then
            .paths += [($record[2:])]
          else
-           .
+           error("unexpected porcelain-v2 record: \($record)")
+         end
+       end) |
+    .paths
+  ' "$1"
+}
+
+parse_diff_name_status_paths() {
+  jq -Rs '
+    split("\u0000") | .[:-1] as $records |
+    reduce range(0; $records | length) as $index
+      ({paths: [], skip: 0};
+       if .skip > 0 then
+         .skip -= 1
+       else
+         $records[$index] as $status |
+         if $status | test("^[RC][0-9]+$") then
+           if ($index + 2) >= ($records | length) then
+             error("missing name-status rename/copy endpoint")
+           else
+             .paths += [$records[$index + 1], $records[$index + 2]] |
+             .skip = 2
+           end
+         elif $status | test("^[ADMRTUXB]$") then
+           if ($index + 1) >= ($records | length) then
+             error("missing name-status path")
+           else
+             .paths += [$records[$index + 1]] |
+             .skip = 1
+           end
+         else
+           error("unexpected name-status record: \($status)")
          end
        end) |
     .paths
@@ -80,16 +119,26 @@ validate_contract() {
     printf '%s\n' 'OWNERSHIP-NUL-STATUS' >&2
     return 1
   }
-  grep -Fq "git diff --name-only -z \"\$base\" --" "$contract" || {
-    printf '%s\n' 'OWNERSHIP-NUL-DIFF' >&2
+  grep -Fq "git diff --name-status -z --find-renames \"\$base\" --" "$contract" || {
+    printf '%s\n' 'OWNERSHIP-NUL-RENAME-DIFF' >&2
     return 1
   }
   grep -Fq "git --literal-pathspecs add -- \"\$path\"" "$contract" || {
     printf '%s\n' 'OWNERSHIP-LITERAL-PATHSPEC' >&2
     return 1
   }
-  grep -Eiq 'both endpoints of every rename' "$contract" || {
+  grep -Eiq 'both endpoints of every rename|both the source and destination of every rename' "$contract" || {
     printf '%s\n' 'OWNERSHIP-RENAME-ENDPOINTS' >&2
+    return 1
+  }
+  tr '\n' ' ' <"$contract" |
+    grep -Eiq 'ordinary tracked.*rename.*unmerged.*untracked' || {
+    printf '%s\n' 'OWNERSHIP-PORCELAIN-RECORD-TYPES' >&2
+    return 1
+  }
+  tr '\n' ' ' <"$contract" |
+    grep -Eiq 'unknown record type.*fail closed|fail closed.*unknown record type' || {
+    printf '%s\n' 'OWNERSHIP-UNKNOWN-RECORD' >&2
     return 1
   }
   grep -Eiq 'content (hash|identity)' "$contract" || {
@@ -194,9 +243,67 @@ jq -Rs 'split("\u0000")[:-1]' "$tmp/leading-staged" >"$tmp/leading-staged.json"
 test "$(jq 'length' "$tmp/leading-staged.json")" -eq 1 || fail OWNERSHIP-LEADING-DASH
 require_path "$tmp/leading-staged.json" "$leading_path" OWNERSHIP-LEADING-DASH
 
-git -C "$repo" diff --name-only -z "$base" -- >"$tmp/tracked"
-jq -Rs 'split("\u0000")[:-1]' "$tmp/tracked" >"$tmp/tracked.json"
-require_path "$tmp/tracked.json" "$deleted_path" OWNERSHIP-DELETE
+git -C "$repo" diff --name-status -z --find-renames "$base" -- >"$tmp/tracked-name-status"
+parse_diff_name_status_paths "$tmp/tracked-name-status" >"$tmp/tracked-paths.json"
+require_path "$tmp/tracked-paths.json" "$deleted_path" OWNERSHIP-DELETE
+
+git -C "$repo" add --all
+git -C "$repo" commit -qm 'worker committed changes'
+git -C "$repo" status --porcelain=v2 -z --untracked-files=all >"$tmp/committed-status"
+test ! -s "$tmp/committed-status" || fail OWNERSHIP-COMMITTED-STATUS-NOT-CLEAN
+
+git -C "$repo" diff --name-only -z --find-renames "$base" -- >"$tmp/committed-name-only"
+jq -Rs 'split("\u0000")[:-1]' "$tmp/committed-name-only" >"$tmp/committed-name-only.json"
+require_path "$tmp/committed-name-only.json" "$rename_target" OWNERSHIP-NAME-ONLY-TARGET
+if jq -e --arg path "$rename_source" 'index($path) != null' "$tmp/committed-name-only.json" >/dev/null; then
+  fail OWNERSHIP-NAME-ONLY-CHARACTERIZATION
+fi
+
+git -C "$repo" diff --name-status -z --find-renames "$base" -- >"$tmp/committed-name-status"
+parse_diff_name_status_paths "$tmp/committed-name-status" >"$tmp/committed-paths.json"
+require_path "$tmp/committed-paths.json" "$rename_source" OWNERSHIP-COMMITTED-RENAME-SOURCE
+require_path "$tmp/committed-paths.json" "$rename_target" OWNERSHIP-COMMITTED-RENAME-TARGET
+if is_owned "$rename_source" && is_owned "$rename_target"; then
+  fail OWNERSHIP-COMMITTED-CROSS-BOUNDARY-RENAME-NOT-BLOCKED
+fi
+
+conflict_repo="$tmp/conflict-repo"
+conflict_path=$(printf 'owned/conflict\nGrüße.txt')
+git init -q "$conflict_repo"
+git -C "$conflict_repo" config user.name 'Flow42 conflict fixture'
+git -C "$conflict_repo" config user.email 'ownership-conflict@example.invalid'
+mkdir -p "$conflict_repo/owned"
+printf '%s\n' baseline >"$conflict_repo/$conflict_path"
+git -C "$conflict_repo" add --all
+git -C "$conflict_repo" commit -qm baseline
+conflict_base_branch=$(git -C "$conflict_repo" symbolic-ref --short HEAD)
+git -C "$conflict_repo" checkout -q -b worker-side
+printf '%s\n' worker >"$conflict_repo/$conflict_path"
+git -C "$conflict_repo" commit -qam worker
+git -C "$conflict_repo" checkout -q "$conflict_base_branch"
+printf '%s\n' coordinator >"$conflict_repo/$conflict_path"
+git -C "$conflict_repo" commit -qam coordinator
+if git -C "$conflict_repo" merge worker-side >"$tmp/conflict-merge.log" 2>&1; then
+  fail OWNERSHIP-CONFLICT-FIXTURE-DID-NOT-CONFLICT
+fi
+git -C "$conflict_repo" status --porcelain=v2 -z --untracked-files=all >"$tmp/conflict-status"
+parse_status_paths "$tmp/conflict-status" >"$tmp/conflict-paths.json"
+require_path "$tmp/conflict-paths.json" "$conflict_path" OWNERSHIP-UNMERGED-PATH
+
+printf 'x unsupported\0' >"$tmp/unknown-status"
+if parse_status_paths "$tmp/unknown-status" >"$tmp/unknown-paths.json" 2>/dev/null; then
+  fail OWNERSHIP-UNKNOWN-STATUS-ACCEPTED
+fi
+
+printf 'Z\0owned/unsupported\0' >"$tmp/unknown-name-status"
+if parse_diff_name_status_paths "$tmp/unknown-name-status" >"$tmp/unknown-diff-paths.json" 2>/dev/null; then
+  fail OWNERSHIP-UNKNOWN-NAME-STATUS-ACCEPTED
+fi
+
+printf 'R100\0outside/truncated\0' >"$tmp/truncated-name-status"
+if parse_diff_name_status_paths "$tmp/truncated-name-status" >"$tmp/truncated-diff-paths.json" 2>/dev/null; then
+  fail OWNERSHIP-TRUNCATED-NAME-STATUS-ACCEPTED
+fi
 
 validate_contract "$root/core/OWNERSHIP.md"
 
@@ -212,4 +319,4 @@ if validate_contract "$tmp/mutated-pathspec.md" >/dev/null 2>&1; then
   fail OWNERSHIP-MUTATION-PATHSPEC-ACCEPTED
 fi
 
-echo 'ownership ok: NUL paths, rename endpoints, dirty identity, literal pathspecs'
+echo 'ownership ok: NUL paths, committed rename endpoints, dirty identity, literal pathspecs'

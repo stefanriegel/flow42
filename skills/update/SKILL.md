@@ -7,8 +7,8 @@ description: Update an installed Flow42 plugin from its configured repository or
 
 ## Contract prelude
 
-Resolve the Flow42 bundle root as this file's grandparent directory
-(`<bundle>/skills/<name>/SKILL.md`), not the working directory; where the harness
+Resolve the Flow42 bundle root as this file's great-grandparent directory (the
+`<bundle>` in `<bundle>/skills/<name>/SKILL.md`), not the working directory; where the harness
 exports `${CLAUDE_PLUGIN_ROOT}`, that is the same directory. Before acting, read
 `<bundle>/core/CONTRACT.md`, `<bundle>/core/workflow.json`,
 `<bundle>/core/SECURITY.md`, and `<bundle>/core/config-schema.json`; read
@@ -90,9 +90,117 @@ record the complete source object without normalising its kind.
 
 Read every `flow42@flow42` entry from the plugin listing and record its `scope`
 and previous `version`. Require at least one unambiguous, unmanaged installation
-entry; otherwise stop before mutation. Preserve every recorded installation
-scope in `plugin_scopes`, including mixed-scope installations such as a
-user-scope marketplace with user- and local-scope plugins.
+entry; otherwise stop before mutation. Require every recorded installation to
+have the same previous version. A single marketplace pin cannot soundly restore
+heterogeneous per-scope versions, so differing versions stop before mutation
+and are reported by scope. Preserve every recorded installation scope in
+`plugin_scopes`, including mixed-scope installations such as a user-scope
+marketplace with user- and local-scope plugins.
+
+The following POSIX shell block is the read-only Claude preflight. Supply the
+absolute project root in `FLOW42_PROJECT_ROOT` (for example,
+`FLOW42_PROJECT_ROOT='/path/with spaces/project'`); retain the capability, JSON,
+ambiguity, duplicate, and homogeneous-version checks as one fail-closed unit:
+
+```sh
+# flow42-claude-preflight
+claude_config_root=${CLAUDE_CONFIG_DIR:-"$HOME/.claude"}
+: "${FLOW42_PROJECT_ROOT:?set FLOW42_PROJECT_ROOT to the absolute project root}"
+project_root=$FLOW42_PROJECT_ROOT
+claude_cli_version=$(claude --version)
+if ! claude plugin update --help >/dev/null 2>&1; then
+  printf '%s\n' "Claude Code $claude_cli_version does not expose plugin update" >&2
+  exit 1
+fi
+marketplace_listing=$(claude plugin marketplace list --json)
+plugin_listing=$(claude plugin list --json)
+printf '%s\n' "$marketplace_listing" | jq -e 'type == "array"' >/dev/null
+printf '%s\n' "$plugin_listing" | jq -e 'type == "array"' >/dev/null
+
+declaring_scope_count=0
+declaring_scopes=
+marketplace_scope=
+declaring_settings_file=
+recorded_source_json=
+for candidate_scope in user project local; do
+  case "$candidate_scope" in
+    user) candidate_settings=$claude_config_root/settings.json ;;
+    project) candidate_settings=$project_root/.claude/settings.json ;;
+    local) candidate_settings=$project_root/.claude/settings.local.json ;;
+  esac
+  test -f "$candidate_settings" || continue
+  jq -e 'type == "object"' "$candidate_settings" >/dev/null
+  candidate_source=$(jq -c '.extraKnownMarketplaces.flow42.source // empty' \
+    "$candidate_settings")
+  test -n "$candidate_source" || continue
+  printf '%s\n' "$candidate_source" | jq -e 'type == "object"' >/dev/null
+  declaring_scope_count=$((declaring_scope_count + 1))
+  if test -n "$declaring_scopes"; then
+    declaring_scopes="$declaring_scopes $candidate_scope"
+  else
+    declaring_scopes=$candidate_scope
+  fi
+  marketplace_scope=$candidate_scope
+  declaring_settings_file=$candidate_settings
+  recorded_source_json=$candidate_source
+done
+if test "$declaring_scope_count" -ne 1; then
+  test -n "$declaring_scopes" || declaring_scopes='<none>'
+  printf '%s\n' "flow42 must have exactly one marketplace declaration; found: $declaring_scopes" >&2
+  exit 1
+fi
+
+recorded_source_kind=$(printf '%s\n' "$recorded_source_json" | jq -er '.source')
+case "$recorded_source_kind" in
+  github)
+    recorded_source_repo=$(printf '%s\n' "$recorded_source_json" | jq -er '.repo')
+    recorded_source_ref=$(printf '%s\n' "$recorded_source_json" | jq -er '.ref')
+    recorded_marketplace_source=${recorded_source_repo}@${recorded_source_ref}
+    ;;
+  git)
+    recorded_source_url=$(printf '%s\n' "$recorded_source_json" | jq -er '.url')
+    recorded_source_ref=$(printf '%s\n' "$recorded_source_json" | jq -er '.ref')
+    recorded_marketplace_source=${recorded_source_url}#${recorded_source_ref}
+    ;;
+  directory)
+    recorded_marketplace_source=$(printf '%s\n' "$recorded_source_json" | jq -er '.path')
+    ;;
+  *)
+    printf '%s\n' "unsupported flow42 marketplace source kind: $recorded_source_kind" >&2
+    exit 1
+    ;;
+esac
+
+if ! printf '%s\n' "$plugin_listing" | jq -e '
+  [.[] | select(.id == "flow42@flow42")] as $entries |
+  ($entries | length) > 0 and
+  ($entries | all(
+    (.scope == "user" or .scope == "project" or .scope == "local") and
+    ((.version | type) == "string" and (.version | length) > 0)
+  )) and
+  (($entries | map(.scope) | unique | length) == ($entries | length))
+' >/dev/null; then
+  printf '%s\n' 'flow42 installations are missing, managed, invalid, or duplicate by scope' >&2
+  exit 1
+fi
+recorded_version_count=$(printf '%s\n' "$plugin_listing" | jq -r '
+  [.[] | select(.id == "flow42@flow42") | .version] | unique | length
+')
+if test "$recorded_version_count" -ne 1; then
+  recorded_version_report=$(printf '%s\n' "$plugin_listing" | jq -r '
+    [.[] | select(.id == "flow42@flow42") | "\(.scope)=\(.version)"] |
+    join(", ")
+  ')
+  printf '%s\n' "flow42 installations have heterogeneous versions: $recorded_version_report" >&2
+  exit 1
+fi
+plugin_scopes=$(printf '%s\n' "$plugin_listing" | jq -r '
+  [.[] | select(.id == "flow42@flow42") | .scope] | join(" ")
+')
+recorded_plugin_version=$(printf '%s\n' "$plugin_listing" | jq -r '
+  [.[] | select(.id == "flow42@flow42") | .version] | unique | .[0]
+')
+```
 
 Reconstruct `recorded_marketplace_source` from the settings source object, not
 from `marketplace list`: GitHub `{source,repo,ref}` becomes `owner/repo@tag`, Git
@@ -102,19 +210,197 @@ the shorthand and required for a full Git URL, but a URL declares a different
 source kind that cannot be added over a shorthand declaration, so rollback must
 reuse the recorded kind. With the angle-bracket assignments below replaced by
 the recorded values, move the marketplace pin once, then converge every plugin
-scope with this literal sequence:
+scope with this literal transaction. Run the block as one shell flow; do not
+split the mutation body from its rollback functions or invoke either in a child
+shell. Every failing mutation is caught explicitly so the live state flags are
+available to rollback even when the caller uses `sh -e`:
 
 ```sh
+# flow42-claude-update
 marketplace_scope=<recorded-marketplace-declaration-scope>
 plugin_scopes='<space-separated-recorded-plugin-installation-scopes>'
 recorded_marketplace_source=<source-object-reconstructed-add-argument>
 target_marketplace_source=<owner>/<repo>@<tag>
-claude plugin marketplace remove flow42 --scope "$marketplace_scope"
-claude plugin marketplace add "$target_marketplace_source" --scope "$marketplace_scope"
-for plugin_scope in $plugin_scopes; do
-  claude plugin install flow42@flow42 --scope "$plugin_scope" -y
-  claude plugin update flow42@flow42 --scope "$plugin_scope" -y
-done
+target_plugin_version=<verified-candidate-plugin-version>
+recorded_marketplace_removed=false
+target_marketplace_added=false
+
+: "${recorded_source_json:?run the Claude preflight in this same shell first}"
+: "${declaring_settings_file:?run the Claude preflight in this same shell first}"
+: "${recorded_plugin_version:?run the Claude preflight in this same shell first}"
+flow42_target_source_ref=${target_marketplace_source##*@}
+flow42_target_source_repo=${target_marketplace_source%@*}
+flow42_target_source_json=$(jq -cn \
+  --arg repo "$flow42_target_source_repo" \
+  --arg ref "$flow42_target_source_ref" \
+  '{source:"github", repo:$repo, ref:$ref}')
+flow42_recorded_source_json=$(printf '%s\n' "$recorded_source_json" | jq -c '
+  if .source == "github" then {source, repo, ref}
+  elif .source == "git" then {source, url, ref}
+  elif .source == "directory" then {source, path}
+  else error("unsupported source kind") end
+')
+
+flow42_claude_reconcile_marketplace_state() {
+  flow42_current_source_json=
+  if test -f "$declaring_settings_file"; then
+    jq -e 'type == "object"' "$declaring_settings_file" >/dev/null || return 1
+    flow42_current_source_json=$(jq -c '
+      .extraKnownMarketplaces.flow42.source // empty |
+      if .source == "github" then {source, repo, ref}
+      elif .source == "git" then {source, url, ref}
+      elif .source == "directory" then {source, path}
+      else error("unsupported source kind") end
+    ' \
+      "$declaring_settings_file")
+  fi
+  if test -z "$flow42_current_source_json"; then
+    recorded_marketplace_removed=true
+    target_marketplace_added=false
+    flow42_expected_listing_count=0
+  elif jq -en --argjson actual "$flow42_current_source_json" \
+    --argjson expected "$flow42_recorded_source_json" '$actual == $expected' >/dev/null; then
+    recorded_marketplace_removed=false
+    target_marketplace_added=false
+    flow42_expected_listing_count=1
+  elif jq -en --argjson actual "$flow42_current_source_json" \
+    --argjson expected "$flow42_target_source_json" '$actual == $expected' >/dev/null; then
+    recorded_marketplace_removed=true
+    target_marketplace_added=true
+    flow42_expected_listing_count=1
+  else
+    return 1
+  fi
+  if ! flow42_marketplace_listing=$(claude plugin marketplace list --json); then
+    return 1
+  fi
+  flow42_listing_count=$(printf '%s\n' "$flow42_marketplace_listing" | jq '
+    [.[] | select(.name == "flow42")] | length
+  ') || return 1
+  test "$flow42_listing_count" -eq "$flow42_expected_listing_count"
+}
+
+flow42_claude_verify_recorded_state() {
+  test -f "$declaring_settings_file" || return 1
+  flow42_restored_source_json=$(jq -c \
+    '.extraKnownMarketplaces.flow42.source // empty' \
+    "$declaring_settings_file")
+  jq -en --argjson actual "$flow42_restored_source_json" \
+    --argjson expected "$recorded_source_json" '$actual == $expected' >/dev/null || return 1
+  flow42_claude_reconcile_marketplace_state || return 1
+  test "$recorded_marketplace_removed" = false || return 1
+  test "$target_marketplace_added" = false || return 1
+  flow42_restored_plugins=$(claude plugin list --json) || return 1
+  for plugin_scope in $plugin_scopes; do
+    flow42_restored_version=$(printf '%s\n' "$flow42_restored_plugins" | \
+      jq -er --arg scope "$plugin_scope" '
+        [.[] | select(.id == "flow42@flow42" and .scope == $scope)] |
+        if length == 1 then .[0].version else error("missing or duplicate scope") end
+      ') || return 1
+    test "$flow42_restored_version" = "$recorded_plugin_version" || return 1
+  done
+}
+
+flow42_claude_rollback() {
+  flow42_rollback_status=0
+  if test "$target_marketplace_added" = true; then
+    if claude plugin marketplace remove flow42 --scope "$marketplace_scope"; then
+      target_marketplace_added=false
+    else
+      flow42_rollback_status=1
+    fi
+  fi
+  if test "$target_marketplace_added" = false && \
+     test "$recorded_marketplace_removed" = true; then
+    if claude plugin marketplace add "$recorded_marketplace_source" --scope "$marketplace_scope"; then
+      recorded_marketplace_removed=false
+    else
+      flow42_rollback_status=1
+    fi
+  fi
+  if test "$target_marketplace_added" = false && \
+     test "$recorded_marketplace_removed" = false; then
+    for plugin_scope in $plugin_scopes; do
+      if ! claude plugin install flow42@flow42 --scope "$plugin_scope" -y; then
+        flow42_rollback_status=1
+      fi
+      if ! claude plugin update flow42@flow42 --scope "$plugin_scope" -y; then
+        flow42_rollback_status=1
+      fi
+    done
+  else
+    flow42_rollback_status=1
+  fi
+  if test "$flow42_rollback_status" -eq 0 && \
+     ! flow42_claude_verify_recorded_state; then
+    flow42_rollback_status=1
+  fi
+  return "$flow42_rollback_status"
+}
+
+flow42_claude_abort_update() {
+  flow42_failed_command=$1
+  if flow42_claude_rollback; then
+    printf '%s\n' "Claude update failed at $flow42_failed_command; recorded state restored" >&2
+  else
+    printf '%s\n' "Claude update failed at $flow42_failed_command; rollback is incomplete" >&2
+  fi
+  return 1
+}
+
+flow42_claude_abort_marketplace_update() {
+  flow42_failed_command=$1
+  if ! flow42_claude_reconcile_marketplace_state; then
+    printf '%s\n' "Claude update failed at $flow42_failed_command; marketplace state could not be reconciled" >&2
+    return 1
+  fi
+  flow42_claude_abort_update "$flow42_failed_command"
+}
+
+flow42_claude_update_transaction() {
+  if ! claude plugin marketplace remove flow42 --scope "$marketplace_scope"; then
+    flow42_claude_abort_marketplace_update 'marketplace remove'
+    return 1
+  fi
+  recorded_marketplace_removed=true
+  if ! claude plugin marketplace add "$target_marketplace_source" --scope "$marketplace_scope"; then
+    flow42_claude_abort_marketplace_update 'marketplace add'
+    return 1
+  fi
+  target_marketplace_added=true
+  for plugin_scope in $plugin_scopes; do
+    if ! claude plugin install flow42@flow42 --scope "$plugin_scope" -y; then
+      flow42_claude_abort_update "plugin install --scope $plugin_scope"
+      return 1
+    fi
+    if ! claude plugin update flow42@flow42 --scope "$plugin_scope" -y; then
+      flow42_claude_abort_update "plugin update --scope $plugin_scope"
+      return 1
+    fi
+  done
+  if ! flow42_target_plugin_listing=$(claude plugin list --json); then
+    flow42_claude_abort_update 'plugin list post-condition readback'
+    return 1
+  fi
+  for plugin_scope in $plugin_scopes; do
+    if ! flow42_actual_plugin_version=$(printf '%s\n' "$flow42_target_plugin_listing" | \
+      jq -er --arg scope "$plugin_scope" '
+        [.[] | select(.id == "flow42@flow42" and .scope == $scope)] |
+        if length == 1 then .[0].version else error("missing or duplicate scope") end
+      '); then
+      flow42_claude_abort_update "plugin scope $plugin_scope post-condition readback"
+      return 1
+    fi
+    if test "$flow42_actual_plugin_version" != "$target_plugin_version"; then
+      flow42_claude_abort_update "plugin scope $plugin_scope version post-condition"
+      return 1
+    fi
+  done
+}
+
+if ! flow42_claude_update_transaction; then
+  exit 1
+fi
 ```
 
 `install` is a no-op when marketplace removal preserved an installation and
@@ -131,19 +417,12 @@ explicitly. Neither documents an installation-scope selector, so the recorded
 source is their whole rollback state; do not invent a scope flag to fake symmetry.
 
 Treat the add, install, update, and post-condition checks alike as rollback
-triggers. For Claude, if the target marketplace was added, remove it only from
-`marketplace_scope`; if the add failed, skip that absent-target removal. Restore
-the kind-preserving recorded source at `marketplace_scope`, then converge every
-recorded plugin scope back to its previous version with the symmetric sequence:
-
-```sh
-claude plugin marketplace remove flow42 --scope "$marketplace_scope"
-claude plugin marketplace add "$recorded_marketplace_source" --scope "$marketplace_scope"
-for plugin_scope in $plugin_scopes; do
-  claude plugin install flow42@flow42 --scope "$plugin_scope" -y
-  claude plugin update flow42@flow42 --scope "$plugin_scope" -y
-done
-```
+triggers. The transaction removes the target only when its live
+`target_marketplace_added` flag is true, restores the kind-preserving recorded
+source only when `recorded_marketplace_removed` is true, then converges every
+recorded plugin scope back to the common previous version. Do not reconstruct
+these flags after a failed child shell; rerun the complete transaction only
+after inspecting and recovering any explicitly reported incomplete rollback.
 
 After Claude rollback, re-read the declaring settings file and require its
 `extraKnownMarketplaces.flow42.source` object to deep-equal the recorded source

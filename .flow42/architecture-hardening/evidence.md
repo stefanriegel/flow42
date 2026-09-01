@@ -52,7 +52,8 @@
   diagnostics `OWNERSHIP-NUL-STATUS` and missing agent pointer. Green temporary
   Git behavior covers spaces, tabs, newlines, UTF-8, leading dashes, deletion,
   both rename endpoints, literal pathspecs, and already-dirty overlap; all 12
-  skill preludes and four agent pointers agree byte-for-byte.
+  skill preludes agree byte-for-byte, and all four agent authority pointers are
+  present.
 - 2026-09-01T06:23:00Z; control-plane slice; expected absent schema, undeclared
   lifecycle nodes, and the receipt fixed point to fail; actual red diagnostics
   `CONFIG-SCHEMA-MISSING`, `LIFECYCLE-UNDECLARED-NODE`, and missing
@@ -71,9 +72,64 @@
   conformance, contracts, update, release checksum, security, dependencies,
   14-check eval index, eight structural case evals, ShellCheck, dash focused
   checks, and `git diff --check` passed.
+- 2026-09-01T06:47:21Z; exact-head independent Codex review; reviewed head
+  `1883c384b1d6d1158d546d65228b51a15f9e7f7c`; reviewer
+  `/root/independent_review`; expected adversarial review to distinguish green
+  fixtures from real safety behavior; actual verdict BLOCKED with five HIGH and
+  two MEDIUM findings. Reproducers exposed rollback loss under `sh -e`, unsafe
+  configured argv and invalid Git refs accepted by the schema validator,
+  committed rename source loss, unauthenticated trusted-receipt claims, a
+  `blocked` to `complete` resume path, proof-tier drift, and the missing threat
+  model. The work item returned from `verifying` to `building`; no receipt was
+  issued and no Forge state changed.
+- 2026-09-01T06:49:20Z; tool-less Opus 5 diff review through the local Claude
+  wrapper; reviewed baseline-to-head diff
+  `65a7910b9b2ec1d44aa5724b13a319633d69bcc3..1883c384b1d6d1158d546d65228b51a15f9e7f7c`;
+  expected an independent architecture/security challenge with no repository
+  tools; actual second attempt completed with `VERDICT: BLOCKED`. It confirmed
+  the rollback defect and additionally identified receipt rename/risk currency,
+  review-loop enforcement, unmerged ownership records, unsafe worktree paths,
+  heterogeneous-scope rollback, and false eval-tier claims. The first attempt
+  emitted a tool request despite receiving no tools and was discarded as
+  unusable evidence. Opus performed no repository or Forge mutation.
+- 2026-09-01T06:51:04Z; primary-source remediation check; expected the repair
+  primitives to match their providers' actual contracts; actual
+  [Git diff options](https://git-scm.com/docs/diff-options) document
+  `--name-status -z` as status plus unmodified NUL-terminated pathnames and
+  `--no-renames` as disabling rename folding, while
+  [Git check-ref-format](https://git-scm.com/docs/git-check-ref-format.html) is
+  the branch-name authority. [SLSA provenance](https://slsa.dev/spec/v1.0/provenance)
+  verification requires authenticated signer/builder identity and a matching
+  subject digest; [GitHub's attestation guidance](https://docs.github.com/en/actions/concepts/security/artifact-attestations)
+  similarly binds repository, workflow, commit SHA, and OIDC identity and
+  states that unverified attestations provide no security benefit. These
+  sources support endpoint-safe Git parsing, delegating ref validation to Git,
+  and rejecting self-asserted trusted receipt labels.
+- 2026-09-01T07:15:18Z; independent-review remediation; expected every HIGH and
+  MEDIUM reproducer plus integration-discovered seam to fail before its repair
+  and pass afterward; actual update rollback now executes as one strict
+  transaction and restores exact state after 18 before-effect, 18 after-effect,
+  and six post-condition failures across GitHub, Git, and directory sources.
+  Config fixtures reject shell evaluation, path-qualified and wrapper-obscured
+  destructive commands, Git/Forge/Terraform option hiding, invalid refs including
+  `@{-1}`, unsafe paths, duplicate keys, and unsupported YAML. Ownership retains
+  committed rename/copy endpoints and real unmerged records. Receipt tests reject
+  forged strong issuers, non-ancestor heads, rename-to-neutral paths, nested
+  lookalikes, risk changes, and duplicate status keys. Lifecycle tests bind a
+  non-final resume stage to history and block a third automatic review repair.
+  Coordinator review also corrected every skill and worker authority pointer
+  from the erroneous grandparent to the actual bundle great-grandparent.
+- 2026-09-01T07:15:18Z; post-remediation whole-tree verification; expected all
+  available local checks at one dirty snapshot to pass; actual parity,
+  validation, conformance, contracts, update, release checksum, security,
+  dependencies, 12-check mixed-tier eval index, eight structural case evals,
+  ShellCheck, `sh -n`, `dash -n`, `git diff --check`, and focused execution under
+  `sh`, `dash`, and `ksh` passed. No general agent runtime, remote CI, Forge,
+  release, or deployment proof is inferred from these local checks.
 
 ## Known gaps
 
-Independent receipt-subject review is pending. `gitleaks` is unavailable, so no
-gitleaks result is claimed. No remote CI, Forge, merge, release, deployment, or
-live normal-harness mutation proof has been run.
+The first receipt-subject reviews are BLOCKED and remediation plus fresh review
+is pending. `gitleaks` is unavailable, so no gitleaks result is claimed. No
+remote CI, Forge, merge, release, deployment, or live normal-harness mutation
+proof has been run.

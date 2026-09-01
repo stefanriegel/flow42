@@ -21,9 +21,12 @@
 
 ## Non-functional requirements
 
-All repository shell remains POSIX `sh` and passes ShellCheck. Tests use
-temporary directories and must not mutate normal Claude, Codex, Git, or Forge
-state. Diagnostics are deterministic and identify the failed invariant.
+All repository shell remains `sh`-compatible across the supported macOS
+`/bin/sh`, `dash`, and `ksh` test environments and passes ShellCheck; this is a
+supported-shell portability claim, not proof against every strict POSIX
+implementation. Tests use temporary directories and must not mutate normal
+Claude, Codex, Git, or Forge state. Diagnostics are deterministic and identify
+the failed invariant.
 
 ## Domain model and terminology
 
@@ -47,6 +50,40 @@ editing the reviewed code identity after attestation.
 Fail closed on ambiguous scope, source, ownership, schema, receipt provenance,
 or transition state. Do not treat independent review as human authorization.
 Do not persist secrets or raw authenticated CLI output.
+
+### Threat model
+
+- Assets: repository integrity; the exact reviewed Git identity; worker path
+  ownership; human confirmation state; configured command argv; plugin source,
+  version, installation scopes, and rollback state; and review provenance.
+- Actors: the accountable human; the coordinating agent; non-implementing
+  reviewers; bounded implementation workers; authenticated Forge and
+  orchestrator principals; vendor CLIs; and an attacker able to control
+  repository text, issue/review text, configuration values, Git pathnames, or
+  an unauthenticated receipt claim.
+- Trust boundaries: human request to coordinator; repository data to executable
+  agent instructions; configuration tokens to process execution; coordinator
+  to worker worktree; Git's byte-oriented path records to ownership decisions;
+  vendor marketplace state to the update adapter; and a review provider's
+  authenticated record to local receipt validation.
+- Abuse cases: inject shell evaluation through configured argv; smuggle an
+  unowned source through a committed rename; claim a forged trusted review;
+  resume from `blocked` directly to a final state; make update rollback delete
+  the only usable marketplace declaration; use malicious path bytes to evade
+  ownership checks; or edit non-bookkeeping code while retaining a stale
+  receipt.
+- Mitigations: declarative schema validation plus direct argv execution; Git's
+  NUL-delimited name-status records with both rename endpoints; authenticated
+  receipt resolution and exact-field binding; non-final, recorded resume
+  targets; step-aware update rollback with exact state readback; literal
+  pathspec staging; and receipt currency restricted to the reviewed work
+  item's bookkeeping paths.
+- Residual risk: local independent review cannot authenticate an external
+  principal and remains a lower proof tier; vendor CLI semantics can change;
+  custom validators can drift from their prose contracts; local fixtures do
+  not prove remote Forge, normal-harness, or release behavior. These risks are
+  kept explicit and require fail-closed diagnostics or stronger live evidence
+  before a stronger proof tier is claimed.
 
 ## Acceptance criteria
 

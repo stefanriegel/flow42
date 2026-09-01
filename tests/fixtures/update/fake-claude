@@ -23,7 +23,63 @@ write_state() {
   mv "$state_tmp" "$FAKE_STATE"
 }
 
-case "$1 $2 $3" in
+sync_settings_scope() {
+  settings_scope=$1
+  test -n "${FAKE_SETTINGS_FILE:-}" || return 0
+  settings_tmp=${FAKE_SETTINGS_FILE}.new
+  if jq -e --arg scope "$settings_scope" '.declarations[$scope] != null' \
+    "$FAKE_STATE" >/dev/null; then
+    source_object=$(jq -c --arg scope "$settings_scope" \
+      '.declarations[$scope]' "$FAKE_STATE")
+    jq --argjson source "$source_object" \
+      '.extraKnownMarketplaces.flow42.source = $source' \
+      "$FAKE_SETTINGS_FILE" >"$settings_tmp"
+  else
+    jq 'del(.extraKnownMarketplaces.flow42)' \
+      "$FAKE_SETTINGS_FILE" >"$settings_tmp"
+  fi
+  mv "$settings_tmp" "$FAKE_SETTINGS_FILE"
+}
+
+fail_phase=${FAKE_FAIL_PHASE:-before}
+command_line=$*
+if test -n "${FAKE_FAIL_COMMAND:-}" && \
+   test "$command_line" = "$FAKE_FAIL_COMMAND" && \
+   test "$fail_phase" = before && \
+   test ! -f "${FAKE_FAIL_MARKER:?FAKE_FAIL_MARKER is required with FAKE_FAIL_COMMAND}"; then
+  touch "$FAKE_FAIL_MARKER"
+  printf '%s\n' "forced command failure: $command_line" >&2
+  exit 1
+fi
+
+fail_after_effect_if_requested() {
+  if test -n "${FAKE_FAIL_COMMAND:-}" && \
+     test "$command_line" = "$FAKE_FAIL_COMMAND" && \
+     test "$fail_phase" = after && \
+     test ! -f "${FAKE_FAIL_MARKER:?FAKE_FAIL_MARKER is required with FAKE_FAIL_COMMAND}"; then
+    touch "$FAKE_FAIL_MARKER"
+    printf '%s\n' "forced after-effect command failure: $command_line" >&2
+    exit 1
+  fi
+}
+
+case "$command_line" in
+  '--version')
+    printf '%s\n' '2.1.0 (Flow42 fake)'
+    exit 0
+    ;;
+  'plugin update --help')
+    if test "${FAKE_FAIL_UPDATE_HELP:-false}" = true; then
+      printf '%s\n' 'plugin update unavailable' >&2
+      exit 1
+    fi
+    printf '%s\n' 'Usage: claude plugin update'
+    exit 0
+    ;;
+esac
+
+command_key="${1:-} ${2:-} ${3:-}"
+case "$command_key" in
   'plugin marketplace remove')
     marketplace_scope=$(scope_from_args "$@")
     if ! jq -e --arg scope "$marketplace_scope" '.declarations[$scope] != null' \
@@ -32,10 +88,15 @@ case "$1 $2 $3" in
       exit 1
     fi
     # shellcheck disable=SC2016
-    write_state --arg scope "$marketplace_scope" '
+    write_state --arg scope "$marketplace_scope" \
+      --argjson preserve_installs "${FAKE_PRESERVE_INSTALLS_ON_REMOVE:-false}" '
       del(.declarations[$scope]) |
-      if (.declarations | length) == 0 then .installs = {} else . end
+      if $preserve_installs then .
+      elif (.declarations | length) == 0 then .installs = {}
+      else . end
     '
+    sync_settings_scope "$marketplace_scope"
+    fail_after_effect_if_requested
     ;;
   'plugin marketplace add')
     marketplace_source=$4
@@ -64,7 +125,11 @@ case "$1 $2 $3" in
           '{source:"github", repo:$repo, ref:$ref}')
         ;;
       *)
-        source_ref=
+        if test -n "${FAKE_DIRECTORY_VERSION:-}"; then
+          source_ref=v${FAKE_DIRECTORY_VERSION}
+        else
+          source_ref=
+        fi
         source_object=$(jq -cn --arg path "$marketplace_source" \
           '{source:"directory", path:$path}')
         ;;
@@ -80,6 +145,8 @@ case "$1 $2 $3" in
     write_state --arg scope "$marketplace_scope" --argjson source "$source_object" \
       --arg available "$available" \
       '.declarations[$scope] = $source | .available = $available'
+    sync_settings_scope "$marketplace_scope"
+    fail_after_effect_if_requested
     ;;
   'plugin install flow42@flow42')
     plugin_scope=$(scope_from_args "$@")
@@ -91,6 +158,7 @@ case "$1 $2 $3" in
     # shellcheck disable=SC2016
     write_state --arg scope "$plugin_scope" \
       '.installs[$scope] = .available'
+    fail_after_effect_if_requested
     ;;
   'plugin update flow42@flow42')
     plugin_scope=$(scope_from_args "$@")
@@ -102,13 +170,16 @@ case "$1 $2 $3" in
     # shellcheck disable=SC2016
     write_state --arg scope "$plugin_scope" \
       '.installs[$scope] = .available'
+    fail_after_effect_if_requested
     ;;
   'plugin marketplace list')
+    fail_after_effect_if_requested
     jq '[.declarations | to_entries[] |
       {name:"flow42", source:.value.source} + .value
     ]' "$FAKE_STATE"
     ;;
   'plugin list --json')
+    fail_after_effect_if_requested
     jq '[.installs | to_entries[] |
       {id:"flow42@flow42", scope:.key, version:.value}
     ]' "$FAKE_STATE"
