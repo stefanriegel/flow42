@@ -1,3 +1,5 @@
+> LEGACY (recorded against v0.x–v2 schemas; describes retired stages/counts. Kept for provenance; see [Architecture](../../docs/ARCHITECTURE.md#what-this-does-not-claim) for what V3 does and does not claim.)
+
 # Flow42 threat model
 
 ## Scope and assumptions

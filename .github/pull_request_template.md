@@ -7,6 +7,6 @@
 ## Risks and rollback
 
 - [ ] Canonical contract preserved or intentionally versioned
-- [ ] Claude Code and Codex parity checked
+- [ ] Structural checks pass (`sh tests/structure.sh`)
 - [ ] Behavior change began with a failing test
 - [ ] No secrets or private repository content included

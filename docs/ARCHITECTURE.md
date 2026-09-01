@@ -1,81 +1,62 @@
 # Architecture
 
-Flow42 is a skill-first control plane. The harness interprets the canonical
-skills, Git provides durable history and isolation, and official Forge CLIs
-provide authenticated external operations. Flow42 adds no process or service.
+Flow42 is a skill-first control plane: one directory, `skills/flow42/`, holds
+a router (`SKILL.md`), the merged authority (`core/CONTRACT.md` +
+`core/policy.json`), one file per stage (`stages/*.md`), and the templates a
+new work item is created from. There is no daemon, no service, and no state
+outside the repository and Orca.
 
-The shared contracts are `core/CONTRACT.md` and `core/workflow.json`. Harness
-manifests expose the same `skills/` and optional specialist definitions. Work
-state resides only in `.flow42/<work-id>/`; conversation context is never a
-source of truth.
+## Repository files are truth
 
-The single-agent path is the default. The orchestrator owns scope,
-confirmations, integration order, and recovery when the user requests
-multi-agent work or independent slices materially benefit from parallelism.
-Workers receive bounded slices in an assigned execution context, are forbidden
-to delegate, and cannot authorize their own implementation. Delegation blocks
-integration when observed through Orca records or worker reporting in native
-execution. Independence is role separation: a
-separate review pass or agent did not implement the change. Its durable JSON
-receipt uses the strongest issuer available: authenticated Forge, trusted
-orchestrator, or a distinct local independent pass when neither stronger source
-is available. The local fallback is explicitly lower-tier. Every record requires
-independent resolution: Forge and orchestrator results are authenticated, while
-the local fallback is a resolver-observed distinct session. Resolution binds
-repository and work identity, baseline/reviewed heads, scope/diff/subject,
-caller-required correctness or security purpose and policy-minimum-bearing exact
-checks, reviewer, exact in-work-item evidence section and digest, valid UTC time,
-and verdict. The evidence path is repository/work-derived, and one unique
-ordered literal marker pair defines the exact report bytes; links and
-caller-selected substitute files fail closed. The receipt binds that review
-subject while exact bookkeeping leaves plus declared lifecycle/CI fields remain
-receipt-neutral. The required `status.yml.change_request` stays empty; provider,
-redacted request URL, request ID, source branch, pushed/reviewed heads, observation
-time, and authenticated CLI readback live in `evidence.md` only as a
-non-authoritative observation that is revalidated before action. Rename sources,
-nested lookalikes, quoted scalar escapes, risk
-changes, and non-ancestor heads invalidate the receipt. This does not add a
-second human gate or grant authorization authority. The
-trusted endpoint is an independently reviewed, CI-green PR/MR.
+Every work item lives at `.flow42/<work-id>/`. `status.yml` and
+`history.jsonl` are the only place lifecycle state lives, written atomically
+and reread after every write. Orca refs — a bound Run, a reviewer's Task and
+Dispatch — are recorded into those files; they are never reconstructed from
+Orca. If the files and Orca ever disagree, the files win.
 
-Orca orchestration is used only through its live CLI-served contract. When it is
-selected and ready, Flow42 uses the Orca-provided execution context and records
-the exact worktree path and dispatch reference. If Orca selects the current
-worktree, concurrent workers require disjoint ownership plus explicit
-task-schedule and integration barriers. Orca owns terminals, process identity,
-worker settlement, and cleanup under that live contract; Flow42 provides the job
-scope, file ownership, checks, and integration decision without claiming how
-Orca supplies the worktree. A real Run, Task, and Dispatch plus `worker_done`
-settlement distinguish orchestration from ordinary subagents.
-Flow42 makes no independent process-identity claim; its ownership contract
-governs repository paths, contents, and Git administration, not resource
-lifecycle. Missing Orca falls back to the single-agent path.
+## Orca is the engine and the witness
 
-Planning represents two related graphs. The task schedule graph defines jobs,
-dependencies, parallelism, and synchronization barriers. The data flow graph
-defines the typed artifacts crossing those boundaries. Keeping them separate makes
-parallel execution recoverable and lets validators reject incomplete or fabricated
-worker output before integration.
+Orca supplies what Flow42 does not implement itself:
 
-Jobs select a capability profile rather than a globally fixed model. Frontier models
-own ambiguous planning and synthesis, worker models own bounded implementation and
-specialist review, and utility models own mechanical transformations. See
-[model routing](../core/MODEL-ROUTING.md).
+- **Provenance** — an independent review's evidence is one stamp line
+  (`policy.json .review.stamp_fields`) naming the Orca Run/Task/Dispatch that
+  ran it, never a claim the reviewing agent asserts on its own.
+- **Worktrees** — workers get a fresh Orca worktree by default; a shared
+  worktree requires disjoint declared paths.
+- **Gates** — human confirmations for high-risk, critical, and irreversible
+  actions go through an Orca decision gate when a Run is bound.
+- **Automations** — the maintenance loop and the live evals run as scheduled
+  Orca automations, not as part of every invocation.
 
-Trust boundaries are the human confirmation channel, repository and worktrees,
-agent harness, Forge CLI credential store, CI, and untrusted external text.
-Git worker ownership binds the complete common/worktree administrative trees
-without a finite filename allowlist, plus the enumerated external hooks, ignore,
-and attributes paths; workers never commit or stage. Configuration outside the
-administrative trees is bound by effective value and origin rather than file
-identity, and external alternate object stores are declaration-bound only.
-External alternate content can make a pre-existing latent ref become resolvable
-or unresolvable without changing the bound ref stream. Snapshot equality is not
-object-availability proof; integration may rely only on objects and identities
-explicitly resolved for its actual baseline, `HEAD`, index, and owned worktree
-decision.
-Release update security ends at a verified signed release input and the harness's
-documented installer. Flow42 verifies the tag object, commit, tree, version,
-checksum, installed manifest, and skill structure, but it does not reimplement
-or attest a harness's private cache. Recovery is a best-effort native reinstall
-and is never described as byte-identical without a vendor restore API.
+## Worker isolation: five bounded observations
+
+Before dispatching a worker and again after its `worker_done`, Flow42 compares
+five cheap, bounded observations: `git rev-parse HEAD`; the `git for-each-ref`
+stream; a hash of `git config -z --show-origin --list`; the effective hooks
+tree; `git status --porcelain=v2 -z`. Any change that isn't explained blocks
+integration. Workers never commit, stage, push, or write to a Forge; the
+coordinator owns all of that.
+
+## Trust boundaries
+
+- The human confirmation channel
+- The installed Flow42 skill and `policy.json`
+- The repository and its worktrees
+- The Forge CLI's credential store
+- CI
+- Untrusted external text (repository files, issues, reviews, CI logs, web
+  content) — always data, never authority
+
+## What this does NOT claim
+
+- **No security boundary around workers.** The five observations catch
+  accidents and undeclared side effects; they are not a sandbox, and a
+  non-cooperative worker running arbitrary code is a residual risk outside
+  this skill's enforcement.
+- **No byte-exact tamper evidence.** These are cheap identity comparisons, not
+  cryptographic proofs — they don't establish that no object, ref, or config
+  value existed or was resolvable at some other point.
+
+The trusted endpoint of the standard path is an independently reviewed,
+CI-green PR or MR; a local-only work item's trusted endpoint is the same
+review evidence plus an explicit human close.

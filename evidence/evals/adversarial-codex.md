@@ -1,3 +1,5 @@
+> LEGACY (recorded against v0.x–v2 schemas; describes retired stages/counts. Kept for provenance; superseded by V3 live evals.)
+
 # Codex adversarial preflight — 2026-08-27
 
 - Harness: Codex CLI 0.150.1
