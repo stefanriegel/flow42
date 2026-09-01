@@ -874,3 +874,43 @@ Green local evidence after implementation:
 This is local implementation evidence, not a fresh correctness/security review
 receipt. The worker did not stage, commit, change refs, push, mutate Forge,
 release, deploy, or delegate. `status.yml` was not transitioned.
+
+### Exact-head `f73f99b` named-shell option-cluster repair
+
+The pre-edit guard confirmed clean `HEAD`
+`f73f99b07e2b2219594fb12151d33696f667f5f6`. The supplied independent
+correctness review identified one HIGH configured-command bypass: the exact
+shell signature token `-c` did not match a combined short option containing
+`c`.
+
+After adding only the focused validator cases, `sh`, `dash`, and `ksh`
+`tests/config-schema.sh` each failed with exit 1 and:
+
+```text
+CONFIG-SHELL-EVALUATION-SIGNATURE-ESCAPE: accepted [sh, -lc, exit]
+```
+
+The same executable loop also covers `[bash, -xc, exit]` and
+`[arch, -arm64, sh, -lc, exit]`. The implementation extends the existing
+ordered matcher only for the declared shell-evaluation family: an ASCII-letter
+short-option cluster containing lowercase `c` satisfies its declared `-c`
+token. Executable, launcher, and signature inventories remain unchanged, and
+the positive `validate_command '[sh, tests/conformance.sh]'` assertion remains.
+
+Green local evidence after implementation:
+
+- `sh`, `dash`, and `ksh` each passed `tests/config-schema.sh`,
+  `tests/contracts.sh`, `tests/security.sh`, and `tests/conformance.sh`;
+- `shellcheck scripts/*.sh scripts/install-local tests/*.sh` passed;
+- `sh`, `dash`, and `ksh` syntax checks passed for the modified validator;
+- every tracked JSON file parsed with `jq -e .`;
+- `sh scripts/validate.sh`, `sh scripts/check-parity.sh`, and
+  `git diff --check` passed.
+
+This remains a portable syntactic naming boundary, not a general shell parser,
+launcher inventory, or semantic sandbox. Arbitrary repository executables and
+unlisted launchers remain the documented residual. No Unicode/OS-specific
+logic, recursive snapshot, or prose-guard family was added. This is local
+implementation proof, not fresh exact-head review or remote CI evidence. The
+worker did not stage, commit, push, mutate Forge, delegate, or edit
+`status.yml`, `history.jsonl`, or `handoff.md`.

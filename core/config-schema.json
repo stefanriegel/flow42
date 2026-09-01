@@ -58,7 +58,8 @@
     "ordered_signature_match": {
       "executable_position": "any-token-position",
       "executable_normalization": "basename-ascii-casefold",
-      "remaining_signature_tokens": "ordered-subsequence"
+      "remaining_signature_tokens": "ordered-subsequence",
+      "named_shell_short_option_cluster": "ascii-letters-containing-c-match-declared--c"
     },
     "ordered_signature_families": [
       "authority-bearing-executable-singletons",

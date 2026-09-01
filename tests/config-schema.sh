@@ -19,7 +19,8 @@ jq -e '.fields.base_branch.validation == "git-check-ref-format---branch" and
   .command_policy.ordered_signature_match == {
     "executable_position": "any-token-position",
     "executable_normalization": "basename-ascii-casefold",
-    "remaining_signature_tokens": "ordered-subsequence"
+    "remaining_signature_tokens": "ordered-subsequence",
+    "named_shell_short_option_cluster": "ascii-letters-containing-c-match-declared--c"
   } and
   .command_policy.ordered_signature_families == [
     "authority-bearing-executable-singletons",
@@ -44,7 +45,9 @@ fail() { echo "$1" >&2; return 1; }
 matches_ordered_signature() {
   token_stream=$1
   signature=$2
-  printf '%s\n' "$token_stream" | LC_ALL=C awk -v signature="$signature" '
+  cluster_mode=${3:-exact}
+  printf '%s\n' "$token_stream" | LC_ALL=C awk -v signature="$signature" \
+    -v cluster_mode="$cluster_mode" '
     BEGIN {signature_length=split(signature, signature_tokens, "\t")}
     {command_tokens[NR]=$0}
     END {
@@ -55,7 +58,11 @@ matches_ordered_signature() {
         if (executable != signature_tokens[1]) continue
         wanted=2
         for (position=start+1; position<=NR && wanted<=signature_length; position++) {
-          if (command_tokens[position] == signature_tokens[wanted]) wanted++
+          candidate=command_tokens[position]
+          if (candidate == signature_tokens[wanted] ||
+              (cluster_mode == "named-shell-c" &&
+               signature_tokens[wanted] == "-c" &&
+               candidate ~ /^-[A-Za-z]*c[A-Za-z]*$/)) wanted++
         }
         if (wanted > signature_length) exit 0
       }
@@ -130,7 +137,7 @@ EOF
     return
   fi
   while IFS= read -r signature; do
-    if matches_ordered_signature "$tokens" "$signature"; then
+    if matches_ordered_signature "$tokens" "$signature" named-shell-c; then
       fail CONFIG-COMMAND-SHELL-EVAL
       return
     fi
@@ -333,7 +340,10 @@ shell_evaluation_case=0
 for shell_evaluation_argv in \
   '[sh, -x, -c, echo]' \
   '[arch, -arm64, sh, -x, -c, echo]' \
-  '[arch, -arm64, bash, --noprofile, -c, echo]'; do
+  '[arch, -arm64, bash, --noprofile, -c, echo]' \
+  '[sh, -lc, exit]' \
+  '[bash, -xc, exit]' \
+  '[arch, -arm64, sh, -lc, exit]'; do
   shell_evaluation_case=$((shell_evaluation_case + 1))
   shell_evaluation_log="$tmp/shell-evaluation-signature-$shell_evaluation_case.log"
   shell_evaluation_rc=0

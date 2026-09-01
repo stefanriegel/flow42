@@ -41,10 +41,12 @@ shell-evaluation signatures, and mutation signatures all use one matcher: every
 token position is a potential executable, its basename is ASCII-casefolded, and
 the remaining signature tokens must occur later in order. The same rule catches
 named wrappers and intervening global options without parsing each CLI grammar.
+For a declared named-shell `-c` signature, a short ASCII-letter option cluster
+containing `c`, including `-lc` or `-xc`, is also shell evaluation and fails.
 These control CLIs remain forbidden unless a future shared explicit allowlist
 can prove a specific argv is read-only; the current allowlist is empty and
-no named control-CLI token is allowed by exception. Safe direct script argv such as
-`sh tests/conformance.sh` remains distinct from shell evaluation.
+no named control-CLI token is allowed by exception. Safe direct script argv such
+as `sh tests/conformance.sh` remains distinct from shell evaluation.
 
 This predicate is a naming check, not a semantic sandbox. It cannot see a
 control CLI reached through an unnamed path: a repository script, build runner,
