@@ -49,18 +49,24 @@
   },
   "command_policy": {
     "fail_closed": true,
-    "token_pattern": "^[^[:space:],]+$",
+    "token_pattern": "^[!-~]+$",
     "authority_bearing_executables": ["git", "gh", "glab", "terraform"],
     "authority_bearing_executable_positions": "any",
     "blocked_launcher_executables": ["xcrun"],
     "blocked_launcher_executables_exhaustive": false,
     "read_only_control_cli_allowlist": [],
-    "disallowed_mutation_signature_match": {
+    "ordered_signature_match": {
       "executable_position": "any-token-position",
       "executable_normalization": "basename-ascii-casefold",
       "remaining_signature_tokens": "ordered-subsequence"
     },
-    "forbidden_token_pattern": "([$][(]|`|&&|[|][|]|[;<>]|(^|[^|])[|]([^|]|$))",
+    "ordered_signature_families": [
+      "authority-bearing-executable-singletons",
+      "blocked-launcher-singletons",
+      "shell-evaluation-signatures",
+      "declared-mutation-signatures"
+    ],
+    "forbidden_token_pattern": "([$]|`|&&|[|][|]|[;<>]|(^|[^|])[|]([^|]|$))",
     "shell_evaluation_prefixes": [
       ["sh", "-c"], ["sh", "--command"],
       ["bash", "-c"], ["bash", "--command"],

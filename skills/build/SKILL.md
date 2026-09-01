@@ -24,9 +24,12 @@ Confirm the current intent, spec, plan, status, and history agree before editing
 product code. For high or critical risk, require the explicit plan confirmation
 recorded by the plan gate. Establish a green baseline. For behavior changes and bug fixes, observe a
 relevant failing test before implementation, then make it pass. For legacy code,
-add characterization coverage first. Assign independent slices to separate
-worktrees and agents only when file ownership is disjoint. Preserve unrelated
-changes. Record checks, red-green observations, decisions, and gaps in
+add characterization coverage first. Use the Orca-provided execution context
+and exact worktree selected by Orca when it is ready. If Orca selects the
+current worktree, concurrent slices require disjoint ownership plus explicit
+task-scheduling and integration barriers. In the native path, use the exact
+worktree assigned by the coordinator. Preserve unrelated changes. Record checks,
+red-green observations, decisions, and gaps in
 `evidence.md`. Name the proof strategy and use applicable characterization,
 unit, integration, E2E, lint, type, build, UI interaction/visual, or migration
 dry-run/rollback evidence. Justify unavailable checks. Never integrate a slice
@@ -44,7 +47,7 @@ recorded ownership. Also compare complete content-and-metadata identities of the
 common and worktree Git directories without exclusions, plus exact-byte
 effective external hooks, ignore, and attributes paths. Reject links, invalid
 path transcoding, unreadable entries, or partial producer output. A worker must
-not stage; any Git administrative mutation blocks integration even when the
+not stage or push; any Git administrative mutation blocks integration even when the
 working-tree path snapshot is unchanged.
 Workers receive no Forge-write authority and cannot delegate. Block integration
 on out-of-scope paths while preserving the worktree; worker settlement and

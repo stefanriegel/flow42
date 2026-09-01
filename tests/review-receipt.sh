@@ -41,6 +41,13 @@ sha256_file() {
   printf '%s\n' "$hash_value"
 }
 
+reject_nul_file() {
+  byte_input=$1
+  byte_without_nul=$2
+  LC_ALL=C tr -d '\000' <"$byte_input" >"$byte_without_nul" || return 1
+  cmp -s "$byte_input" "$byte_without_nul"
+}
+
 extract_review_section() {
   evidence_file=$1
   section_id=$2
@@ -49,6 +56,7 @@ extract_review_section() {
   end_marker="<!-- flow42-review-section:$section_id:end -->"
   test -f "$evidence_file" && test ! -L "$evidence_file" || return 1
   test "$(find "$evidence_file" -prune -links 1)" = "$evidence_file" || return 1
+  reject_nul_file "$evidence_file" "$section_output.nul-check" || return 1
   test "$(grep -F -x -c "$begin_marker" "$evidence_file")" -eq 1 || return 1
   test "$(grep -F -x -c "$end_marker" "$evidence_file")" -eq 1 || return 1
   awk -v begin="$begin_marker" -v end="$end_marker" '
@@ -118,11 +126,13 @@ jq -e '.independent_review.local_fallback_tier == "lower" and
   .independent_review.status_yaml_subset.quoted_keys == "reject" and
   .independent_review.status_yaml_subset.unknown_keys == "reject" and
   .independent_review.status_yaml_subset.unsupported_constructs == "reject" and
+  .independent_review.status_yaml_subset.nul_bytes == "reject-before-parsing" and
   .independent_review.status_yaml_subset.canonicalization == {"quoted_scalar":"unquote-without-escapes","quoted_scalar_escapes":"reject","plain_scalar":"preserve","inline_string_sequence":"remove-insignificant-whitespace","field_order":"status_required_fields","comparison":"canonical-key-value"} and
   .independent_review.status_yaml_subset.required_fields == .independent_review.status_required_fields and
   .independent_review.subject_derivation == {"repository_id":"normalized-origin-remote","work_id":"exact-work-item-directory","baseline_head":"git-rev-parse-verify","reviewed_head":"git-rev-parse-verify","scope_digest":"sha256-canonical-ordered-reviewed-path-set","diff_digest":"sha256-nul-safe-no-renames-baseline-to-head-path-content-diff","review_subject":"caller-expected-subject"} and
+  .independent_review.nul_detection == {"applies_to":["evidence-section-extraction","status-yaml-parsing"],"method":"nul-stripped-copy-and-byte-compare","producer_exit_zero_required":true,"reject_before_interpretation":true} and
   .independent_review.review_expectation_derivation == {"review_kind":"caller-required-review-kind","checks":"caller-required-exact-canonical-ordered-check-array-containing-policy-minimums","artifact_ref":"caller-expected-evidence-section-in-exact-work-item","artifact_digest":"sha256-exact-persisted-evidence-section-bytes"} and
-  .independent_review.artifact_section_format == {"evidence_path":"repository-root/.flow42/<work-id>/evidence.md","begin_marker":"<!-- flow42-review-section:<section-id>:begin -->","end_marker":"<!-- flow42-review-section:<section-id>:end -->","marker_cardinality":"exactly-one-ordered-pair","digest_bytes":"exact-bytes-strictly-between-marker-lines-with-lf-line-terminators","links":"reject"} and
+  .independent_review.artifact_section_format == {"evidence_path":"repository-root/.flow42/<work-id>/evidence.md","begin_marker":"<!-- flow42-review-section:<section-id>:begin -->","end_marker":"<!-- flow42-review-section:<section-id>:end -->","marker_cardinality":"exactly-one-ordered-pair","digest_bytes":"exact-bytes-strictly-between-marker-lines-with-lf-line-terminators","nul_bytes":"reject-before-marker-extraction","links":"reject"} and
   .independent_review.authenticated_derivation == {"recorded_at":"issuer-authenticated-record-time-or-resolver-observed-distinct-local-session-time"} and
   .independent_review.receipt_required_fields == ["schema_version","review_kind","issuer_kind","issuer_receipt_ref","repository_id","work_id","baseline_head","reviewed_head","scope_digest","diff_digest","review_subject","reviewer_principal","reviewer_role","dispatch_or_session_ref","implementer","verdict","checks","artifact_ref","artifact_digest","recorded_at"] and
   .independent_review.status_yaml_subset.change_request_policy == "reserved-empty-for-schema-compatibility" and
@@ -263,6 +273,38 @@ if validate_receipt "$fixtures/valid-local-pass.json" "$expected_head" \
   exit 1
 fi
 
+artifact_nul_repository="$tmp/artifact-nul-repository"
+artifact_nul_path="$artifact_nul_repository/.flow42/$expected_work_id/evidence.md"
+artifact_nul_control="$tmp/artifact-nul-control.md"
+mkdir -p "$artifact_nul_repository/.flow42/$expected_work_id"
+printf '%s\n' \
+  '<!-- flow42-review-section:correctness-review:begin -->' \
+  '# Correctness review' \
+  '' \
+  'The required contract check passed for the reviewed subject.' \
+  '<!-- flow42-review-section:correctness-review:end -->' \
+  >"$artifact_nul_control"
+{
+  printf '%s\n' \
+    '<!-- flow42-review-section:correctness-review:begin -->' \
+    '# Correctness review' \
+    ''
+  printf 'The required contract check passed for the reviewed subject.\000concealed-bytes\n'
+  printf '%s\n' '<!-- flow42-review-section:correctness-review:end -->'
+} >"$artifact_nul_path"
+test "$(sha256_file "$artifact_nul_control")" != \
+  "$(sha256_file "$artifact_nul_path")" || {
+  echo 'NUL evidence fixture did not create distinct bytes' >&2
+  exit 1
+}
+extract_review_section "$artifact_nul_control" correctness-review \
+  "$tmp/artifact-nul-control-section"
+if extract_review_section "$artifact_nul_path" correctness-review \
+  "$tmp/artifact-nul-section" >/dev/null 2>&1; then
+  echo 'review receipt accepted distinct NUL evidence bytes for digest extraction' >&2
+  exit 1
+fi
+
 artifact_duplicate_repository="$tmp/artifact-duplicate-repository"
 mkdir -p "$artifact_duplicate_repository/.flow42/$expected_work_id"
 cp "$expected_artifact_repository/.flow42/$expected_work_id/evidence.md" \
@@ -362,6 +404,12 @@ validate_receipt_contract() {
   grep -Fq 'exact receipt-neutral leaf in the work item under review' "$contract" || { echo RECEIPT-CONTRACT-PATHS >&2; return 1; }
   grep -Fq 'canonical top-level key set exactly once' "$contract" || { echo RECEIPT-CONTRACT-STATUS >&2; return 1; }
   grep -Fq '`change_request`' "$security" || { echo RECEIPT-CONTRACT-STATUS >&2; return 1; }
+  if ! grep -Fq 'reject NUL bytes' "$contract" ||
+    ! grep -Fq 'NUL-bearing `change_request` cannot canonicalize as empty' "$contract" ||
+    ! grep -Fq 'checked NUL-stripped copy and byte' "$security"; then
+    echo RECEIPT-CONTRACT-NUL >&2
+    return 1
+  fi
   if ! grep -Fq 'Every receipt must' "$contract" ||
     ! grep -Fq 'resolver-observed distinct local session' "$contract"; then
     echo RECEIPT-CONTRACT-LOCAL-RESOLUTION >&2
@@ -408,6 +456,7 @@ validate_status_yaml() {
   status_file=$1
   policy=$2
   canonical_file=$3
+  reject_nul_file "$status_file" "$canonical_file.nul-check" || return 1
   awk '
     function unquote(value) {
       if (value ~ /^"[^"]*"$/) return substr(value, 2, length(value) - 2)
@@ -510,6 +559,18 @@ for current_status in "$root"/.flow42/*/status.yml; do
   test -f "$current_status" || continue
   validate_status_yaml "$current_status" "$root/core/risk-policy.json" "$tmp/current-status.canonical"
 done
+
+while IFS= read -r status_line; do
+  case "$status_line" in
+    'change_request: ""') printf 'change_request: \000\n' ;;
+    *) printf '%s\n' "$status_line" ;;
+  esac
+done <"$root/templates/status.yml" >"$tmp/status-nul-change-request.yml"
+if validate_status_yaml "$tmp/status-nul-change-request.yml" \
+  "$root/core/risk-policy.json" "$tmp/status-nul-change-request.canonical"; then
+  echo 'status YAML accepted NUL change_request as canonical empty' >&2
+  exit 1
+fi
 
 repo="$tmp/repo"
 mkdir -p "$repo/.flow42/wi"

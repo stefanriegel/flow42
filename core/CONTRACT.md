@@ -34,12 +34,13 @@ missing repository command paths block use with a migration instruction. Parse
 only the declared YAML subset and reject duplicate keys. A literal base branch
 must satisfy both the schema pattern and `git check-ref-format --branch`;
 `worktree_parent` and protected paths reject absolute, home-relative, and parent
-traversal forms. For each declared disallowed mutation signature, treat every
-token position as a potential executable, normalize that token to its
-ASCII-casefolded basename, and reject when the remaining signature tokens occur
-later in order. The authority-bearing executable and blocked-launcher checks use
-the same normalization. This one rule covers named wrappers and intervening
-global options without claiming a full CLI parser.
+traversal forms. Command tokens are printable ASCII under the POSIX C locale
+and exclude whitespace, commas, brackets, and dollar expansion syntax. Treat authority-bearing
+executable singletons, blocked-launcher singletons, shell-evaluation signatures,
+and declared mutation signatures uniformly: every token position is a potential
+executable, its basename is ASCII-casefolded, and the remaining signature tokens
+must occur later in order. This one rule covers named wrappers and intervening
+global options without claiming a full CLI parser or adding a launcher denylist.
 Configuration changes do not require a separate approval artifact or Forge
 interaction.
 
@@ -116,7 +117,10 @@ Map that reference to the canonical repository-root
 file. Delimit the report with exactly one ordered pair of literal
 `<!-- flow42-review-section:<section-id>:begin -->` and
 `<!-- flow42-review-section:<section-id>:end -->` lines and hash the exact
-LF-terminated bytes strictly between them. Reject symbolic links,
+LF-terminated bytes strictly between them. Before marker counting or extraction,
+reject NUL bytes using a NUL-stripped copy and byte comparison whose producer
+status is checked; NUL-bearing evidence never reaches digest derivation. Reject
+symbolic links,
 duplicate/missing/reordered markers, invalid section IDs, and path traversal.
 The extractor requires a regular non-symlink evidence path and observes a link
 count of one. Multiply linked evidence files are rejected when observed, but
@@ -163,7 +167,9 @@ Quoted keys and duplicate, missing, or unknown keys fail closed. Values must use
 the declared scalar or inline string-list subset; canonical quoted scalar values
 without escapes are accepted, while quoted escapes, anchors, aliases, tags,
 merge keys, nested mappings, and block scalars are rejected before comparison.
-The schema-compatible `change_request` field remains required but empty. Before
+Before status YAML parsing, reject NUL bytes with the same checked byte-comparison
+procedure, so a NUL-bearing `change_request` cannot canonicalize as empty. The
+schema-compatible `change_request` field remains required but empty. Before
 any PR/MR-dependent action, query the authenticated official CLI and require its
 live provider, normalized repository, request ID, redacted canonical URL, exact
 source branch, pushed head, reviewed head, and real UTC observation time to

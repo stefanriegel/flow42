@@ -111,7 +111,7 @@ graft state, refs, reflogs, recovery state, `HEAD`, pseudo-refs, and index are
 coordinator-owned; any change blocks integration. Effective-value or origin
 changes in external included configuration also block, while the disclosed
 file-identity and external-alternate residuals above do not expand worker
-authority. A worker commit, staging operation, or other `HEAD`/ref change is
+authority. A worker commit, staging operation, push, or other `HEAD`/ref change is
 forbidden rather than an integration mechanism. Ordinary ownership of product
 paths never grants Git-administration authority.
 
@@ -140,7 +140,7 @@ worker reporting in native execution. Reporting by a non-cooperative native
 worker is not trustworthy, so native absence of delegation remains a disclosed
 residual rather than a proven fact. Preserve all files and report the exact
 mismatch, including rename endpoints, dirty-path collisions, and Git
-administrative identity changes. Workers do not perform Forge writes; the
+administrative identity changes. Workers do not push or perform Forge writes; the
 coordinator owns any later real issue or PR/MR operation.
 
 Keep the task schedule graph separate from the data flow graph. Schedule edges

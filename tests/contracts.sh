@@ -71,7 +71,7 @@ fi
 
 validate_threat_model_staging() {
   threat_model=$1
-  grep -Fq 'Workers never stage; only the coordinator may stage an exact reviewed path after the post-worker checks pass.' \
+  grep -Fq 'Workers never stage or push; only the coordinator may stage an exact reviewed path after the post-worker checks pass' \
     "$threat_model" || return 1
   if tr '\n' ' ' <"$threat_model" |
     grep -Eiq 'workers? may[^.]*stag|except an explicitly authorized exact staging operation'; then

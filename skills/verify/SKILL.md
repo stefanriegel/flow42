@@ -55,8 +55,10 @@ Derive `.flow42/<work-id>/evidence.md` from the canonical repository/work
 identity; never hash a separately supplied path. Require exactly one ordered
 literal `<!-- flow42-review-section:<section-id>:begin -->` / `...:end -->`
 marker pair and hash the LF-terminated bytes strictly between those lines.
-Reject symbolic links, invalid IDs, duplicate/missing/reordered markers, and
-traversal, and observe a link count of one. Multiply linked evidence files are
+Before marker counting or extraction, reject NUL bytes with a checked
+NUL-stripped copy and byte comparison; never derive a digest from NUL-bearing
+evidence. Reject symbolic links, invalid IDs, duplicate/missing/reordered markers,
+and traversal, and observe a link count of one. Multiply linked evidence files are
 rejected when observed, but that predicate and the extracted digest are
 point-in-time observations rather than an atomic file-identity guarantee across
 extraction, hashing, resolution, and acceptance. A concurrent same-user
@@ -98,5 +100,7 @@ requires a fresh review. Receipt-neutral diff validation and diff digest
 derivation fail closed unless the Git diff producer exits successfully and its
 complete NUL-delimited output is consumed without parse or hash failure. A
 successful downstream parser, filter, or hasher never masks producer failure.
+Reject NUL bytes with the same checked byte comparison before parsing either
+status version, so `change_request` cannot canonicalize as empty.
 Use the canonical revision, atomic status,
 append-only history, and read-back procedure.

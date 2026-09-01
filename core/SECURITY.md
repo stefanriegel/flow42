@@ -33,16 +33,14 @@ Invoke tokens directly; never use `eval`, `sh -c`, `bash -c`, command
 substitution, or concatenated shell strings. Pass `--` before user-controlled
 positional values when supported. Validate work IDs, branches, paths, URLs, and
 Forge identifiers against the narrow grammar required by the operation.
-Schema validation rejects empty or whitespace-ambiguous tokens, shell syntax,
-declared mutation signatures, and any token whose ASCII-casefolded basename is
-`git`, `gh`, `glab`, or `terraform` in any argv position, so a wrapper cannot
-reach an authority-bearing control CLI it names.
-For each mutation signature, every token position is a potential executable;
-normalize that token to its ASCII-casefolded basename and reject when the
-remaining signature tokens occur later in order. Authority-bearing executables
-and blocked launchers use the same normalization. The same rule therefore
-catches named wrappers and intervening global options without parsing each CLI
-grammar.
+Schema validation accepts only printable ASCII command tokens under the POSIX C
+locale and rejects whitespace, comma/bracket ambiguity, every dollar-bearing token, shell syntax,
+and declared mutation signatures. Authority-bearing executable singletons
+(`git`, `gh`, `glab`, and `terraform`), blocked-launcher singletons,
+shell-evaluation signatures, and mutation signatures all use one matcher: every
+token position is a potential executable, its basename is ASCII-casefolded, and
+the remaining signature tokens must occur later in order. The same rule catches
+named wrappers and intervening global options without parsing each CLI grammar.
 These control CLIs remain forbidden unless a future shared explicit allowlist
 can prove a specific argv is read-only; the current allowlist is empty and
 no named control-CLI token is allowed by exception. Safe direct script argv such as
@@ -91,7 +89,10 @@ never impersonates provider authentication, and is accepted only when the
 resolver observes a distinct non-implementing local session and its real UTC
 calendar time.
 
-The extractor requires a regular non-symlink evidence path and observes a link
+Before marker inspection and extraction, a checked NUL-stripped copy and byte
+comparison rejects any NUL-bearing evidence file, so distinct bytes cannot be
+collapsed into one extracted digest. The extractor then requires a regular
+non-symlink evidence path and observes a link
 count of one. Multiply linked evidence files are rejected when observed, but the
 predicate and extracted digest are point-in-time observations. Flow42 does not
 claim atomic file identity across extraction, hashing, receipt resolution, and
@@ -113,7 +114,9 @@ fresh review. Before comparing fields, require the canonical status key set with
 every unquoted top-level key present exactly once. Duplicate, quoted, missing,
 or unknown keys and anchors, aliases, tags, merge keys, nested mappings, and
 block scalars fail closed; canonical quoted scalar values remain accepted only
-without escapes. Keep the required `change_request` field empty. Treat any PR/MR
+without escapes. Reject NUL bytes through the same checked byte comparison
+before status parsing, so a NUL-bearing `change_request` cannot canonicalize as
+empty. Keep the required `change_request` field empty. Treat any PR/MR
 text in receipt-neutral `evidence.md` as a non-authoritative observation. Before
 acting, use the authenticated official CLI to bind the live provider, normalized
 repository, request ID, canonical URL, source branch, pushed and reviewed heads,
@@ -124,7 +127,7 @@ action.
 
 ## Worker boundary
 
-Record allowed paths before dispatch. Tell workers not to perform Forge writes;
+Record allowed paths before dispatch. Tell workers not to push or perform Forge writes;
 the coordinator owns those operations. Before dispatch and integration apply
 the NUL-delimited snapshots, rename-endpoint checks, literal pathspec rules, and
 pre-existing dirty-content identity procedure in `core/OWNERSHIP.md`. Any
@@ -149,7 +152,7 @@ equality is not object-availability proof; integration may rely only on objects
 and identities explicitly resolved for its actual baseline, `HEAD`, index, and
 owned worktree decision. Reject lossy configured-path decoding, links within the
 bound surfaces, unreadable state, and partial producer output. A worker commit,
-staging operation, or any other Git-admin change is forbidden even when all
+staging operation, push, or any other Git-admin change is forbidden even when all
 changed working-tree paths are otherwise owned.
 
 Prefer the least-capable suitable worker profile. Do not print or pass credentials
