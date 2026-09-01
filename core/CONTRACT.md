@@ -39,7 +39,9 @@ and exclude whitespace, commas, brackets, and dollar expansion syntax. Treat aut
 executable singletons, blocked-launcher singletons, shell-evaluation signatures,
 and declared mutation signatures uniformly: every token position is a potential
 executable, its basename is ASCII-casefolded, and the remaining signature tokens
-must occur later in order. This one rule covers named wrappers and intervening
+must occur later in order. For declared named-shell `-c` signatures, a short
+ASCII-letter option cluster containing `c`, such as `-lc` or `-xc`, matches the
+same forbidden signature. This one rule covers named wrappers and intervening
 global options without claiming a full CLI parser or adding a launcher denylist.
 Configuration changes do not require a separate approval artifact or Forge
 interaction.

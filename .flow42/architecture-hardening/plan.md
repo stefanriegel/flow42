@@ -301,3 +301,15 @@ worker staging, push, and Forge-write prohibitions.
 - Integration barrier: the coordinator owns staging and all later integration.
   This repair records no lifecycle transition; `status.yml` remains unchanged
   and fresh independent exact-head reviews are still required.
+
+### Exact-head `f73f99b` named-shell cluster remediation
+
+The final correctness review of clean head
+`f73f99b07e2b2219594fb12151d33696f667f5f6` found one bounded command-policy
+escape: a declared named-shell `-c` signature did not match a short option
+cluster containing `c`. Extend only the existing portable ordered matcher so
+`sh -lc`, `bash -xc`, and `arch -arm64 sh -lc` fail, while retaining direct
+`sh tests/conformance.sh`. Do not add a shell parser, launcher inventory,
+Unicode or OS branch, recursive snapshot, or new prose guard. The coordinator
+owns staging and integration; `status.yml`, `history.jsonl`, and `handoff.md`
+remain unchanged, and fresh exact-head review remains required.

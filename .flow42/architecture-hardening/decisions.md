@@ -246,3 +246,20 @@
   boundary rather than OS-specific normalization.
 - Actor: dispatched Codex worker `task_b4787edf6b27` /
   `ctx_91c404f68ce9`, under coordinator-owned integration.
+
+## 2026-09-01T16:16:06Z — reject named-shell `c` option clusters
+
+- Context: The exact-head correctness review of
+  `f73f99b07e2b2219594fb12151d33696f667f5f6` reproduced `sh -lc`, `bash -xc`,
+  and `arch -arm64 sh -lc` command-string evaluation escaping the exact `-c`
+  shell signature.
+- Decision: In the existing ordered matcher, only while matching the declared
+  shell-evaluation family, treat a short ASCII-letter option cluster containing
+  lowercase `c` as the declared `-c` token. Preserve every executable,
+  launcher, and signature inventory.
+- Consequences: The named combined forms fail closed and direct
+  `sh tests/conformance.sh` remains valid. The rule is still a conservative
+  syntactic naming boundary, not a general shell parser or semantic sandbox;
+  unlisted launchers and arbitrary repository executables remain residual.
+- Actor: dispatched Codex implementation worker under coordinator-owned
+  integration; no staging, lifecycle transition, remote, or Forge authority.

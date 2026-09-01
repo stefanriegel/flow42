@@ -42,7 +42,10 @@ executable singletons, blocked-launcher singletons, shell-evaluation signatures,
 and declared mutation signatures. Every token position is a potential
 executable; its basename is ASCII-casefolded, and the remaining signature tokens
 must occur later in order. This catches named wrappers and intervening global
-options without parsing each CLI grammar. The
+options without parsing each CLI grammar. A declared named-shell `-c` signature
+also matches a short ASCII-letter option cluster containing `c`, so `sh -lc`,
+`bash -xc`, and an `arch`-wrapped `sh -lc` fail while direct
+`sh tests/conformance.sh` remains valid. The
 schema's shared read-only control-CLI allowlist is intentionally empty. Bare and
 path-qualified `xcrun` remains one blocked launcher because it can locate and
 execute a developer tool; this includes default run mode, `--run`/`-r`, SDK
