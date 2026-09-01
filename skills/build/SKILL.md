@@ -35,13 +35,17 @@ whose local gates fail.
 Apply the exact ownership authority loaded by the contract prelude before and
 after every worker: preserve raw `porcelain=v2 -z` status and NUL-delimited
 `name-status` or raw tracked-delta records with rename detection. Compare both
-source and destination of committed or uncommitted renames, plus dirty-content
-identities; retain unmerged records and fail closed on unknown record types,
-cross-boundary endpoints, or undeclared overlap. Require the worker to report
-the exact paths it changed and compare them to the recorded ownership.
-Also compare the common-dir/worktree config, remotes, hooks, refs/HEAD, and index
-identities required by that authority; undeclared Git administrative mutation
-blocks integration even when the working-tree path snapshot is unchanged.
+source and destination of uncommitted changes and base-relative rename evidence,
+plus dirty-content identities; disposable tests may commit a rename, but a real
+worker must never commit or change `HEAD`/refs. Retain unmerged records and fail
+closed on unknown record types, cross-boundary endpoints, or undeclared overlap.
+Require the worker to report the exact paths it changed and compare them to the
+recorded ownership. Also compare complete content-and-metadata identities of the
+common and worktree Git directories without exclusions, plus exact-byte
+effective external hooks, ignore, and attributes paths. Reject links, invalid
+path transcoding, unreadable entries, or partial producer output. A worker must
+not stage; any Git administrative mutation blocks integration even when the
+working-tree path snapshot is unchanged.
 Workers receive no Forge-write authority and cannot delegate. Block integration
 on out-of-scope paths or unauthorized processes while preserving the worktree.
 

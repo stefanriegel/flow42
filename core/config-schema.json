@@ -51,6 +51,7 @@
     "fail_closed": true,
     "token_pattern": "^[^[:space:],]+$",
     "authority_bearing_executables": ["git", "gh", "glab", "terraform"],
+    "blocked_launcher_executables": ["xcrun"],
     "read_only_control_cli_allowlist": [],
     "forbidden_token_pattern": "([$][(]|`|&&|[|][|]|[;<>]|(^|[^|])[|]([^|]|$))",
     "shell_evaluation_prefixes": [

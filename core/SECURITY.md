@@ -59,29 +59,42 @@ Persist the actor, UTC timestamp, exact action, scope, and reason in
 Do not invent an additional approver, treat an agent review as human assent, or
 require a second human merely to satisfy independent review. An independent
 reviewer must be a separate pass or agent that did not implement the reviewed
-change. Persist its verdict as the schema-versioned receipt defined by
+change. Persist its verdict as the schema-version 2 receipt defined by
 `core/risk-policy.json`, using the strongest available issuer: authenticated
 Forge, trusted orchestrator, then a distinct local independent pass when neither
 stronger issuer is available. Forge and orchestrator receipts fail closed unless
-an independent resolver authenticates the issuer record and binds repository
+an independent resolver authenticates the issuer record and binds review kind, repository
 identity, work ID, baseline and reviewed SHAs, scope and diff digests, expected
 review subject, reviewer principal and role, implementer flag, session or
-dispatch, checks, verdict, and artifact reference and digest to the persisted
-receipt. The local fallback is explicitly lower-tier and never impersonates
-provider authentication.
+dispatch, checks, verdict, artifact reference and digest, and `recorded_at` to
+the persisted receipt. The caller derives the required correctness or security
+purpose, exact canonical ordered checks, and expected persisted artifact
+reference and exact evidence-section byte digest before accepting a receipt.
+Derive the evidence file from the canonical repository/work identity, extract
+bytes only between one ordered pair of literal section marker lines, and reject
+links or caller-selected substitute files before accepting a receipt;
+the check array must contain every policy minimum for that purpose. Resolve all
+three issuer kinds independently. The local fallback is explicitly lower-tier,
+never impersonates provider authentication, and is accepted only when the
+resolver observes a distinct non-implementing local session and its real UTC
+calendar time.
 
 The receipt binds `reviewed_head` and remains current only when it is ancestral
 to `HEAD`. Inspect the NUL-safe diff with rename detection disabled so a rename
 into a neutral filename retains its non-neutral source path. Neutral leaf names
 apply only directly inside the reviewed work item, never in nested or unrelated
 paths. For `status.yml`, only `stage`, `state_revision`, `updated_at`, `blockers`,
-`resume_stage`, `ci_state`, `next_actions`, `forge_item`, and a grammar-valid
-`change_request` are neutral; a change
+`resume_stage`, `ci_state`, and `next_actions` are neutral; a change
 to identity, work type, risk, review-loop count, or any other field requires
 fresh review. Before comparing fields, require the canonical status key set with
 every unquoted top-level key present exactly once. Duplicate, quoted, missing,
 or unknown keys and anchors, aliases, tags, merge keys, nested mappings, and
-block scalars fail closed; canonical quoted scalar values remain accepted.
+block scalars fail closed; canonical quoted scalar values remain accepted only
+without escapes. Keep the required `change_request` field empty. Treat any PR/MR
+text in receipt-neutral `evidence.md` as a non-authoritative observation. Before
+acting, use the authenticated official CLI to bind the live provider, normalized
+repository, request ID, canonical URL, source branch, pushed and reviewed heads,
+and valid UTC observation time; fail closed on any mismatch.
 Receipt-neutral changes to decisions.md never authenticate or
 supply human confirmation. Review never authorizes a high-risk or irreversible
 action.
@@ -96,12 +109,31 @@ out-of-scope path, undeclared dirty-path overlap, recursive delegation,
 untracked process, or unapproved external effect blocks integration while
 preserving the worktree.
 
+Treat the complete common and worktree Git directories plus effective external
+hooks, ignore, and attributes paths as coordinator-owned administrative state.
+Snapshot every entry without exclusions so refs, reflogs, pseudo-refs, recovery
+state, object storage, config, hooks, behavior controls, HEAD, and index cannot
+hide behind a finite filename list. Reject lossy configured-path decoding,
+links, unreadable state, and partial producer output. A worker commit, staging
+operation, or any other Git-admin change is forbidden even when all changed
+working-tree paths are otherwise owned.
+
 Prefer the least-capable suitable worker profile. Do not print or pass credentials
 to a worker. If the runtime provides capability isolation, use it; otherwise keep
 sensitive or Forge-writing work with the coordinator.
 
 ## Release provenance
 
-Supported installs use an immutable V1 tag. Verify the resolved commit, plugin
-version, release checksum, and signed tag before publishing installation claims.
-Mutable branches and local paths are development sources only.
+Supported installs use an immutable V1 tag. Verify the resolved commit and tree,
+plugin version, release checksum, and signed tag before mutation. A later source,
+tag, or version readback is not installed-artifact provenance. Where the harness
+exposes marketplace and plugin cache paths, bind current-project identity and
+perform two sanitized full point-in-time tree observations against the verified
+candidate. Use an empty Git template and neutral attributes; exclude only
+validated, single-linked vendor PID-marker JSON. Canonicalize the config root,
+reject linked/multiply linked settings, and validate exact reproducible source
+shapes before invoking Git or the vendor CLI. A force-moved tag, missing path,
+malformed marker, byte/mode/path mismatch, or substituted cache fails closed and triggers
+rollback. These observations do not make a same-user mutable cache immutable;
+disclose the lack of a documented vendor lock. Mutable branches and local paths
+are development sources only.

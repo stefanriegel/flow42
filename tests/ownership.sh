@@ -15,6 +15,14 @@ fail() {
   exit 1
 }
 
+delete_paths() {
+  for delete_path in "$@"; do
+    if test -e "$delete_path" || test -L "$delete_path"; then
+      find "$delete_path" -depth -delete
+    fi
+  done
+}
+
 require_path() {
   json_file=$1
   exact_path=$2
@@ -114,25 +122,205 @@ dirty_overlap_allowed() {
 }
 
 hash_file_or_missing() {
-  if test -f "$1"; then
-    shasum -a 256 "$1" | awk '{print $1}'
+  hash_path=$1
+  test ! -L "$hash_path" || return 1
+  if test -f "$hash_path"; then
+    hash_output=$(shasum -a 256 "$hash_path") || return 1
+    hash_value=${hash_output%% *}
+    case "$hash_value" in *[!0-9a-f]*|'') return 1 ;; esac
+    test "${#hash_value}" -eq 64 || return 1
+    printf '%s\n' "$hash_value"
+  elif test -e "$hash_path"; then
+    return 1
   else
     printf '%s\n' missing
   fi
 }
 
 hash_tree_or_missing() {
-  if test -d "$1"; then
-    tar -cf - -C "$1" . | shasum -a 256 | awk '{print $1}'
+  tree_path=$1
+  tree_archive="$tmp/admin-tree.tar"
+  tree_links="$tmp/admin-tree.links"
+  delete_paths "$tree_archive" "$tree_links"
+  test ! -L "$tree_path" || return 1
+  if test -d "$tree_path"; then
+    find "$tree_path" \( -type l -o \( -type f -links +1 \) -o \
+      \( ! -type f ! -type d \) \) -print \
+      >"$tree_links" || return 1
+    test ! -s "$tree_links" || return 1
+    if ! tar -cf "$tree_archive" -C "$tree_path" .; then
+      delete_paths "$tree_archive"
+      return 1
+    fi
+    tree_identity=$(hash_file_or_missing "$tree_archive") || {
+      delete_paths "$tree_archive"
+      return 1
+    }
+    delete_paths "$tree_archive"
+    printf '%s\n' "$tree_identity"
+  elif test -e "$tree_path"; then
+    return 1
   else
     printf '%s\n' missing
   fi
 }
 
+hash_string() {
+  hash_capture="$tmp/hash-string"
+  printf '%s' "$1" >"$hash_capture" || return 1
+  hash_file_or_missing "$hash_capture"
+}
+
+path_metadata() {
+  metadata_path=$1
+  if metadata=$(stat -f '%HT:%Lp:%d:%i:%l' "$metadata_path" 2>/dev/null); then
+    printf '%s\n' "$metadata"
+  elif metadata=$(stat -c '%F:%a:%d:%i:%h' -- "$metadata_path" 2>/dev/null); then
+    printf '%s\n' "$metadata"
+  else
+    return 1
+  fi
+}
+
+hash_behavior_path() {
+  behavior_path=$1
+  test ! -L "$behavior_path" || return 1
+  if test -f "$behavior_path"; then
+    behavior_metadata=$(path_metadata "$behavior_path") || return 1
+    behavior_links=${behavior_metadata##*:}
+    test "$behavior_links" -eq 1 || return 1
+    behavior_content=$(hash_file_or_missing "$behavior_path") || return 1
+    behavior_kind=regular
+  elif test -d "$behavior_path"; then
+    behavior_metadata=$(path_metadata "$behavior_path") || return 1
+    behavior_kind=directory
+    behavior_content=$(hash_tree_or_missing "$behavior_path") || return 1
+  elif test -e "$behavior_path"; then
+    return 1
+  else
+    behavior_metadata=missing
+    behavior_kind=missing
+    behavior_content=missing
+  fi
+
+  hash_string "$behavior_kind:$behavior_metadata:$behavior_content"
+}
+
+snapshot_behavior_path() {
+  behavior_label=$1
+  behavior_path=$2
+  behavior_path_identity=$(hash_string "$behavior_path") || return 1
+  behavior_content_identity=$(hash_behavior_path "$behavior_path") || return 1
+  printf '%s-path=%s\n' "$behavior_label" "$behavior_path_identity"
+  printf '%s-content=%s\n' "$behavior_label" "$behavior_content_identity"
+}
+
+snapshot_external_behavior_path() {
+  behavior_repo=$1
+  behavior_key=$2
+  behavior_default_leaf=$3
+  behavior_label=$4
+  behavior_capture_prefix=$5
+  behavior_config_rc=0
+  behavior_config_capture="$behavior_capture_prefix.$behavior_label.config"
+
+  if capture_git_config_path "$behavior_repo" "$behavior_key" \
+    "$behavior_config_capture"; then
+    behavior_configured=$(LC_ALL=C dd \
+      if="$behavior_config_capture.value" 2>/dev/null) || return 1
+    delete_paths "$behavior_config_capture.value"
+    if test -z "$behavior_configured"; then
+      printf '%s-path=configured-empty\n' "$behavior_label"
+      printf '%s-content=missing\n' "$behavior_label"
+      return 0
+    fi
+    case "$behavior_configured" in
+      /*) behavior_external_path=$behavior_configured ;;
+      *) behavior_external_path="$behavior_repo/$behavior_configured" ;;
+    esac
+  else
+    behavior_config_rc=$?
+    test "$behavior_config_rc" -eq 1 || return 1
+  fi
+
+  if test "${behavior_config_rc:-0}" -eq 1 &&
+    test -n "${XDG_CONFIG_HOME:-}"; then
+    case "$XDG_CONFIG_HOME" in /*) ;; *) return 1 ;; esac
+    behavior_external_path="$XDG_CONFIG_HOME/git/$behavior_default_leaf"
+  elif test "${behavior_config_rc:-0}" -eq 1 && test -n "${HOME:-}"; then
+    case "$HOME" in /*) ;; *) return 1 ;; esac
+    behavior_external_path="$HOME/.config/git/$behavior_default_leaf"
+  elif test "${behavior_config_rc:-0}" -eq 1; then
+    printf '%s-path=no-default-home\n' "$behavior_label"
+    printf '%s-content=missing\n' "$behavior_label"
+    return 0
+  fi
+
+  snapshot_behavior_path "$behavior_label" "$behavior_external_path"
+}
+
+capture_git_config_path() {
+  config_repo=$1
+  config_key=$2
+  config_prefix=$3
+  config_raw="$config_prefix.raw"
+  config_value="$config_prefix.value"
+  config_last="$config_prefix.last"
+  config_without_nul="$config_prefix.without-nul"
+  config_roundtrip="$config_prefix.roundtrip"
+  delete_paths "$config_raw" "$config_value" "$config_last" \
+    "$config_without_nul" "$config_roundtrip"
+
+  if git -C "$config_repo" config --path --null --get "$config_key" \
+    >"$config_raw"; then
+    :
+  else
+    config_rc=$?
+    delete_paths "$config_raw"
+    test "$config_rc" -eq 1 && return 1
+    return 2
+  fi
+  config_size_raw=$(LC_ALL=C wc -c <"$config_raw") || return 2
+  config_size=$(printf '%s' "$config_size_raw" | tr -d '[:space:]') ||
+    return 2
+  case "$config_size" in ''|*[!0-9]*) return 2 ;; esac
+  test "$config_size" -ge 1 || return 2
+  dd if="$config_raw" of="$config_last" bs=1 \
+    skip=$((config_size - 1)) count=1 2>/dev/null || return 2
+  config_last_byte_raw=$(od -An -tu1 "$config_last") || return 2
+  config_last_byte=$(printf '%s' "$config_last_byte_raw" |
+    tr -d '[:space:]') || return 2
+  test "$config_last_byte" = 0 || return 2
+  dd if="$config_raw" of="$config_value" bs=1 \
+    count=$((config_size - 1)) 2>/dev/null || return 2
+  LC_ALL=C tr -d '\000' <"$config_raw" >"$config_without_nul" || return 2
+  cmp -s "$config_value" "$config_without_nul" || return 2
+  jq -jRs '.' "$config_value" >"$config_roundtrip" || return 2
+  cmp -s "$config_value" "$config_roundtrip" || return 2
+  config_line_count_raw=$(LC_ALL=C wc -l <"$config_value") || return 2
+  config_line_count=$(printf '%s' "$config_line_count_raw" |
+    tr -d '[:space:]') || return 2
+  test "$config_line_count" -eq 0 || return 2
+  delete_paths "$config_raw" "$config_last" "$config_without_nul" \
+    "$config_roundtrip"
+}
+
+behavior_surfaces_snapshot() {
+  behavior_repo=$1
+  behavior_output=$2
+  behavior_capture_prefix="$behavior_output.capture"
+  {
+    snapshot_external_behavior_path "$behavior_repo" core.excludesFile ignore \
+      external-excludes "$behavior_capture_prefix" || return 1
+    snapshot_external_behavior_path "$behavior_repo" core.attributesFile \
+      attributes external-attributes "$behavior_capture_prefix" || return 1
+  } >"$behavior_output"
+}
+
 absolute_git_dir() {
   snapshot_repo=$1
   selector=$2
-  raw=$(git -C "$snapshot_repo" rev-parse "$selector")
+  raw=$(git -C "$snapshot_repo" rev-parse "$selector") || return 1
   case "$raw" in
     /*) printf '%s\n' "$raw" ;;
     *) (CDPATH=''; export CDPATH; cd -- "$snapshot_repo/$raw" && pwd -P) ;;
@@ -142,41 +330,84 @@ absolute_git_dir() {
 admin_snapshot() {
   snapshot_repo=$1
   output=$2
-  common_dir=$(absolute_git_dir "$snapshot_repo" --git-common-dir)
-  git_dir=$(absolute_git_dir "$snapshot_repo" --git-dir)
+  common_dir=$(absolute_git_dir "$snapshot_repo" --git-common-dir) || return 1
+  git_dir=$(absolute_git_dir "$snapshot_repo" --git-dir) || return 1
+
+  common_tree_identity=$(hash_tree_or_missing "$common_dir") || return 1
+  if test "$git_dir" = "$common_dir"; then
+    git_tree_identity=same-as-common
+  else
+    git_tree_identity=$(hash_tree_or_missing "$git_dir") || return 1
+  fi
+
   hooks_dir="$common_dir/hooks"
-  configured_hooks=$(git -C "$snapshot_repo" config --path --get core.hooksPath || true)
-  if test -n "$configured_hooks"; then
+  hooks_capture="$output.hooks-path"
+  if capture_git_config_path "$snapshot_repo" core.hooksPath "$hooks_capture"; then
+    configured_hooks=$(LC_ALL=C dd if="$hooks_capture.value" 2>/dev/null) ||
+      return 1
+    find "$hooks_capture.value" -delete
+    test -n "$configured_hooks" || return 1
     case "$configured_hooks" in
       /*) hooks_dir=$configured_hooks ;;
       *) hooks_dir="$snapshot_repo/$configured_hooks" ;;
     esac
+  else
+    hooks_config_rc=$?
+    test "$hooks_config_rc" -eq 1 || return 1
   fi
-  hooks_identity=$(hash_tree_or_missing "$hooks_dir")
-  effective_config_identity=$(git -C "$snapshot_repo" config --null \
-    --show-origin --show-scope --list | shasum -a 256 | awk '{print $1}')
-  refs_identity=$(git -C "$snapshot_repo" for-each-ref \
-    --format='%(refname)%00%(objectname)%00%(symref)' | shasum -a 256 | awk '{print $1}')
-  pseudo_refs_identity=$(
-    for pseudo_ref in HEAD ORIG_HEAD FETCH_HEAD MERGE_HEAD CHERRY_PICK_HEAD \
-      REVERT_HEAD AUTO_MERGE BISECT_START; do
-      printf '%s=%s\n' "$pseudo_ref" "$(hash_file_or_missing "$git_dir/$pseudo_ref")"
-    done | shasum -a 256 | awk '{print $1}'
-  )
+  hooks_identity=$(hash_behavior_path "$hooks_dir") || return 1
+
+  effective_config_capture="$output.effective-config"
+  git -C "$snapshot_repo" config --null --show-origin --show-scope --list \
+    >"$effective_config_capture" || return 1
+  effective_config_identity=$(hash_file_or_missing "$effective_config_capture") ||
+    return 1
+  delete_paths "$effective_config_capture"
+
+  refs_capture="$output.refs"
+  git -C "$snapshot_repo" for-each-ref \
+    --format='%(refname)%00%(objectname)%00%(symref)' >"$refs_capture" ||
+    return 1
+  refs_identity=$(hash_file_or_missing "$refs_capture") || return 1
+  delete_paths "$refs_capture"
+
+  behavior_surfaces_file="$output.behavior-surfaces"
+  behavior_surfaces_snapshot "$snapshot_repo" "$behavior_surfaces_file" ||
+    return 1
+  behavior_surfaces_identity=$(hash_file_or_missing "$behavior_surfaces_file") ||
+    return 1
+
+  common_dir_identity=$(hash_string "$common_dir") || return 1
+  git_dir_identity=$(hash_string "$git_dir") || return 1
+  hooks_dir_identity=$(hash_string "$hooks_dir") || return 1
+  common_config_identity=$(hash_file_or_missing "$common_dir/config") || return 1
+  worktree_config_identity=$(hash_file_or_missing "$git_dir/config.worktree") ||
+    return 1
+  packed_refs_identity=$(hash_file_or_missing "$common_dir/packed-refs") ||
+    return 1
+  reftable_identity=$(hash_tree_or_missing "$common_dir/reftable") || return 1
+  index_identity=$(hash_file_or_missing "$git_dir/index") || return 1
+
   {
-    printf 'common-dir=%s\n' "$common_dir"
-    printf 'git-dir=%s\n' "$git_dir"
-    printf 'common-config=%s\n' "$(hash_file_or_missing "$common_dir/config")"
-    printf 'worktree-config=%s\n' "$(hash_file_or_missing "$git_dir/config.worktree")"
+    printf 'common-dir=%s\n' "$common_dir_identity"
+    printf 'git-dir=%s\n' "$git_dir_identity"
+    printf 'common-admin-tree=%s\n' "$common_tree_identity"
+    printf 'git-admin-tree=%s\n' "$git_tree_identity"
+    printf 'common-config=%s\n' "$common_config_identity"
+    printf 'worktree-config=%s\n' "$worktree_config_identity"
     printf 'effective-config=%s\n' "$effective_config_identity"
-    printf 'hooks-dir=%s\n' "$hooks_dir"
+    printf 'hooks-dir=%s\n' "$hooks_dir_identity"
     printf 'hooks=%s\n' "$hooks_identity"
+    printf 'behavior-surfaces=%s\n' "$behavior_surfaces_identity"
+    while IFS= read -r behavior_surface_record; do
+      printf 'behavior-%s\n' "$behavior_surface_record"
+    done <"$behavior_surfaces_file"
     printf 'refs=%s\n' "$refs_identity"
-    printf 'packed-refs=%s\n' "$(hash_file_or_missing "$common_dir/packed-refs")"
-    printf 'reftable=%s\n' "$(hash_tree_or_missing "$common_dir/reftable")"
-    printf 'pseudo-refs=%s\n' "$pseudo_refs_identity"
-    printf 'index=%s\n' "$(hash_file_or_missing "$git_dir/index")"
+    printf 'packed-refs=%s\n' "$packed_refs_identity"
+    printf 'reftable=%s\n' "$reftable_identity"
+    printf 'index=%s\n' "$index_identity"
   } >"$output"
+  delete_paths "$behavior_surfaces_file"
 }
 
 validate_contract() {
@@ -228,6 +459,47 @@ validate_contract() {
   tr '\n' ' ' <"$contract" |
     grep -Eiq 'common.*config.*remote.*hook.*ref.*index' || {
     printf '%s\n' 'OWNERSHIP-GIT-ADMIN-IDENTITY' >&2
+    return 1
+  }
+  if ! grep -Fq 'complete content-and-metadata identity for every entry' "$contract" ||
+    ! grep -Fq 'without exclusions' "$contract" ||
+    ! grep -Fq 'refs, reflogs' "$contract" ||
+    ! grep -Fq 'object database, and the index' "$contract"; then
+    printf '%s\n' 'OWNERSHIP-COMPLETE-GIT-ADMIN' >&2
+    return 1
+  fi
+  if ! grep -Fq 'exactly one NUL-terminated byte record' "$contract" ||
+    ! grep -Fq 'invalid UTF-8' "$contract" ||
+    ! grep -Fq 'trailing-newline path must fail closed' "$contract"; then
+    printf '%s\n' 'OWNERSHIP-EXACT-CONFIG-PATH' >&2
+    return 1
+  fi
+  if ! grep -Fq 'symlink, or multiply linked regular file' "$contract" ||
+    ! grep -Fq 'partial archive or hash pipeline' "$contract"; then
+    printf '%s\n' 'OWNERSHIP-ADMIN-PRODUCER-LINKS' >&2
+    return 1
+  fi
+  grep -Fq 'Workers are forbidden from creating commits' "$contract" || {
+    printf '%s\n' 'OWNERSHIP-WORKER-COMMIT-FORBIDDEN' >&2
+    return 1
+  }
+  tr '\n' ' ' <"$contract" |
+    grep -Eiq 'Workers are forbidden.*HEAD.*ref' || {
+    printf '%s\n' 'OWNERSHIP-WORKER-HEAD-REF-FORBIDDEN' >&2
+    return 1
+  }
+  if tr '\n' ' ' <"$contract" |
+    grep -Eiq 'workers? (may|can|are allowed to|are permitted to).*(commit|HEAD|refs?)'; then
+    printf '%s\n' 'OWNERSHIP-WORKER-GIT-MUTATION-EXCEPTION' >&2
+    return 1
+  fi
+  if tr '\n' ' ' <"$contract" |
+    grep -Eiq 'workers? (may|can|are allowed to|are permitted to).*Git administrative'; then
+    printf '%s\n' 'OWNERSHIP-GIT-ADMIN-EXCEPTION' >&2
+    return 1
+  fi
+  grep -Fq 'worker stage' "$contract" || {
+    printf '%s\n' 'OWNERSHIP-WORKER-STAGING-FORBIDDEN' >&2
     return 1
   }
   tr '\n' ' ' <"$contract" |
@@ -329,6 +601,7 @@ parse_diff_name_status_paths "$tmp/tracked-name-status" >"$tmp/tracked-paths.jso
 require_path "$tmp/tracked-paths.json" "$deleted_path" OWNERSHIP-DELETE
 
 git -C "$repo" add --all
+# Disposable evidence only: dispatched workers may not commit or move HEAD.
 git -C "$repo" commit -qm 'worker committed changes'
 git -C "$repo" status --porcelain=v2 -z --untracked-files=all >"$tmp/committed-status"
 test ! -s "$tmp/committed-status" || fail OWNERSHIP-COMMITTED-STATUS-NOT-CLEAN
@@ -395,6 +668,101 @@ git -C "$admin_repo" config user.email 'ownership-admin@example.invalid'
 printf '%s\n' tracked >"$admin_repo/tracked.txt"
 git -C "$admin_repo" add tracked.txt
 git -C "$admin_repo" commit -qm baseline
+admin_baseline_excludes="$tmp/admin-baseline-ignore"
+admin_baseline_attributes="$tmp/admin-baseline-attributes"
+: >"$admin_baseline_excludes"
+: >"$admin_baseline_attributes"
+git -C "$admin_repo" config core.excludesFile "$admin_baseline_excludes"
+git -C "$admin_repo" config core.attributesFile "$admin_baseline_attributes"
+
+admin_common=$(absolute_git_dir "$admin_repo" --git-common-dir)
+cp "$admin_common/info/exclude" "$tmp/admin-info-exclude.backup"
+admin_snapshot "$admin_repo" "$tmp/admin-before-info-exclude"
+git -C "$admin_repo" status --porcelain=v2 -z --untracked-files=all \
+  >"$tmp/admin-status-before-info-exclude"
+if is_owned outside-hidden.txt; then
+  fail OWNERSHIP-ADMIN-INFO-EXCLUDE-FIXTURE-IN-SCOPE
+fi
+printf '%s\n' 'outside-hidden.txt' >>"$admin_common/info/exclude"
+printf '%s\n' hidden >"$admin_repo/outside-hidden.txt"
+git -C "$admin_repo" check-ignore -q -- outside-hidden.txt ||
+  fail OWNERSHIP-ADMIN-INFO-EXCLUDE-FIXTURE-NOT-HIDDEN
+git -C "$admin_repo" status --porcelain=v2 -z --untracked-files=all \
+  >"$tmp/admin-status-after-info-exclude"
+cmp -s "$tmp/admin-status-before-info-exclude" \
+  "$tmp/admin-status-after-info-exclude" ||
+  fail OWNERSHIP-ADMIN-INFO-EXCLUDE-PORCELAIN-CHANGED
+admin_snapshot "$admin_repo" "$tmp/admin-after-info-exclude"
+cmp -s "$tmp/admin-before-info-exclude" "$tmp/admin-after-info-exclude" &&
+  fail OWNERSHIP-ADMIN-INFO-EXCLUDE-UNDETECTED
+cp "$tmp/admin-info-exclude.backup" "$admin_common/info/exclude"
+find "$admin_repo/outside-hidden.txt" -delete
+
+admin_attributes="$admin_common/info/attributes"
+admin_snapshot "$admin_repo" "$tmp/admin-before-info-attributes"
+printf '%s\n' 'tracked.txt fixture-attribute' >"$admin_attributes"
+test "$(git -C "$admin_repo" check-attr fixture-attribute -- tracked.txt)" = \
+  'tracked.txt: fixture-attribute: set' ||
+  fail OWNERSHIP-ADMIN-INFO-ATTRIBUTES-FIXTURE-NOT-EFFECTIVE
+admin_snapshot "$admin_repo" "$tmp/admin-after-info-attributes"
+cmp -s "$tmp/admin-before-info-attributes" \
+  "$tmp/admin-after-info-attributes" &&
+  fail OWNERSHIP-ADMIN-INFO-ATTRIBUTES-UNDETECTED
+find "$admin_attributes" -delete
+
+admin_alternates="$admin_common/objects/info/alternates"
+admin_snapshot "$admin_repo" "$tmp/admin-before-alternates"
+printf '%s\n' "$admin_remote/objects" >"$admin_alternates"
+git -C "$admin_repo" cat-file -e 'HEAD^{commit}' ||
+  fail OWNERSHIP-ADMIN-ALTERNATES-FIXTURE-BROKE-REPOSITORY
+admin_snapshot "$admin_repo" "$tmp/admin-after-alternates"
+cmp -s "$tmp/admin-before-alternates" "$tmp/admin-after-alternates" &&
+  fail OWNERSHIP-ADMIN-ALTERNATES-UNDETECTED
+find "$admin_alternates" -delete
+
+external_excludes="$tmp/external-ignore"
+: >"$external_excludes"
+git -C "$admin_repo" config core.excludesFile "$external_excludes"
+admin_snapshot "$admin_repo" "$tmp/admin-before-external-excludes"
+git -C "$admin_repo" status --porcelain=v2 -z --untracked-files=all \
+  >"$tmp/admin-status-before-external-excludes"
+printf '%s\n' 'external-hidden.txt' >>"$external_excludes"
+printf '%s\n' hidden >"$admin_repo/external-hidden.txt"
+git -C "$admin_repo" check-ignore -q -- external-hidden.txt ||
+  fail OWNERSHIP-ADMIN-EXTERNAL-EXCLUDES-FIXTURE-NOT-HIDDEN
+git -C "$admin_repo" status --porcelain=v2 -z --untracked-files=all \
+  >"$tmp/admin-status-after-external-excludes"
+cmp -s "$tmp/admin-status-before-external-excludes" \
+  "$tmp/admin-status-after-external-excludes" ||
+  fail OWNERSHIP-ADMIN-EXTERNAL-EXCLUDES-PORCELAIN-CHANGED
+admin_snapshot "$admin_repo" "$tmp/admin-after-external-excludes"
+cmp -s "$tmp/admin-before-external-excludes" \
+  "$tmp/admin-after-external-excludes" &&
+  fail OWNERSHIP-ADMIN-EXTERNAL-EXCLUDES-UNDETECTED
+find "$admin_repo/external-hidden.txt" -delete
+git -C "$admin_repo" config core.excludesFile "$admin_baseline_excludes"
+
+newline_external_excludes=$(printf 'external\nignore')
+git -C "$admin_repo" config core.excludesFile "$newline_external_excludes"
+if admin_snapshot "$admin_repo" "$tmp/admin-newline-external-excludes" \
+  >/dev/null 2>&1; then
+  fail OWNERSHIP-ADMIN-EXTERNAL-PATH-NEWLINE-ACCEPTED
+fi
+git -C "$admin_repo" config core.excludesFile "$admin_baseline_excludes"
+
+external_attributes="$tmp/external-attributes"
+: >"$external_attributes"
+git -C "$admin_repo" config core.attributesFile "$external_attributes"
+admin_snapshot "$admin_repo" "$tmp/admin-before-external-attributes"
+printf '%s\n' 'tracked.txt external-attribute' >>"$external_attributes"
+test "$(git -C "$admin_repo" check-attr external-attribute -- tracked.txt)" = \
+  'tracked.txt: external-attribute: set' ||
+  fail OWNERSHIP-ADMIN-EXTERNAL-ATTRIBUTES-FIXTURE-NOT-EFFECTIVE
+admin_snapshot "$admin_repo" "$tmp/admin-after-external-attributes"
+cmp -s "$tmp/admin-before-external-attributes" \
+  "$tmp/admin-after-external-attributes" &&
+  fail OWNERSHIP-ADMIN-EXTERNAL-ATTRIBUTES-UNDETECTED
+git -C "$admin_repo" config core.attributesFile "$admin_baseline_attributes"
 
 admin_snapshot "$admin_repo" "$tmp/admin-before-remote"
 git -C "$admin_repo" remote add injected "$admin_remote"
@@ -411,7 +779,6 @@ cmp -s "$tmp/admin-before-hooks-path" "$tmp/admin-after-hooks-path" && fail OWNE
 git -C "$admin_repo" config --unset core.hooksPath
 
 admin_snapshot "$admin_repo" "$tmp/admin-before-hook"
-admin_common=$(absolute_git_dir "$admin_repo" --git-common-dir)
 printf '%s\n' '#!/bin/sh' 'exit 0' >"$admin_common/hooks/pre-commit"
 chmod +x "$admin_common/hooks/pre-commit"
 test -z "$(git -C "$admin_repo" status --porcelain)" || fail OWNERSHIP-ADMIN-HOOK-DIRTY-WORKTREE
@@ -433,6 +800,106 @@ admin_snapshot "$admin_repo" "$tmp/admin-after-index"
 cmp -s "$tmp/admin-before-index" "$tmp/admin-after-index" && fail OWNERSHIP-ADMIN-INDEX-UNDETECTED
 git -C "$admin_repo" update-index --no-assume-unchanged tracked.txt
 
+# The complete Git-admin tree catches future or uncommon state without relying
+# on a maintained filename manifest.
+admin_snapshot "$admin_repo" "$tmp/admin-before-future-state"
+printf '%s\n' future >"$admin_common/FUTURE_STATE"
+admin_snapshot "$admin_repo" "$tmp/admin-after-future-state"
+cmp -s "$tmp/admin-before-future-state" "$tmp/admin-after-future-state" &&
+  fail OWNERSHIP-ADMIN-FUTURE-STATE-UNDETECTED
+delete_paths "$admin_common/FUTURE_STATE"
+
+admin_head=$(git -C "$admin_repo" rev-parse HEAD)
+admin_snapshot "$admin_repo" "$tmp/admin-before-rebase-head"
+printf '%s\n' "$admin_head" >"$admin_common/REBASE_HEAD"
+test "$(git -C "$admin_repo" rev-parse REBASE_HEAD)" = "$admin_head" ||
+  fail OWNERSHIP-ADMIN-REBASE-HEAD-FIXTURE-NOT-RESOLVED
+admin_snapshot "$admin_repo" "$tmp/admin-after-rebase-head"
+cmp -s "$tmp/admin-before-rebase-head" "$tmp/admin-after-rebase-head" &&
+  fail OWNERSHIP-ADMIN-REBASE-HEAD-UNDETECTED
+delete_paths "$admin_common/REBASE_HEAD"
+
+admin_reflog="$admin_common/logs/HEAD"
+cp "$admin_reflog" "$tmp/admin-reflog.backup"
+admin_snapshot "$admin_repo" "$tmp/admin-before-reflog"
+printf '%s %s Flow42 fixture <fixture@example.invalid> 1700000000 +0000\tworker-marker\n' \
+  "$admin_head" "$admin_head" >>"$admin_reflog"
+test "$(git -C "$admin_repo" reflog show -1 --format=%gs HEAD)" = worker-marker ||
+  fail OWNERSHIP-ADMIN-REFLOG-FIXTURE-NOT-VISIBLE
+admin_snapshot "$admin_repo" "$tmp/admin-after-reflog"
+cmp -s "$tmp/admin-before-reflog" "$tmp/admin-after-reflog" &&
+  fail OWNERSHIP-ADMIN-REFLOG-UNDETECTED
+cp "$tmp/admin-reflog.backup" "$admin_reflog"
+
+# A trailing newline is part of core.hooksPath. Shell-trimming it would inspect
+# a different directory from the one Git executes, so the snapshot rejects it.
+newline_hooks='../outside-hooks
+'
+mkdir -p "$admin_repo/$newline_hooks"
+printf '%s\n' '#!/bin/sh' 'exit 23' >"$admin_repo/$newline_hooks/pre-commit"
+chmod +x "$admin_repo/$newline_hooks/pre-commit"
+git -C "$admin_repo" config core.hooksPath "$newline_hooks"
+if admin_snapshot "$admin_repo" "$tmp/admin-newline-hooks" >/dev/null 2>&1; then
+  fail OWNERSHIP-ADMIN-HOOKS-PATH-TRAILING-NEWLINE-ACCEPTED
+fi
+hook_rc=0
+git -C "$admin_repo" hook run pre-commit >/dev/null 2>&1 || hook_rc=$?
+test "$hook_rc" -eq 23 || fail OWNERSHIP-ADMIN-HOOKS-PATH-FIXTURE-NOT-EXECUTED
+git -C "$admin_repo" config --unset core.hooksPath
+delete_paths "$admin_repo/$newline_hooks"
+
+# Configured external behavior paths are byte-validated and cannot redirect
+# through equal-content links.
+printf '%s\n' baseline >"$external_excludes"
+git -C "$admin_repo" config core.excludesFile "$external_excludes"
+printf '%s\n' baseline >"$tmp/external-ignore-target"
+delete_paths "$external_excludes"
+ln -s "$tmp/external-ignore-target" "$external_excludes"
+if admin_snapshot "$admin_repo" "$tmp/admin-external-symlink" >/dev/null 2>&1; then
+  fail OWNERSHIP-ADMIN-EXTERNAL-SYMLINK-ACCEPTED
+fi
+delete_paths "$external_excludes"
+printf '%s\n' baseline >"$external_excludes"
+ln "$external_excludes" "$tmp/external-ignore-hardlink"
+if admin_snapshot "$admin_repo" "$tmp/admin-external-hardlink" >/dev/null 2>&1; then
+  fail OWNERSHIP-ADMIN-EXTERNAL-HARDLINK-ACCEPTED
+fi
+delete_paths "$tmp/external-ignore-hardlink"
+
+non_utf8_suffix=$(printf '\377x')
+non_utf8_path="$tmp/non-utf8-$non_utf8_suffix"
+git -C "$admin_repo" config core.excludesFile "$non_utf8_path"
+if admin_snapshot "$admin_repo" "$tmp/admin-non-utf8-config" >/dev/null 2>&1; then
+  fail OWNERSHIP-ADMIN-NON-UTF8-CONFIG-ACCEPTED
+fi
+git -C "$admin_repo" config core.excludesFile "$external_excludes"
+
+git -C "$admin_repo" config --unset core.excludesFile
+if XDG_CONFIG_HOME=relative HOME="$HOME" \
+  admin_snapshot "$admin_repo" "$tmp/admin-relative-xdg" >/dev/null 2>&1; then
+  fail OWNERSHIP-ADMIN-RELATIVE-XDG-ACCEPTED
+fi
+git -C "$admin_repo" config core.excludesFile "$external_excludes"
+
+# Producer failures are observed directly; no POSIX pipeline can turn a partial
+# archive or digest into a successful identity.
+producer_bin="$tmp/producer-bin"
+mkdir "$producer_bin"
+cp "$root/tests/fixtures/ownership/failing-tar" "$producer_bin/tar"
+chmod +x "$producer_bin/tar"
+if PATH="$producer_bin:$PATH" \
+  admin_snapshot "$admin_repo" "$tmp/admin-failing-tar" >/dev/null 2>&1; then
+  fail OWNERSHIP-ADMIN-TAR-FAILURE-ACCEPTED
+fi
+delete_paths "$producer_bin/tar"
+cp "$root/tests/fixtures/ownership/failing-shasum" "$producer_bin/shasum"
+chmod +x "$producer_bin/shasum"
+if PATH="$producer_bin:$PATH" \
+  admin_snapshot "$admin_repo" "$tmp/admin-failing-shasum" >/dev/null 2>&1; then
+  fail OWNERSHIP-ADMIN-HASH-FAILURE-ACCEPTED
+fi
+delete_paths "$producer_bin"
+
 validate_contract "$root/core/OWNERSHIP.md"
 
 cp "$root/core/OWNERSHIP.md" "$tmp/mutated-newline.md"
@@ -447,4 +914,18 @@ if validate_contract "$tmp/mutated-pathspec.md" >/dev/null 2>&1; then
   fail OWNERSHIP-MUTATION-PATHSPEC-ACCEPTED
 fi
 
-echo 'ownership ok: NUL paths, committed rename endpoints, dirty identity, literal pathspecs'
+cp "$root/core/OWNERSHIP.md" "$tmp/mutated-worker-commit.md"
+printf '%s\n' 'Workers may commit and change HEAD or refs during a dispatch.' \
+  >>"$tmp/mutated-worker-commit.md"
+if validate_contract "$tmp/mutated-worker-commit.md" >/dev/null 2>&1; then
+  fail OWNERSHIP-MUTATION-WORKER-COMMIT-ACCEPTED
+fi
+
+cp "$root/core/OWNERSHIP.md" "$tmp/mutated-admin-exception.md"
+printf '%s\n' 'Workers may mutate any Git administrative file absent from the examples.' \
+  >>"$tmp/mutated-admin-exception.md"
+if validate_contract "$tmp/mutated-admin-exception.md" >/dev/null 2>&1; then
+  fail OWNERSHIP-MUTATION-GIT-ADMIN-EXCEPTION-ACCEPTED
+fi
+
+echo 'ownership ok: exact paths plus complete fail-closed Git-admin identity'

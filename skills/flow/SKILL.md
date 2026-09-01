@@ -62,9 +62,13 @@ Delegate only bounded vertical slices with disjoint ownership. Keep the task
 schedule graph separate from the data flow graph, cap workers at configured
 concurrency, forbid recursive delegation, and apply the NUL-safe ownership
 authority loaded by the contract prelude, including rename-aware tracked-delta
-records that retain both endpoints after a worker commit and unmerged records
-that cannot be silently dropped. Compare Git config, remote, hook, ref/HEAD, and
-index identities as well as working-tree paths. The orchestrator owns
+records that retain both endpoints in base-relative history and disposable
+committed-rename fixtures, while workers themselves never commit, stage, or
+change `HEAD`/refs. Retain unmerged records that cannot be silently dropped.
+Compare complete common/worktree Git-directory content-and-metadata identities
+without exclusions plus exact-byte effective external hook, ignore, and
+attributes paths; fail closed on links, lossy decoding, unreadable entries, or
+producer errors. The orchestrator owns
 integration, recovery, and any Forge writes.
 
 Run independent correctness, security, and quality reviews in parallel against

@@ -43,9 +43,12 @@
 - Worker result v1: worker producer, coordinator consumer; dispatch identity,
   base commit, modified files, red/green commands, remaining gaps required;
   coordinator validates against ownership and the worktree diff.
-- Review receipt v1: independent reviewer producer, PR skill consumer; reviewed
-  code identity, provider provenance, verdict, checks, and artifact reference
-  required; invalid or self-authored receipts fail closed.
+- Review receipt v2: independent reviewer producer, verifier and PR skill
+  consumers; caller-required purpose and exact policy-minimum-bearing checks,
+  reviewed code identity, provider provenance, verdict, exact in-work-item
+  report bytes/reference, and resolver-bound time required. Version 1,
+  purpose-substituted, partial, unrelated-artifact, or self-authored receipts
+  fail closed.
 
 ## Integration order
 
@@ -111,3 +114,77 @@ Each worker owns exact paths and makes no commits or Forge writes. A failed slic
 is isolated by its path set and can be repaired without discarding unrelated
 changes. Preserve every file on ownership mismatch and stop integration. No
 merge, publish, or deployment is authorized by this plan.
+
+## Human-resumed blocker repair
+
+The 2026-09-01 user instruction explicitly resumes reversible local repair after
+revision 10 exhausted the two automatic review loops. The item remains
+`blocked` and `review_loops: 2` while repairs are in flight; after all recorded
+blockers are resolved, the legal `blocked → verifying` resume transition may be
+taken without inventing another automatic repair loop.
+
+- Dispatch base and worktree: commit
+  `20c3cf002a2c90fa49047d496c0fc347c8a5261f` in
+  `/Users/sr/orca/flow42`; current worktree only because all repairs build on the
+  exact blocked branch. Worker limit three. Harness Codex, provider OpenAI,
+  model `gpt-5.6-sol`, effort `xhigh`, `delegation_allowed: false`.
+- `codex-config-wrapper`: owns only `core/config-schema.json`,
+  `tests/config-schema.sh`, and `docs/CONFIGURATION.md`. Inputs are the exact
+  xcrun reproducer and current command-policy contract. Output must identify
+  modified files, observed red/green commands, residual semantic-sandbox limits,
+  and any proposed cross-cutting edits without making them.
+- `codex-git-admin`: owns only `core/OWNERSHIP.md` and `tests/ownership.sh`.
+  Inputs are the exact `info/exclude` hiding reproducer and the administrative
+  state contract. Output must identify modified files, observed red/green
+  commands, fail-closed coverage, performance/portability tradeoffs, and any
+  proposed cross-cutting edits without making them.
+- `codex-review-receipt`: owns only `core/risk-policy.json`,
+  `tests/review-receipt.sh`, `tests/fixtures/review-receipt/**`,
+  `skills/verify/SKILL.md`, `skills/pr/SKILL.md`, and
+  `templates/evidence.md`. Inputs are the spellcheck-only/unrelated-artifact
+  replay and timestamp/purpose findings. Output must identify modified files,
+  observed red/green commands, migration implications, and any proposed
+  cross-cutting edits without making them.
+- The coordinator owns `skills/update/SKILL.md`, `tests/update.sh`, update
+  fixtures, lifecycle/status canonicalization, change-request placement,
+  cross-cutting `core/{CONTRACT,SECURITY}.md`, threat-model/evidence corrections,
+  integration, commits, and all work-item or handoff files. Workers must not
+  stage, commit, write Git administrative state, mutate Forge state, launch
+  delegates, or touch coordinator-owned/pre-existing dirty files.
+
+Integration requires NUL-safe ownership and Git-administration snapshots before
+and after every dispatch, exact-path reconciliation, focused adversarial tests,
+the whole local matrix, one committed exact subject, and fresh non-implementer
+correctness and security reviews of that same subject. A new blocker returns the
+item to `blocked`; no repair is inferred from a reviewer verdict.
+
+### Pre-integration adversarial audits
+
+After the implementation workers settle, three additional read-only Codex
+workers inspect the security-sensitive slices before integration: one audits Git
+behavior and administrative-state coverage, one audits receipt purpose/check/
+artifact/time binding, and one audits the verified-candidate-to-installed-cache
+boundary. They own no files, may not mutate Git or Forge state, and do not
+replace the required fresh correctness and security reviews of the final clean
+exact-head subject. All use `gpt-5.6-sol` at `xhigh` effort with delegation
+disabled.
+
+### Human-resumed repair disposition
+
+- Configuration rejects `xcrun` as a control-CLI launcher and proves the former
+  escape can push only inside a disposable reproducer before the repaired policy
+  rejects it.
+- Ownership snapshots the complete common/worktree Git administrative trees and
+  exact effective external behavior paths, rejects partial or lossy producers,
+  and forbids worker staging, commits, ref moves, and every other Git-admin
+  mutation.
+- Receipt schema v2 binds correctness/security purpose, exact required checks,
+  exact report bytes/reference, and real resolver time for every issuer. Report
+  bytes come only from a unique literal marker pair in the canonical work-item
+  evidence path; local fallback is a separately resolved distinct session, not
+  a self-asserted pass.
+- Claude update commands execute at the canonical project root, bind project and
+  config root, reject linked settings and unsupported source shapes, bind project
+  and local entries by exact `projectPath`, neutralize Git templates/config/
+  filters, compare fetched and installed trees to the verified candidate twice,
+  and disclose the remaining post-observation same-user cache race.
