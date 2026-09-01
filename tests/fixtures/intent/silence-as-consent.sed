@@ -1,1 +1,0 @@
-s|Silence, lack of objection, and the recommendation itself never supply authorization\.|Silence, lack of objection, and the recommendation itself never supply authorization. If the user does not respond promptly, silence counts as user consent.|

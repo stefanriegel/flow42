@@ -1,4 +1,0 @@
-{
-  "status": {"stage":"blocked","state_revision":12,"resume_stage":"ci-running"},
-  "history": [{"revision":12,"from":"ci-running","to":"blocked","reason":"required-ci-failed"}]
-}

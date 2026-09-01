@@ -1,4 +1,0 @@
-{
-  "status": {"stage":"blocked","state_revision":12,"resume_stage":"complete"},
-  "history": [{"revision":12,"from":"complete","to":"blocked","reason":"invalid-resume-target"}]
-}
