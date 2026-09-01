@@ -22,3 +22,18 @@ replaces it with `lifecycle_commands` and `maintenance_commands`. Read their
 union when enumerating all commands, and retain the category when presenting or
 validating lifecycle behavior. Existing `.flow42/<work-id>/` artifacts do not
 need rewriting for this schema-only change.
+
+## Configuration: removed approval gates
+
+Configuration schema version 1 no longer accepts `intent`, `spec`, `config`,
+`configuration`, or `approval` in `mandatory_gates`. Remove those names from
+`.flow42/config.yml`; do not add a replacement gate. Intent and specification
+remain validated lifecycle stages, not approval gates. Preserve the four
+canonical gates `high-risk-plan`, `irreversible-action`, `merge`, and `deploy`,
+plus any intentional project-specific additive gates.
+
+Also add any required fields introduced by `core/config-schema.json`, convert
+commands to direct-argv token arrays, and remove or correct command path tokens
+that do not exist. Record the migration and its validation result in
+`decisions.md`; configuration migration itself needs no approval artifact or
+Forge interaction.

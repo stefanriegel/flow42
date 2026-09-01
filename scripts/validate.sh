@@ -4,7 +4,8 @@ set -eu
 root=$(CDPATH=''; export CDPATH; cd -- "$(dirname -- "$0")/.." && pwd)
 errors=0
 
-for json in "$root/core/workflow.json" "$root/core/risk-policy.json" "$root/evals/scenarios.json" \
+for json in "$root/core/workflow.json" "$root/core/risk-policy.json" \
+  "$root/core/config-schema.json" "$root/evals/scenarios.json" \
   "$root/.claude-plugin/marketplace.json" \
   "$root/.claude-plugin/plugin.json" "$root/.codex-plugin/plugin.json"; do
   if ! jq -e . "$json" >/dev/null; then
@@ -21,6 +22,19 @@ for skill in "$root"/skills/*/SKILL.md; do
   fi
   if grep -q '\[TODO:' "$skill"; then
     echo "placeholder: ${skill#"$root/"}" >&2
+    errors=1
+  fi
+done
+
+if ! sh "$root/tests/prelude.sh" >/dev/null; then
+  echo 'skill contract preludes or agent authority pointers are invalid' >&2
+  errors=1
+fi
+
+for reviewer in "$root"/tests/*.sh; do
+  reviewer_name=${reviewer##*/}
+  if ! grep -R -F -q "$reviewer_name" "$root/tests/contracts.sh" "$root/.github/workflows"; then
+    echo "test reviewer is unreachable from aggregate checks or CI: $reviewer_name" >&2
     errors=1
   fi
 done

@@ -58,16 +58,20 @@ check_intent_inventory() {
   intent_text=$(tr '\n' ' ' <"$1" | tr -s ' ')
   line_count=$(wc -l <"$1" | tr -d ' ')
 
-  if test "$line_count" -lt 15 || test "$line_count" -gt 60; then
-    echo "intent skill violates 15-60 line house style: $line_count" >&2
+  if test "$line_count" -lt 15 || test "$line_count" -gt 90; then
+    echo "intent skill violates 15-90 line house style: $line_count" >&2
     intent_contract_failed=1
   fi
   test "$(grep -c '^# ' "$1")" -eq 1 || {
     echo 'intent skill must have exactly one H1' >&2
     intent_contract_failed=1
   }
-  if grep -E -q '^##|^[-*] ' "$1"; then
-    echo 'intent skill must remain imperative prose without subheadings or bullets' >&2
+  test "$(grep -c '^## Contract prelude$' "$1")" -eq 1 || {
+    echo 'intent skill must contain exactly one canonical contract prelude' >&2
+    intent_contract_failed=1
+  }
+  if grep -E '^## ' "$1" | grep -F -v -q '## Contract prelude' || grep -E -q '^[-*] ' "$1"; then
+    echo 'intent body must remain imperative prose without extra subheadings or bullets' >&2
     intent_contract_failed=1
   fi
 
@@ -109,6 +113,15 @@ check_intent_inventory() {
   require_phrase 'Never request or persist secrets, credentials, private records, or raw personal or customer data'
   require_phrase 'trivial-change fast path'
   require_phrase 'ask no questions and complete the intent directly'
+  require_phrase 'If the user cannot answer'
+  require_phrase 'rephrase it in outcome language'
+  require_phrase 'offer concrete options with the recommendation and tradeoffs'
+  require_phrase 'conservative reversible default'
+  require_phrase 'Record it as a provisional assumption'
+  require_phrase 'basis, scope, invalidation signal, and validation checkpoint'
+  require_phrase 'defer implementation uncertainty to specification or planning'
+  require_phrase 'Block only when no safe fallback exists'
+  require_phrase 'Never use a default as authorization'
 
   test "$intent_contract_failed" -eq 0
 }
@@ -143,6 +156,16 @@ check_intent_semantics() {
     'do not choose the recommendation, infer an answer, or advance' \
     'Atomically transition to `blocked`' \
     'reread both'
+  require_paragraph_sequence \
+    'an unavailable answer receives clarification before fallback' \
+    'If the user cannot answer' \
+    'rephrase it in outcome language' \
+    'offer concrete options with the recommendation and tradeoffs'
+  require_paragraph_sequence \
+    'safe reversible defaults precede blocking' \
+    'conservative reversible default' \
+    'Record it as a provisional assumption' \
+    'Block only when no safe fallback exists'
 
   reject_semantic_pattern \
     'questions before repository inspection' \
@@ -162,6 +185,12 @@ check_intent_semantics() {
   reject_semantic_pattern \
     'batched questions' \
     '(batch|ask|present|send|collect)[^.;]{0,64}(all|multiple|several)[^.;]{0,48}questions|questions[^.;]{0,48}(at once|together|in (a|one) batch)'
+  reject_semantic_pattern \
+    'immediate block before clarification' \
+    '(cannot answer|answer is unavailable)[^.;]{0,96}(immediately|directly)[^.;]{0,32}block'
+  reject_semantic_pattern \
+    'unsafe default authorization' \
+    'Never use a default as authorization[^.]{0,240}(unless|except)'
 
   test "$intent_contract_failed" -eq 0
 }
@@ -186,6 +215,8 @@ expect_reviewer_mutation_rejected() {
     fixed-question-count) expected='fixed question count' ;;
     headless-chooses-recommendation) expected='headless recommendation choice' ;;
     batch-questions) expected='batched questions' ;;
+    immediate-block-before-clarification) expected='immediate block before clarification' ;;
+    unsafe-default-authorization) expected='unsafe default authorization' ;;
     *)
       echo "unknown intent reviewer fixture: $fixture_name" >&2
       exit 1
@@ -223,4 +254,4 @@ for fixture in "$fixture_dir"/*.sed; do
   expect_reviewer_mutation_rejected "$fixture"
 done
 
-echo 'intent contract ok: bounded interview, durable resume, consent, confidentiality, fast path'
+echo 'intent contract ok: bounded interview, safe fallback, durable resume, consent, confidentiality, fast path'

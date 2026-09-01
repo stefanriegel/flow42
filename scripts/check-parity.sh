@@ -70,7 +70,7 @@ jq -e '.name == "flow42" and (.plugins | length == 1) and .plugins[0].name == "f
 version=$(jq -r '.version' "$root/.claude-plugin/plugin.json")
 expected_tag="v$version"
 for document in "$root/README.md" "$root/docs/INSTALLATION.md"; do
-  expected_claude="claude plugin marketplace add stefanriegel/flow42#$expected_tag"
+  expected_claude="claude plugin marketplace add stefanriegel/flow42@$expected_tag"
   expected_codex="codex plugin marketplace add stefanriegel/flow42 --ref $expected_tag"
   expected_pi="pi install git:github.com/stefanriegel/flow42@$expected_tag"
 
@@ -81,7 +81,7 @@ for document in "$root/README.md" "$root/docs/INSTALLATION.md"; do
     }
   done
 
-  grep -E '^(claude plugin marketplace add stefanriegel/flow42#|codex plugin marketplace add stefanriegel/flow42 --ref |pi install git:github.com/stefanriegel/flow42@)' \
+  grep -E '^(claude plugin marketplace add stefanriegel/flow42@|codex plugin marketplace add stefanriegel/flow42 --ref |pi install git:github.com/stefanriegel/flow42@)' \
     "$document" |
   while IFS= read -r install_line; do
     case "$install_line" in

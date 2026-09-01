@@ -14,9 +14,12 @@ confirmations, integration order, and recovery when the user requests
 multi-agent work or independent slices materially benefit from parallelism.
 Workers receive bounded slices in isolated worktrees, cannot delegate, and
 cannot authorize their own implementation. Independence is role separation: a
-separate review pass or agent did not implement the change. In a solo-owned repository, its
-exact-head verdict is stored as durable review evidence. This does not add a
-second human gate or grant authorization authority. The
+separate review pass or agent did not implement the change. Its durable JSON
+receipt uses the strongest issuer available: authenticated Forge, trusted
+orchestrator, or a distinct local independent pass when neither stronger source
+is available. The receipt binds the reviewed code head while four bookkeeping
+paths remain receipt-neutral, so persisting the receipt does not make itself
+stale. This does not add a second human gate or grant authorization authority. The
 trusted endpoint is an independently reviewed, CI-green PR/MR.
 
 Orca orchestration is used only through its live CLI-served contract. A real

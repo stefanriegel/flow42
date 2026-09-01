@@ -20,6 +20,11 @@ jobs:
       - run: sh scripts/validate.sh
       - run: sh tests/conformance.sh
       - run: sh tests/contracts.sh
+      - run: sh tests/prelude.sh
+      - run: sh tests/ownership.sh
+      - run: sh tests/review-receipt.sh
+      - run: sh tests/config-schema.sh
+      - run: sh tests/lifecycle-transitions.sh
       - run: sh tests/update.sh
       - run: sh tests/release-checksum.sh
       - run: sh tests/security.sh

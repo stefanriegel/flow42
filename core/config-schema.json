@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "unknown_fields": "block",
+  "fields": {
+    "schema_version": {"required": true, "type": "integer", "enum": [1], "default": 1},
+    "forge": {"required": true, "type": "string", "enum": ["auto", "github", "gitlab", "none"], "default": "auto"},
+    "harness": {"required": true, "type": "string", "enum": ["auto", "claude-code", "codex", "pi"], "default": "auto"},
+    "execution_environment": {"required": true, "type": "string", "enum": ["auto", "orca", "native"], "default": "auto"},
+    "base_branch": {"required": true, "type": "string", "pattern": "^(auto|[A-Za-z0-9][A-Za-z0-9._/-]{0,127})$", "default": "auto"},
+    "concurrency": {"required": true, "type": "integer", "minimum": 1, "maximum": 4, "default": 4},
+    "worktree_parent": {"required": true, "type": "string", "pattern": "^(auto|[^[:space:]]+)$", "default": "auto"},
+    "model_profiles": {
+      "required": true,
+      "type": "object",
+      "properties": {
+        "frontier": {"required": true, "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$", "default": "auto"},
+        "worker": {"required": true, "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$", "default": "auto"},
+        "utility": {"required": true, "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$", "default": "auto"}
+      }
+    },
+    "commands": {
+      "required": true,
+      "type": "object",
+      "properties": {
+        "format": {"required": true, "type": "token-array", "default": ["auto"]},
+        "lint": {"required": true, "type": "token-array", "default": ["auto"]},
+        "typecheck": {"required": true, "type": "token-array", "default": ["auto"]},
+        "test": {"required": true, "type": "token-array", "default": ["auto"]},
+        "build": {"required": true, "type": "token-array", "default": ["auto"]}
+      }
+    },
+    "protected_paths": {"required": true, "type": "path-array", "item_pattern": "^[A-Za-z0-9._/-]+$", "default": []},
+    "mandatory_gates": {"required": true, "type": "gate-array", "item_pattern": "^[a-z0-9][a-z0-9-]{0,62}$", "default": ["high-risk-plan", "irreversible-action", "merge", "deploy"]}
+  },
+  "canonical_mandatory_gates": ["high-risk-plan", "irreversible-action", "merge", "deploy"],
+  "retired_gates": {
+    "names": ["intent", "spec", "config", "configuration", "approval"],
+    "effect": "block-with-migration"
+  },
+  "extra_gates": "allowed",
+  "command_paths": "must-exist-or-be-auto"
+}

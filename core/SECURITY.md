@@ -33,16 +33,24 @@ Persist the actor, UTC timestamp, exact action, scope, and reason in
 Do not invent an additional approver, treat an agent review as human assent, or
 require a second human merely to satisfy independent review. An independent
 reviewer must be a separate pass or agent that did not implement the reviewed
-change. Its verdict must name the exact Git head SHA and be stored in durable
-review evidence. Review never authorizes a high-risk or irreversible action.
+change. Persist its verdict as the schema-versioned receipt defined by
+`core/risk-policy.json`, using the strongest available issuer: authenticated
+Forge, trusted orchestrator, then a distinct local independent pass when neither
+stronger issuer is available. The receipt binds `reviewed_head` and remains
+current only when it is ancestral to `HEAD` and the NUL-safe diff contains solely
+this work item's `evidence.md`, `decisions.md`, `history.jsonl`, or `status.yml`;
+any other path change requires fresh review. Review never authorizes a high-risk
+or irreversible action.
 
 ## Worker boundary
 
 Record allowed paths before dispatch. Tell workers not to perform Forge writes;
-the coordinator owns those operations. Before integration compare
-`git status --short` and `git diff --name-only` to ownership. Any out-of-scope
-path, recursive delegation, untracked process, or unapproved external effect
-blocks integration while preserving the worktree.
+the coordinator owns those operations. Before dispatch and integration apply
+the NUL-delimited snapshots, rename-endpoint checks, literal pathspec rules, and
+pre-existing dirty-content identity procedure in `core/OWNERSHIP.md`. Any
+out-of-scope path, undeclared dirty-path overlap, recursive delegation,
+untracked process, or unapproved external effect blocks integration while
+preserving the worktree.
 
 Prefer the least-capable suitable worker profile. Do not print or pass credentials
 to a worker. If the runtime provides capability isolation, use it; otherwise keep
