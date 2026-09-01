@@ -7,6 +7,7 @@ set -eu
 
 root=$(CDPATH=''; export CDPATH; cd -P -- "$(dirname -- "$0")/.." && pwd)
 skill=$root/skills/update/SKILL.md
+eval_runner=$root/evals/run.sh
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/flow42-update-test.XXXXXX")
 trap 'find "$tmp" -depth -delete' EXIT HUP INT TERM
 
@@ -75,7 +76,18 @@ check_skill() {
   fi
 }
 
+check_eval_tier() {
+  file=$1
+  label_count=$(grep -Fxc 'record_pass text-conformance update-instructions' \
+    "$file" || true)
+  test "$label_count" -eq 1 || fail UPDATE-EVAL-TIER || return 1
+  if grep -Eq '^record_pass behavioural-reference update-' "$file"; then
+    fail UPDATE-EVAL-BEHAVIOURAL-CLAIM || return 1
+  fi
+}
+
 check_skill "$skill"
+check_eval_tier "$eval_runner"
 
 # Mutation checks prove the boundary assertions are not vacuous.
 sed '/Orca owns worktree, terminal, process, and worker/d' "$skill" >"$tmp/no-orca.md"
@@ -91,4 +103,11 @@ if check_skill "$tmp/false-rollback.md" 2>"$tmp/false-rollback.err"; then
 fi
 grep -Fq UPDATE-HONEST-ROLLBACK "$tmp/false-rollback.err"
 
-echo "update ok: narrow verified-release flow, Orca ownership, and honest recovery"
+sed 's/^record_pass text-conformance update-instructions$/record_pass behavioural-reference update-convergence/' \
+  "$eval_runner" >"$tmp/false-eval-tier.sh"
+if check_eval_tier "$tmp/false-eval-tier.sh" 2>"$tmp/false-eval-tier.err"; then
+  fail UPDATE-MUTATION-EVAL-TIER-ACCEPTED
+fi
+grep -Fq UPDATE-EVAL-TIER "$tmp/false-eval-tier.err"
+
+echo "update ok: narrow verified-release instructions and honest text-conformance tier"

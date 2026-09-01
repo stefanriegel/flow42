@@ -12,8 +12,10 @@ source of truth.
 The single-agent path is the default. The orchestrator owns scope,
 confirmations, integration order, and recovery when the user requests
 multi-agent work or independent slices materially benefit from parallelism.
-Workers receive bounded slices in isolated worktrees, cannot delegate, and
-cannot authorize their own implementation. Independence is role separation: a
+Workers receive bounded slices in an assigned execution context, are forbidden
+to delegate, and cannot authorize their own implementation. Delegation blocks
+integration when observed through Orca records or worker reporting in native
+execution. Independence is role separation: a
 separate review pass or agent did not implement the change. Its durable JSON
 receipt uses the strongest issuer available: authenticated Forge, trusted
 orchestrator, or a distinct local independent pass when neither stronger source
@@ -37,13 +39,17 @@ second human gate or grant authorization authority. The
 trusted endpoint is an independently reviewed, CI-green PR/MR.
 
 Orca orchestration is used only through its live CLI-served contract. When it is
-selected and ready, Orca owns worktrees, terminals, process identity, worker
-settlement, and cleanup. Flow42 provides the job scope, file ownership, checks,
-and integration decision; it does not duplicate Orca's resource manager. A real
-Run, Task, and Dispatch plus `worker_done` settlement distinguish orchestration
-from ordinary subagents. Flow42 makes no independent process-identity claim;
-its ownership contract governs repository paths, contents, and Git administration,
-not resource lifecycle. Missing Orca falls back to the single-agent path.
+selected and ready, Flow42 uses the Orca-provided execution context and records
+the exact worktree path and dispatch reference. If Orca selects the current
+worktree, concurrent workers require disjoint ownership plus explicit
+task-schedule and integration barriers. Orca owns terminals, process identity,
+worker settlement, and cleanup under that live contract; Flow42 provides the job
+scope, file ownership, checks, and integration decision without claiming how
+Orca supplies the worktree. A real Run, Task, and Dispatch plus `worker_done`
+settlement distinguish orchestration from ordinary subagents.
+Flow42 makes no independent process-identity claim; its ownership contract
+governs repository paths, contents, and Git administration, not resource
+lifecycle. Missing Orca falls back to the single-agent path.
 
 Planning represents two related graphs. The task schedule graph defines jobs,
 dependencies, parallelism, and synchronization barriers. The data flow graph
@@ -63,6 +69,11 @@ without a finite filename allowlist, plus the enumerated external hooks, ignore,
 and attributes paths; workers never commit or stage. Configuration outside the
 administrative trees is bound by effective value and origin rather than file
 identity, and external alternate object stores are declaration-bound only.
+External alternate content can make a pre-existing latent ref become resolvable
+or unresolvable without changing the bound ref stream. Snapshot equality is not
+object-availability proof; integration may rely only on objects and identities
+explicitly resolved for its actual baseline, `HEAD`, index, and owned worktree
+decision.
 Release update security ends at a verified signed release input and the harness's
 documented installer. Flow42 verifies the tag object, commit, tree, version,
 checksum, installed manifest, and skill structure, but it does not reimplement

@@ -2,10 +2,10 @@
 set -eu
 
 # Deterministic evaluation index. Behavioural reference fixtures execute real
-# Git or a stateful fake CLI and observe end state. Structural checks inspect
-# versioned data, text-conformance checks preserve normative prose, and
+# Git or a test-local receipt resolver and observe end state. Structural checks
+# inspect versioned data, text-conformance checks preserve normative prose, and
 # this index does not treat environment probes as Flow42 behaviour. None executes
-# a general Flow42 agent runtime.
+# a general Flow42 agent or native harness runtime.
 
 root=$(CDPATH=''; export CDPATH; cd -- "$(dirname -- "$0")/.." && pwd)
 
@@ -20,7 +20,7 @@ sh "$root/tests/ownership.sh" >/dev/null
 record_pass behavioural-reference ownership-boundary
 
 sh "$root/tests/update.sh" >/dev/null
-record_pass behavioural-reference update-convergence
+record_pass text-conformance update-instructions
 
 sh "$root/tests/review-receipt.sh" >/dev/null
 record_pass behavioural-reference review-receipt-currency
@@ -75,4 +75,4 @@ if jq -e '
 fi
 
 test "$pass" -eq 12
-echo "evals ok: $pass behavioural-reference and structural checks; no agent runtime executed"
+echo "evals ok: $pass behavioural-reference, structural, and text-conformance checks; no agent or harness runtime executed"

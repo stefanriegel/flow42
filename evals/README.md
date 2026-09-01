@@ -1,17 +1,27 @@
 # Public evaluations
 
-Flow42 uses three explicitly separate proof tiers:
+The deterministic evaluation index uses three explicitly separate proof tiers:
 
-- **Behavioural reference fixtures:** disposable Git repositories and stateful
-  fake CLIs observe end state for update convergence, ownership including
-  committed rename attribution, and review-receipt currency. They prove the
-  documented command sequence or test-local predicate against Git/CLI semantics;
-  they do not prove that an installed agent followed the instructions.
+- **Behavioural reference fixtures:** disposable Git repositories and a
+  test-local receipt resolver observe ownership, including committed rename
+  attribution, and review-receipt currency. They prove the test-local predicates
+  against Git and resolver semantics; they do not prove that an installed agent
+  followed the instructions.
 - **Structural:** JSON/YAML shape, declared workflow targets, schema validation,
   lifecycle-grammar simulations, portable case consistency, and byte-identical
   direct-skill preludes. Structural simulation is not Flow42 runtime behaviour.
 - **Text conformance:** normative prose remains present. This detects accidental
   deletion but does not prove Git behaviour or agent semantics.
+  `tests/update.sh` is in this tier: it checks the runtime-free update
+  instructions' structure, required boundaries, and evaluation label, without
+  executing a vendor CLI or observing update convergence.
+
+`tests/release-checksum.sh` is a separate local cryptographic fixture. It creates
+disposable signed tags and deterministic archives with fixture keys and exercises
+the trusted verifier, manifest binding, and checksum checks. This proves the
+local Git, SSH-signature, archive, and checksum path only; it does not prove a
+live remote advertisement or published artifact, native harness installation,
+readback or recovery, or private cache bytes.
 
 Environment probes are outside those proof tiers. In particular, masking
 `PATH` and calling `command -v` does not execute Flow42's missing-Forge behavior
@@ -49,7 +59,8 @@ fixture read or environment probe as behaviour. Its summary is an index of mixed
 local evidence, not a native-agent or harness-parity result.
 
 Native harness evidence is recorded under `evidence/evals/`; these runs complement
-the deterministic suite and are required before a harness-parity claim.
+the deterministic suite and are required before a harness-parity claim. The
+deterministic suite contains no live update run for Claude Code, Codex, or Pi.
 
 ## Portable failure cases
 

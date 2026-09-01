@@ -36,6 +36,39 @@ for contract_file in "$root/core/CONTRACT.md" "$root/core/SECURITY.md" \
     grep -Fq 'Multiply linked evidence files are rejected when observed'
 done
 
+validate_diff_producer_contract() {
+  contract_file=$1
+  tr '\n' ' ' <"$contract_file" |
+    grep -Fq 'Receipt-neutral diff validation and diff digest derivation fail closed unless the Git diff producer exits successfully and its complete NUL-delimited output is consumed without parse or hash failure.' || return 1
+  if tr '\n' ' ' <"$contract_file" |
+    grep -Eiq 'may accept[^.]*Git diff producer[^.]*non-zero|downstream[^.]*may mask[^.]*producer failure'; then
+    return 1
+  fi
+}
+
+for contract_file in "$root/core/CONTRACT.md" "$root/core/SECURITY.md" \
+  "$root/skills/verify/SKILL.md"; do
+  validate_diff_producer_contract "$contract_file" || {
+    echo "receipt diff producer-status contract missing: $contract_file" >&2
+    exit 1
+  }
+done
+jq -e '
+  .independent_review.diff_producer_status == {
+    "applies_to": ["receipt-neutral-diff-validation", "diff-digest-derivation"],
+    "git_exit_zero_required": true,
+    "complete_nul_output_required": true,
+    "downstream_success_may_mask_failure": false
+  }
+' "$risk" >/dev/null
+
+sed 's/exits successfully/exits non-zero/' \
+  "$root/core/CONTRACT.md" >"$tmp/mutated-diff-producer-contract.md"
+if validate_diff_producer_contract "$tmp/mutated-diff-producer-contract.md"; then
+  echo 'receipt diff producer-status mutation survived' >&2
+  exit 1
+fi
+
 validate_threat_model_staging() {
   threat_model=$1
   grep -Fq 'Workers never stage; only the coordinator may stage an exact reviewed path after the post-worker checks pass.' \

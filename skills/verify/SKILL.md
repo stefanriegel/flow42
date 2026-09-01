@@ -94,5 +94,9 @@ and valid UTC observation time before acting. Retain the schema-compatible
 `--no-renames`; neutral filenames apply only at the reviewed work-item root. In
 `status.yml`, only the policy's enumerated lifecycle/CI fields are neutral, so a
 risk downgrade, identity change, review-loop change, or other field change
-requires a fresh review. Use the canonical revision, atomic status,
+requires a fresh review. Receipt-neutral diff validation and diff digest
+derivation fail closed unless the Git diff producer exits successfully and its
+complete NUL-delimited output is consumed without parse or hash failure. A
+successful downstream parser, filter, or hasher never masks producer failure.
+Use the canonical revision, atomic status,
 append-only history, and read-back procedure.

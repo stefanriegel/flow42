@@ -5,11 +5,13 @@ work or independent slices materially benefit from parallel execution.
 
 This document governs path ownership, content identity, and Git-administration
 state. It does not govern resource lifecycle. When Orca is the selected and
-ready execution environment, Orca creates the worktree, owns terminal and
-process identity, settles workers, and performs cleanup; record the Orca-provided
-worktree path and dispatch reference rather than creating or removing a
-worktree. In the native path the coordinator creates and retains the worktree.
-The ownership decision below is identical in both paths.
+ready execution environment, the worker uses the Orca-provided execution
+context; record the exact worktree path and dispatch reference rather than
+creating or removing a worktree. If Orca selects the current worktree, record
+that exact selection and require disjoint ownership plus explicit task-schedule
+and integration barriers before concurrent work. In the native path the
+coordinator selects, records, and retains the exact worktree. The ownership
+decision below is identical in both paths.
 
 Before dispatch, persist the worktree path, base commit, allowed path prefixes,
 worker limit, selected model profile, required inputs, output schema, and
@@ -67,11 +69,13 @@ archive or hash pipeline.
 
 An external alternate object store is declaration-bound: Flow42 records and
 compares `objects/info/alternates` but does not resolve or snapshot an external
-object store. An object added there may become readable, but it cannot affect
-integration on its own: refs, `HEAD`, and the index are separately bound and
-forbidden to workers, while every working-tree change is bound to declared
-ownership and review. Record an alternates entry that points outside the two Git
-directories in dispatch evidence as a disclosed residual.
+object store, recursively or otherwise. External alternate content can make a
+pre-existing latent ref become resolvable or unresolvable without changing the
+bound ref stream. Snapshot equality is not object-availability proof.
+Integration may rely only on objects and identities explicitly resolved for its
+actual baseline, HEAD, index, and owned worktree decision. Record an alternates
+entry that points outside the two Git directories in dispatch evidence as a
+disclosed residual.
 
 Also persist separate diagnostic identities, without raw secret-bearing values,
 for:
@@ -129,12 +133,15 @@ semantics with an option terminator: `git --literal-pathspecs add -- "$path"`.
 Never let the worker stage, and never use a broad path, glob, implicit pathspec
 magic, `git add .`, or `git add -A` for integration.
 
-Block integration when a new path is outside ownership, the worker launched a
-delegate, or the observed worktree differs from the dispatched worktree.
-Preserve all files and report the exact mismatch, including rename endpoints
-dirty-path collisions, and Git administrative identity changes. Workers do not
-perform Forge writes; the coordinator owns any later real issue or PR/MR
-operation.
+Block integration when a new path is outside ownership or the observed worktree
+differs from the recorded exact worktree. The delegation prohibition blocks
+integration when a delegate launch is observed through Orca records or through
+worker reporting in native execution. Reporting by a non-cooperative native
+worker is not trustworthy, so native absence of delegation remains a disclosed
+residual rather than a proven fact. Preserve all files and report the exact
+mismatch, including rename endpoints, dirty-path collisions, and Git
+administrative identity changes. Workers do not perform Forge writes; the
+coordinator owns any later real issue or PR/MR operation.
 
 Keep the task schedule graph separate from the data flow graph. Schedule edges
 define dependencies and synchronization barriers. Data edges name a versioned

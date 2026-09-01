@@ -1,5 +1,10 @@
 # Evidence: Architecture hardening
 
+This file is chronological. Update-convergence and private-cache observations
+recorded before the `2026-09-01 update simplification repair` describe the
+historical implementation at those subjects; they were superseded and are not
+current proof for the simplified update interface.
+
 - 2026-09-01T05:37:26Z; baseline
   `65a7910b9b2ec1d44aa5724b13a319633d69bcc3`; clean worktree; expected complete
   existing suite green; actual all validation, parity, conformance, contract,
@@ -732,3 +737,47 @@ Primary-source research supporting the disposition:
 This implementation evidence is coordinator evidence, not the required fresh
 exact-head correctness or security receipt. No remote CI, authenticated Forge
 action, live plugin mutation, release, or deployment is claimed.
+
+### First exact-head review and remediation
+
+Commit `9a112d64f7677ce0148b42f45b98d5a49738ca56` was reviewed from a clean
+worktree by two fresh non-implementers. Codex `gpt-5.6-sol`/xhigh task
+`task_152eb018de10` returned BLOCKED in
+`/tmp/flow42-correctness-9a112d6.md`; Claude Opus/high task
+`task_e5ea5198d28b` returned BLOCKED in `/tmp/flow42-security-9a112d6.md`.
+Both confirmed the same exact SHA and zero-byte porcelain before and after,
+ran the complete local gates with additional `dash` coverage, and preserved
+gitleaks, remote CI, native harness, Forge, release, and deployment as separate
+unavailable proof tiers. These blocked reports are remediation evidence, not
+pass receipts.
+
+The accepted findings were closed in three supervised, disjoint Codex/xhigh
+slices. `task_0ea95ccbf085` generalized the unchanged mutation-signature list to
+a basename-normalized ordered subsequence starting at any candidate executable
+token and made Git producer success plus complete NUL output normative for both
+receipt-neutral validation and diff digest derivation. Its red cases covered
+`arch ... /bin/rm`, `kubectl` and `helm` global options, `docker --context ...
+push`, and `cargo +stable publish`; safe configured gates remained accepted.
+
+`task_2f550b2a490e` replaced the false alternate-object inertness claim with a
+disposable latent-ref fixture: adding only the missing external object changed
+ref resolvability while the administrative snapshot and bound ref stream stayed
+equal. Contracts now say that snapshot equality is not object-availability
+proof and integration may rely only on explicitly resolved objects and
+identities for the actual baseline, `HEAD`, index, and owned worktree decision.
+The same slice records Orca's exact supplied execution context, permits a
+current worktree only with disjoint ownership and explicit barriers, and limits
+delegation detection to Orca records or native worker reporting.
+
+`task_e0eeca0cffe7` moved update coverage to its actual structural/text tier,
+kept the signed-tag/archive/checksum fixture separate, corrected the changelog
+and specification, and deleted seven unreferenced files under
+`tests/fixtures/update/`. The deletion is recoverable from Git and removes an
+executable, unlinted release-archive surface left by the earlier simplification.
+
+After coordinator cross-file integration, the focused configuration,
+ownership, receipt, contract, update, evaluation, validation, parity,
+conformance, security, dependency, ShellCheck, and `git diff --check` gates all
+passed. The opt-in native-agent provenance probe remained skipped. A new exact
+subject and fresh independent reviews are still required before this work item
+can leave `blocked`.

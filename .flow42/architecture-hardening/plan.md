@@ -58,8 +58,10 @@ independent review; remediation and fresh review if needed.
 
 ## Completed implementation
 
-- Update Adapter: install-then-update convergence, scope/source fidelity, exact
-  version readback, canonical install grammar, and stateful fake behavior.
+- Update interface: installed-trust-anchor release verification, harness-native
+  installation and structural readback instructions, honest best-effort
+  recovery, and structural/text-conformance coverage. The earlier stateful fake
+  convergence adapter was superseded by the human-directed simplification.
 - Control plane: receipt-subject currency, strict configuration authority and
   migration, declared pseudo/dynamic states, and legal repair transitions.
 - Ownership/evals: NUL-safe snapshots, rename and dirty-content attribution,
@@ -231,3 +233,28 @@ snapshots and another launcher denylist.
 - Fresh non-implementing exact-head correctness and security reviews are the
   final risk-based release gate. They assess the named acceptance and threat
   surfaces; they are not described as universal product-correctness proof.
+
+### First exact-head review remediation
+
+The first fresh review subject `9a112d64f7677ce0148b42f45b98d5a49738ca56`
+was correctly blocked. Claude Opus/high found the mutation-signature position
+asymmetry and missing normative producer-status rule; Codex/xhigh additionally
+found stale update proof tiers, a latent-ref alternate counterexample, and an
+isolated-worktree claim inconsistent with Orca-selected current-worktree use.
+
+- `codex-control-remediation` owns the existing command signatures and receipt
+  producer contract. It generalizes the unchanged signature inventory to a
+  basename-normalized ordered subsequence from any candidate executable token;
+  it does not add a launcher or implement a full CLI parser.
+- `codex-ownership-remediation` pins external alternate latent-ref
+  resolvability as a disclosed residual and replaces isolated-worktree wording
+  with the exact Orca-provided execution context plus disjoint ownership and
+  barriers when Orca selects the current worktree.
+- `codex-proof-tier-remediation` labels update coverage as structural/text
+  conformance, retains release-checksum proof at its local cryptographic tier,
+  corrects public claims, and deletes the seven unreferenced legacy update
+  fixtures rather than reviving the removed package-manager simulation.
+- Coordinator integration carries the cross-file security wording, runs the
+  full local matrix, creates a new exact subject, and requires fresh independent
+  correctness and security reviews. The blocked reports do not become pass
+  receipts.

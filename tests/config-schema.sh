@@ -16,6 +16,11 @@ jq -e '.fields.base_branch.validation == "git-check-ref-format---branch" and
   .command_policy.blocked_launcher_executables == ["xcrun"] and
   .command_policy.blocked_launcher_executables_exhaustive == false and
   .command_policy.read_only_control_cli_allowlist == [] and
+  .command_policy.disallowed_mutation_signature_match == {
+    "executable_position": "any-token-position",
+    "executable_normalization": "basename",
+    "remaining_signature_tokens": "ordered-subsequence"
+  } and
   (.command_policy.token_pattern | type == "string" and length > 0) and
   (.command_policy.shell_evaluation_prefixes | type == "array" and length > 0) and
   (.command_policy.disallowed_mutation_prefixes | type == "array" and length > 0) and
@@ -29,6 +34,28 @@ top_keys() { awk '/^[A-Za-z_][A-Za-z0-9_]*:/ {sub(/:.*/, ""); print}' "$1"; }
 section_pairs() { awk -v section="$2" '$0 == section ":" {inside=1; next} inside && /^[^ ]/ {exit} inside && /^  [A-Za-z_][A-Za-z0-9_]*:/ {sub(/^  /, ""); key=$0; sub(/:.*/, "", key); sub(/^[^:]*:[[:space:]]*/, ""); print key "\t" $0}' "$1"; }
 list_values() { awk -v section="$2" '$0 == section ":" {inside=1; next} inside && /^[^ ]/ {exit} inside && /^  - / {sub(/^  - /, ""); print}' "$1"; }
 fail() { echo "$1" >&2; return 1; }
+
+matches_ordered_signature() {
+  token_stream=$1
+  signature=$2
+  printf '%s\n' "$token_stream" | awk -v signature="$signature" '
+    BEGIN {signature_length=split(signature, signature_tokens, "\t")}
+    {command_tokens[NR]=$0}
+    END {
+      for (start=1; start<=NR; start++) {
+        executable=command_tokens[start]
+        sub(/^.*\//, "", executable)
+        if (executable != signature_tokens[1]) continue
+        wanted=2
+        for (position=start+1; position<=NR && wanted<=signature_length; position++) {
+          if (command_tokens[position] == signature_tokens[wanted]) wanted++
+        }
+        if (wanted > signature_length) exit 0
+      }
+      exit 1
+    }
+  '
+}
 
 validate_yaml_form() {
   file=$1
@@ -105,8 +132,11 @@ EOF
   done <<EOF
 $(jq -r '.command_policy.shell_evaluation_prefixes[] | @tsv' "$schema")
 EOF
-  while IFS= read -r prefix; do
-    case "$canonical" in "$prefix" | "$prefix""$(printf '\t')"*) fail CONFIG-COMMAND-UNSAFE; return ;; esac
+  while IFS= read -r signature; do
+    if matches_ordered_signature "$tokens" "$signature"; then
+      fail CONFIG-COMMAND-UNSAFE
+      return
+    fi
   done <<EOF
 $(jq -r '.command_policy.disallowed_mutation_prefixes[] | @tsv' "$schema")
 EOF
@@ -291,8 +321,31 @@ for control_cli_argv in \
   grep -Fxq CONFIG-COMMAND-CONTROL-CLI "$control_cli_log"
 done
 
+mutation_signature_case=0
+for mutation_signature_argv in \
+  '[arch, -arm64, /bin/rm, -rf, build]' \
+  '[/usr/bin/kubectl, --context, production, delete, pod, demo]' \
+  '[stdbuf, -o0, /usr/local/bin/helm, --namespace, demo, upgrade, release, chart]' \
+  '[docker, --context, production, push, example/image]' \
+  '[cargo, +stable, publish]'; do
+  mutation_signature_case=$((mutation_signature_case + 1))
+  mutation_signature_log="$tmp/mutation-signature-$mutation_signature_case.log"
+  mutation_signature_rc=0
+  (set +e; validate_command "$mutation_signature_argv") >"$mutation_signature_log" 2>&1 ||
+    mutation_signature_rc=$?
+  if test "$mutation_signature_rc" -eq 0; then
+    echo "CONFIG-MUTATION-SIGNATURE-ESCAPE: accepted $mutation_signature_argv" >&2
+    exit 1
+  fi
+  test "$(grep -c '^CONFIG-' "$mutation_signature_log")" -eq 1
+  grep -Fxq CONFIG-COMMAND-UNSAFE "$mutation_signature_log"
+done
+
 validate_command '[shellcheck, scripts/git-helper.sh]'
 validate_command '[npm, run, lint:git]'
+validate_command '[sh, tests/conformance.sh]'
+validate_command '[npm, --silent, run, lint:git]'
+validate_command '[kubectl, --context, staging, get, pods]'
 configured_lint=$(section_pairs "$root/.flow42/config.yml" commands |
   awk -F "$(printf '\t')" '$1 == "lint" {print $2; exit}')
 validate_command "$configured_lint"
