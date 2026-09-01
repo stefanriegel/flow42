@@ -41,7 +41,9 @@ selected and ready, Orca owns worktrees, terminals, process identity, worker
 settlement, and cleanup. Flow42 provides the job scope, file ownership, checks,
 and integration decision; it does not duplicate Orca's resource manager. A real
 Run, Task, and Dispatch plus `worker_done` settlement distinguish orchestration
-from ordinary subagents. Missing Orca falls back to the single-agent path.
+from ordinary subagents. Flow42 makes no independent process-identity claim;
+its ownership contract governs repository paths, contents, and Git administration,
+not resource lifecycle. Missing Orca falls back to the single-agent path.
 
 Planning represents two related graphs. The task schedule graph defines jobs,
 dependencies, parallelism, and synchronization barriers. The data flow graph
@@ -57,9 +59,12 @@ specialist review, and utility models own mechanical transformations. See
 Trust boundaries are the human confirmation channel, repository and worktrees,
 agent harness, Forge CLI credential store, CI, and untrusted external text.
 Git worker ownership binds the complete common/worktree administrative trees
-without a finite filename allowlist, plus external behavior paths; workers never
-commit or stage. Release update security ends at a verified signed release input
-and the harness's documented installer. Flow42 verifies the tag object, commit,
-tree, version, checksum, installed manifest, and skill structure, but it does not
-reimplement or attest a harness's private cache. Recovery is a best-effort native
-reinstall and is never described as byte-identical without a vendor restore API.
+without a finite filename allowlist, plus the enumerated external hooks, ignore,
+and attributes paths; workers never commit or stage. Configuration outside the
+administrative trees is bound by effective value and origin rather than file
+identity, and external alternate object stores are declaration-bound only.
+Release update security ends at a verified signed release input and the harness's
+documented installer. Flow42 verifies the tag object, commit, tree, version,
+checksum, installed manifest, and skill structure, but it does not reimplement
+or attest a harness's private cache. Recovery is a best-effort native reinstall
+and is never described as byte-identical without a vendor restore API.

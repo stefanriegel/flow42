@@ -48,6 +48,7 @@ extract_review_section() {
   begin_marker="<!-- flow42-review-section:$section_id:begin -->"
   end_marker="<!-- flow42-review-section:$section_id:end -->"
   test -f "$evidence_file" && test ! -L "$evidence_file" || return 1
+  test "$(find "$evidence_file" -prune -links 1)" = "$evidence_file" || return 1
   test "$(grep -F -x -c "$begin_marker" "$evidence_file")" -eq 1 || return 1
   test "$(grep -F -x -c "$end_marker" "$evidence_file")" -eq 1 || return 1
   awk -v begin="$begin_marker" -v end="$end_marker" '
@@ -279,6 +280,24 @@ if validate_receipt "$fixtures/valid-local-pass.json" "$expected_head" \
   exit 1
 fi
 
+artifact_hardlink_repository="$tmp/artifact-hardlink-repository"
+artifact_hardlink_path="$artifact_hardlink_repository/.flow42/$expected_work_id/evidence.md"
+mkdir -p "$artifact_hardlink_repository/.flow42/$expected_work_id"
+cp "$expected_artifact_repository/.flow42/$expected_work_id/evidence.md" \
+  "$artifact_hardlink_path"
+validate_receipt "$fixtures/valid-local-pass.json" "$expected_head" \
+  local-independent-pass "$resolver" "$expected_checks" \
+  "$expected_artifact_ref" "$artifact_hardlink_repository" \
+  "$expected_review_kind"
+ln "$artifact_hardlink_path" "$artifact_hardlink_repository/evidence-alias.md"
+if validate_receipt "$fixtures/valid-local-pass.json" "$expected_head" \
+  local-independent-pass "$resolver" "$expected_checks" \
+  "$expected_artifact_ref" "$artifact_hardlink_repository" \
+  "$expected_review_kind" >/dev/null 2>&1; then
+  echo 'review receipt accepted a hardlinked evidence artifact' >&2
+  exit 1
+fi
+
 for fixture in "$fixtures"/invalid-*.json; do
   name=${fixture##*/}; name=${name%.json}
   strongest=trusted-orchestrator
@@ -451,13 +470,18 @@ receipt_is_current() {
   repo=$1; reviewed=$2; work_id=$3; policy=$4
   git -C "$repo" merge-base --is-ancestor "$reviewed" HEAD || return 1
   neutral=$(jq -c '.independent_review.receipt_neutral_paths' "$policy")
-  if ! git -C "$repo" diff --name-only --no-renames -z "$reviewed" HEAD -- |
-    jq -Rse --arg prefix ".flow42/$work_id/" --argjson neutral "$neutral" '
+  diff_paths="$tmp/receipt-current-paths.nul"
+  if ! git -C "$repo" diff --name-only --no-renames -z \
+    "$reviewed" HEAD -- >"$diff_paths"; then
+    return 1
+  fi
+  if ! jq -Rse --arg prefix ".flow42/$work_id/" --argjson neutral "$neutral" '
       split("\u0000")[:-1] | all(.[];
         . as $path |
         (($path | startswith($prefix)) and
           (($path | ltrimstr($prefix)) as $leaf |
-            ($leaf | contains("/")) == false and ($neutral | index($leaf)) != null)))' >/dev/null; then
+            ($leaf | contains("/")) == false and ($neutral | index($leaf)) != null)))' \
+    <"$diff_paths" >/dev/null; then
     return 1
   fi
 
@@ -699,6 +723,46 @@ sed -f "$fixtures/neutral-includes-config.sed" "$root/core/risk-policy.json" \
 git -C "$repo" checkout -q config
 if receipt_is_current "$repo" "$reviewed" wi "$tmp/neutral-includes-config.json"; then
   echo 'receipt policy escaped the reviewed work-item path scope' >&2
+  exit 1
+fi
+
+git -C "$repo" checkout -q -b missing-tree-case "$reviewed"
+mkdir -p "$repo/missing-tree"
+printf 'unreadable tree\n' >"$repo/missing-tree/product.txt"
+git -C "$repo" add . && git -C "$repo" commit -qm missing-tree
+missing_tree=$(git -C "$repo" rev-parse 'HEAD:missing-tree')
+missing_tree_dir=$(printf '%s\n' "$missing_tree" | cut -c 1-2)
+missing_tree_leaf=$(printf '%s\n' "$missing_tree" | cut -c 3-)
+missing_tree_object="$repo/.git/objects/$missing_tree_dir/$missing_tree_leaf"
+test -f "$missing_tree_object" && test ! -L "$missing_tree_object"
+unlink "$missing_tree_object"
+
+git -C "$repo" merge-base --is-ancestor "$reviewed" HEAD || {
+  echo 'missing-tree producer fixture lost reviewed-head ancestry' >&2
+  exit 1
+}
+if git -C "$repo" diff --name-only --no-renames -z "$reviewed" HEAD -- \
+  >"$tmp/missing-tree.raw" 2>"$tmp/missing-tree.raw.log"; then
+  echo 'missing-tree producer fixture did not make raw git diff fail' >&2
+  exit 1
+fi
+neutral=$(jq -c '.independent_review.receipt_neutral_paths' \
+  "$root/core/risk-policy.json")
+if ! git -C "$repo" diff --name-only --no-renames -z "$reviewed" HEAD -- \
+  2>/dev/null |
+  jq -Rse --arg prefix '.flow42/wi/' --argjson neutral "$neutral" '
+    split("\u0000")[:-1] | all(.[];
+      . as $path |
+      (($path | startswith($prefix)) and
+        (($path | ltrimstr($prefix)) as $leaf |
+          ($leaf | contains("/")) == false and ($neutral | index($leaf)) != null)))' \
+    >/dev/null; then
+  echo 'missing-tree fixture did not reproduce the old POSIX pipeline status' >&2
+  exit 1
+fi
+if receipt_is_current "$repo" "$reviewed" wi "$root/core/risk-policy.json" \
+  2>"$tmp/missing-tree.receipt.log"; then
+  echo 'receipt remained current after its diff producer lost a required tree' >&2
   exit 1
 fi
 

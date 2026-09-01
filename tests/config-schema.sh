@@ -12,7 +12,9 @@ jq -e '.schema_version == 1 and .unknown_fields == "block" and .extra_gates == "
 jq -e '.fields.base_branch.validation == "git-check-ref-format---branch" and
   .command_policy.fail_closed == true and
   .command_policy.authority_bearing_executables == ["git", "gh", "glab", "terraform"] and
+  .command_policy.authority_bearing_executable_positions == "any" and
   .command_policy.blocked_launcher_executables == ["xcrun"] and
+  .command_policy.blocked_launcher_executables_exhaustive == false and
   .command_policy.read_only_control_cli_allowlist == [] and
   (.command_policy.token_pattern | type == "string" and length > 0) and
   (.command_policy.shell_evaluation_prefixes | type == "array" and length > 0) and
@@ -76,17 +78,22 @@ validate_command() {
   canonical=$(printf '%s\n' "$tokens" | awk -v first="$first" 'NR == 1 {$0=first} {if (NR > 1) printf "\t"; printf "%s", $0} END {print ""}')
 
   if jq -e --arg executable "$first" \
-    '.command_policy.authority_bearing_executables | index($executable) != null' \
-    "$schema" >/dev/null; then
-    fail CONFIG-COMMAND-CONTROL-CLI
-    return
-  fi
-  if jq -e --arg executable "$first" \
     '.command_policy.blocked_launcher_executables | index($executable) != null' \
     "$schema" >/dev/null; then
     fail CONFIG-COMMAND-LAUNCHER
     return
   fi
+  while IFS= read -r token; do
+    executable=${token##*/}
+    if jq -e --arg executable "$executable" \
+      '.command_policy.authority_bearing_executables | index($executable) != null' \
+      "$schema" >/dev/null; then
+      fail CONFIG-COMMAND-CONTROL-CLI
+      return
+    fi
+  done <<EOF
+$tokens
+EOF
 
   forbidden_pattern=$(jq -r '.command_policy.forbidden_token_pattern' "$schema")
   if printf '%s\n' "$tokens" | grep -Eq "$forbidden_pattern"; then
@@ -107,6 +114,7 @@ EOF
 
 validate_config() {
   file=$1
+  command_root=${2:-$root}
   validate_yaml_form "$file" || return
   version=$(scalar "$file" schema_version)
   test "$version" = "$(jq -r '.schema_version' "$schema")" || { fail CONFIG-SCHEMA-VERSION; return; }
@@ -188,7 +196,7 @@ EOF
     case "$token" in
       ''|auto|-*) continue ;;
       */*)
-        if ! test -e "$root/$token"; then
+        if ! test -e "$command_root/$token"; then
           command_path_failed=1
           break
         fi
@@ -262,42 +270,52 @@ for fixture in retired-gate missing-canonical-gate unknown-field scalar-command 
   grep -Fxq "$expected" "$log"
 done
 
+control_cli_case=0
+for control_cli_argv in \
+  '[arch, -arm64, git, push, origin, HEAD:main]' \
+  '[stdbuf, -o0, gh, pr, merge]' \
+  '[/usr/bin/arch, -x86_64, /usr/bin/git, push]'; do
+  control_cli_case=$((control_cli_case + 1))
+  control_cli_config="$tmp/control-cli-any-position-$control_cli_case.yml"
+  sed "s#^  lint: .*\$#  lint: $control_cli_argv#" "$fixtures/valid.yml" \
+    >"$control_cli_config"
+  control_cli_log="$tmp/control-cli-any-position-$control_cli_case.log"
+  control_cli_rc=0
+  (set +e; validate_config "$control_cli_config") >"$control_cli_log" 2>&1 ||
+    control_cli_rc=$?
+  if test "$control_cli_rc" -eq 0; then
+    echo "CONFIG-CONTROL-CLI-POSITION-ESCAPE: accepted $control_cli_argv" >&2
+    exit 1
+  fi
+  test "$(grep -c '^CONFIG-' "$control_cli_log")" -eq 1
+  grep -Fxq CONFIG-COMMAND-CONTROL-CLI "$control_cli_log"
+done
+
+validate_command '[shellcheck, scripts/git-helper.sh]'
+validate_command '[npm, run, lint:git]'
+configured_lint=$(section_pairs "$root/.flow42/config.yml" commands |
+  awk -F "$(printf '\t')" '$1 == "lint" {print $2; exit}')
+validate_command "$configured_lint"
+
+residual_root="$tmp/residual-command"
+mkdir -p "$residual_root/tools"
+printf '%s\n' '#!/bin/sh' 'exec git "$@"' >"$residual_root/tools/push.sh"
+residual_config="$tmp/residual-command.yml"
+sed -e 's#^  lint: .*$#  lint: [sh, tools/push.sh]#' \
+  -e 's#^  test: .*$#  test: []#' "$fixtures/valid.yml" >"$residual_config"
+validate_config "$residual_config" "$residual_root" || {
+  echo CONFIG-REPOSITORY-SCRIPT-RESIDUAL-NOT-ACCEPTED >&2
+  exit 1
+}
+
 xcrun_config="$tmp/xcrun-git-push.yml"
 sed 's#^  lint: .*$#  lint: [xcrun, git, push]#' "$fixtures/valid.yml" >"$xcrun_config"
 xcrun_log="$tmp/xcrun-git-push.log"
 xcrun_validation_rc=0
 (set +e; validate_config "$xcrun_config") >"$xcrun_log" 2>&1 || xcrun_validation_rc=$?
 
-xcrun_authority_proof=unavailable
-if command -v xcrun >/dev/null 2>&1 && xcrun --find git >/dev/null 2>&1; then
-  xcrun_repo="$tmp/xcrun-git-repo"
-  xcrun_remote="$tmp/xcrun-git-remote.git"
-  git init -q "$xcrun_repo"
-  git init -q --bare "$xcrun_remote"
-  git -C "$xcrun_repo" config user.name 'Flow42 xcrun fixture'
-  git -C "$xcrun_repo" config user.email 'xcrun-fixture@example.invalid'
-  git -C "$xcrun_repo" checkout -qb main
-  printf '%s\n' fixture >"$xcrun_repo/file.txt"
-  git -C "$xcrun_repo" add file.txt
-  git -C "$xcrun_repo" commit -qm baseline
-  git -C "$xcrun_repo" remote add origin "$xcrun_remote"
-  git -C "$xcrun_repo" config push.default current
-  if git --git-dir="$xcrun_remote" show-ref --verify --quiet refs/heads/main; then
-    echo CONFIG-XCRUN-PRECONDITION >&2
-    exit 1
-  fi
-  (cd "$xcrun_repo" && xcrun git push >/dev/null 2>&1)
-  git --git-dir="$xcrun_remote" show-ref --verify --quiet refs/heads/main || {
-    echo CONFIG-XCRUN-GIT-AUTHORITY-NOT-REACHED >&2
-    exit 1
-  }
-  xcrun_authority_proof=temporary-remote-ref-created
-else
-  echo 'SKIP xcrun-git-authority: xcrun with git is unavailable'
-fi
-
 if test "$xcrun_validation_rc" -eq 0; then
-  echo "CONFIG-XCRUN-LAUNCHER-ESCAPE: accepted [xcrun,git,push]; proof=$xcrun_authority_proof" >&2
+  echo 'CONFIG-XCRUN-LAUNCHER-ESCAPE: accepted [xcrun,git,push]' >&2
   exit 1
 fi
 test "$(grep -c '^CONFIG-' "$xcrun_log")" -eq 1

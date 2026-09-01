@@ -677,3 +677,58 @@ Coordinator self-review found no concrete security, correctness, performance,
 or maintainability defect in the simplified diff. This is not an independent
 review receipt. The work item therefore remains blocked pending resolution or
 explicit disposition of the non-update findings and a fresh independent review.
+
+## 2026-09-01 architecture promise reconciliation
+
+The user explicitly resumed reversible local work and constrained the repair:
+narrow guarantees #1-#3 to reality and Orca's isolation boundary; fix the
+receipt producer error and worker-staging contradiction; keep the hardlink
+follow-up small; review the independent-review requirement; do not recursively
+snapshot external Git config/object stores or grow another launcher denylist.
+
+Claude Opus/high performed the read-only claims adjudication at baseline
+`b71743ae64923142928be920d5ba4c71452aeeb6` in Orca task
+`task_fc6b5967bd16` / dispatch `ctx_23b264376025`. Its recommended boundary was
+implemented by three supervised Codex `gpt-5.6-sol`/xhigh tasks:
+`task_819979b284fa` fixed the receipt diff producer,
+`task_ccacd8bb7cb4` added the bounded hardlink predicate, and
+`task_85c8f2c16fb7` reconciled command, ownership, lifecycle, and staging claims.
+Workers neither staged nor committed; the coordinator released each settled
+dispatch after processing its result.
+
+Observed red evidence included the old `git diff --name-only -z | jq` pipeline
+returning the consumer status after a required tree object was removed, named
+control CLIs surviving in later argv positions, missing external Git residual
+language, and the threat model's worker-staging exception. The integrated green
+checks are `tests/config-schema.sh`, `tests/ownership.sh`,
+`tests/review-receipt.sh`, `tests/contracts.sh`, `tests/security.sh`,
+`tests/conformance.sh`, `scripts/validate.sh`, `scripts/check-parity.sh`,
+ShellCheck, and `git diff --check`.
+
+The resulting claims are deliberately limited. The command predicate rejects
+named control CLIs in any position but accepts an unnamed repository script that
+invokes one. External included configuration is value/origin/scope-bound, while
+equal-value file-identity substitution remains visible as an accepted residual.
+External alternate declarations are bound, while their object-store contents
+are not; a separately bound ref exposes the integration-relevant change. Review
+evidence with more than one observed link is rejected, without claiming atomic
+identity against a concurrent same-user writer. Orca, not Flow42, owns process
+identity, worker settlement, and cleanup.
+
+Primary-source research supporting the disposition:
+
+- Git configuration includes insert another file's contents and retain origin
+  semantics: <https://git-scm.com/docs/git-config/2.44.3.html>.
+- Git alternates allow an object store to borrow objects from another object
+  store: <https://git-scm.com/docs/gitrepository-layout>.
+- POSIX pipeline status without `!` is the last command's status, explaining why
+  the old producer failure could be hidden by successful `jq`:
+  <https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html>.
+- NIST SSDF PW.7 recommends defined code-review processes and recording and
+  triaging discovered issues. This supports a risk-selected independent review
+  gate, not an unlimited correctness guarantee:
+  <https://tsapps.nist.gov/publication/get_pdf.cfm?pub_id=934124>.
+
+This implementation evidence is coordinator evidence, not the required fresh
+exact-head correctness or security receipt. No remote CI, authenticated Forge
+action, live plugin mutation, release, or deployment is claimed.

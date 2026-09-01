@@ -55,7 +55,12 @@ Derive `.flow42/<work-id>/evidence.md` from the canonical repository/work
 identity; never hash a separately supplied path. Require exactly one ordered
 literal `<!-- flow42-review-section:<section-id>:begin -->` / `...:end -->`
 marker pair and hash the LF-terminated bytes strictly between those lines.
-Reject links, invalid IDs, duplicate/missing/reordered markers, and traversal.
+Reject symbolic links, invalid IDs, duplicate/missing/reordered markers, and
+traversal, and observe a link count of one. Multiply linked evidence files are
+rejected when observed, but that predicate and the extracted digest are
+point-in-time observations rather than an atomic file-identity guarantee across
+extraction, hashing, resolution, and acceptance. A concurrent same-user
+replacement or mutation after either observation remains a disclosed residual.
 Missing, unavailable, self-asserted, non-distinct, unauthenticated strong-issuer,
 or mismatched results fail closed.
 Review the diff against the current artifacts and acceptance criteria. Run

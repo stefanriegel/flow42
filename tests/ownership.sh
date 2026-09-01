@@ -468,14 +468,33 @@ validate_contract() {
     printf '%s\n' 'OWNERSHIP-COMPLETE-GIT-ADMIN' >&2
     return 1
   fi
+  if ! tr '\n' ' ' <"$contract" |
+    grep -Fq 'by value and origin path only'; then
+    printf '%s\n' 'OWNERSHIP-EXTERNAL-GIT-RESIDUALS' >&2
+    return 1
+  fi
+  if ! tr '\n' ' ' <"$contract" |
+    grep -Fq 'does not resolve or snapshot an external object store'; then
+    printf '%s\n' 'OWNERSHIP-EXTERNAL-GIT-RESIDUALS' >&2
+    return 1
+  fi
+  grep -Fq 'does not govern resource lifecycle' "$contract" || {
+    printf '%s\n' 'OWNERSHIP-RESOURCE-LIFECYCLE-SCOPE' >&2
+    return 1
+  }
   if ! grep -Fq 'exactly one NUL-terminated byte record' "$contract" ||
     ! grep -Fq 'invalid UTF-8' "$contract" ||
     ! grep -Fq 'trailing-newline path must fail closed' "$contract"; then
     printf '%s\n' 'OWNERSHIP-EXACT-CONFIG-PATH' >&2
     return 1
   fi
-  if ! grep -Fq 'symlink, or multiply linked regular file' "$contract" ||
-    ! grep -Fq 'partial archive or hash pipeline' "$contract"; then
+  if ! tr '\n' ' ' <"$contract" |
+    grep -Fq 'symlink, or multiply linked regular file'; then
+    printf '%s\n' 'OWNERSHIP-ADMIN-PRODUCER-LINKS' >&2
+    return 1
+  fi
+  if ! tr '\n' ' ' <"$contract" |
+    grep -Fq 'partial archive or hash pipeline'; then
     printf '%s\n' 'OWNERSHIP-ADMIN-PRODUCER-LINKS' >&2
     return 1
   fi
@@ -718,7 +737,54 @@ git -C "$admin_repo" cat-file -e 'HEAD^{commit}' ||
 admin_snapshot "$admin_repo" "$tmp/admin-after-alternates"
 cmp -s "$tmp/admin-before-alternates" "$tmp/admin-after-alternates" &&
   fail OWNERSHIP-ADMIN-ALTERNATES-UNDETECTED
+
+# External alternate contents are intentionally outside the snapshot. A new
+# object is inert until a separately bound ref, HEAD, index, or worktree surface
+# references it.
+admin_snapshot "$admin_repo" "$tmp/admin-before-external-alternate-object"
+external_object=$(printf '%s\n' alternate-only-object |
+  git --git-dir="$admin_remote" hash-object -w --stdin)
+git -C "$admin_repo" cat-file -e "$external_object" ||
+  fail OWNERSHIP-EXTERNAL-ALTERNATE-OBJECT-NOT-READABLE
+admin_snapshot "$admin_repo" "$tmp/admin-after-external-alternate-object"
+cmp -s "$tmp/admin-before-external-alternate-object" \
+  "$tmp/admin-after-external-alternate-object" ||
+  fail OWNERSHIP-EXTERNAL-ALTERNATE-OBJECT-UNEXPECTEDLY-BOUND
+git -C "$admin_repo" update-ref refs/flow42/external-alternate "$external_object"
+admin_snapshot "$admin_repo" "$tmp/admin-after-external-alternate-ref"
+cmp -s "$tmp/admin-after-external-alternate-object" \
+  "$tmp/admin-after-external-alternate-ref" &&
+  fail OWNERSHIP-EXTERNAL-ALTERNATE-REF-UNDETECTED
+git -C "$admin_repo" update-ref -d refs/flow42/external-alternate
 find "$admin_alternates" -delete
+
+external_include="$tmp/external-include.config"
+printf '%s\n' '[flow42]' '  claim = baseline' >"$external_include"
+git -C "$admin_repo" config --add include.path "$external_include"
+test "$(git -C "$admin_repo" config --get flow42.claim)" = baseline ||
+  fail OWNERSHIP-EXTERNAL-INCLUDE-FIXTURE-NOT-EFFECTIVE
+admin_snapshot "$admin_repo" "$tmp/admin-before-external-include-value"
+printf '%s\n' '[flow42]' '  claim = changed' >"$external_include"
+test "$(git -C "$admin_repo" config --get flow42.claim)" = changed ||
+  fail OWNERSHIP-EXTERNAL-INCLUDE-VALUE-NOT-EFFECTIVE
+admin_snapshot "$admin_repo" "$tmp/admin-after-external-include-value"
+cmp -s "$tmp/admin-before-external-include-value" \
+  "$tmp/admin-after-external-include-value" &&
+  fail OWNERSHIP-EXTERNAL-INCLUDE-VALUE-UNDETECTED
+
+printf '%s\n' '[flow42]' '  claim = baseline' >"$external_include"
+admin_snapshot "$admin_repo" "$tmp/admin-before-external-include-link"
+printf '%s\n' '[flow42]' '  claim = baseline' >"$tmp/external-include-target"
+delete_paths "$external_include"
+ln -s "$tmp/external-include-target" "$external_include"
+test -L "$external_include" ||
+  fail OWNERSHIP-EXTERNAL-INCLUDE-LINK-FIXTURE-NOT-A-LINK
+admin_snapshot "$admin_repo" "$tmp/admin-after-external-include-link"
+cmp -s "$tmp/admin-before-external-include-link" \
+  "$tmp/admin-after-external-include-link" ||
+  fail OWNERSHIP-EXTERNAL-INCLUDE-EQUAL-VALUE-LINK-UNEXPECTEDLY-BOUND
+git -C "$admin_repo" config --unset-all include.path
+delete_paths "$external_include" "$tmp/external-include-target"
 
 external_excludes="$tmp/external-ignore"
 : >"$external_excludes"

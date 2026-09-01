@@ -34,17 +34,23 @@ substitution, or concatenated shell strings. Pass `--` before user-controlled
 positional values when supported. Validate work IDs, branches, paths, URLs, and
 Forge identifiers against the narrow grammar required by the operation.
 Schema validation rejects empty or whitespace-ambiguous tokens, shell syntax,
-known destructive or wrapper-obscured commands, and every path-qualified or bare
-`git`, `gh`, `glab`, or `terraform` executable. These authority-bearing control
-CLIs remain forbidden unless a future shared explicit allowlist can prove a
-specific argv is read-only; the current allowlist is empty and unknown forms
-fail closed. Safe direct script argv such as `sh tests/conformance.sh` remains
-distinct from shell evaluation.
+known destructive command prefixes, and any token equal to a bare or
+path-qualified `git`, `gh`, `glab`, or `terraform` executable in any argv
+position, so a wrapper cannot reach an authority-bearing control CLI it names.
+These control CLIs remain forbidden unless a future shared explicit allowlist
+can prove a specific argv is read-only; the current allowlist is empty and
+no named control-CLI token is allowed by exception. Safe direct script argv such as
+`sh tests/conformance.sh` remains distinct from shell evaluation.
 
-This syntactic predicate is not a semantic sandbox for an arbitrary repository
-script or executable. Configured project tools run only inside the normal worker
-capability and ownership boundary, with no implicit Git-administration, Forge,
-infrastructure, deployment, publish, or irreversible-action authority.
+This predicate is a naming check, not a semantic sandbox. It cannot see a
+control CLI reached through an unnamed path: a repository script, build runner,
+copied or renamed binary, or launcher that resolves the tool itself. The
+blocked-launcher list is illustrative, not exhaustive, and Flow42 does not
+claim to enumerate every wrapper. Configured project tools therefore run only
+inside the normal worker capability and ownership boundary, with no implicit
+Git-administration, Forge, infrastructure, deployment, publish, or
+irreversible-action authority. That boundary, not the argv predicate, is the
+control.
 
 Redact URL userinfo and query strings before persistence. Never print environment
 variables, credential files, CLI auth output containing tokens, or raw remotes.
@@ -72,12 +78,19 @@ purpose, exact canonical ordered checks, and expected persisted artifact
 reference and exact evidence-section byte digest before accepting a receipt.
 Derive the evidence file from the canonical repository/work identity, extract
 bytes only between one ordered pair of literal section marker lines, and reject
-links or caller-selected substitute files before accepting a receipt;
+symbolic links or caller-selected substitute files before accepting a receipt;
 the check array must contain every policy minimum for that purpose. Resolve all
 three issuer kinds independently. The local fallback is explicitly lower-tier,
 never impersonates provider authentication, and is accepted only when the
 resolver observes a distinct non-implementing local session and its real UTC
 calendar time.
+
+The extractor requires a regular non-symlink evidence path and observes a link
+count of one. Multiply linked evidence files are rejected when observed, but the
+predicate and extracted digest are point-in-time observations. Flow42 does not
+claim atomic file identity across extraction, hashing, receipt resolution, and
+acceptance; a concurrent same-user replacement or mutation after either
+observation remains a disclosed residual.
 
 The receipt binds `reviewed_head` and remains current only when it is ancestral
 to `HEAD`. Inspect the NUL-safe diff with rename detection disabled so a rename
@@ -105,18 +118,22 @@ Record allowed paths before dispatch. Tell workers not to perform Forge writes;
 the coordinator owns those operations. Before dispatch and integration apply
 the NUL-delimited snapshots, rename-endpoint checks, literal pathspec rules, and
 pre-existing dirty-content identity procedure in `core/OWNERSHIP.md`. Any
-out-of-scope path, undeclared dirty-path overlap, recursive delegation,
-untracked process, or unapproved external effect blocks integration while
-preserving the worktree.
+out-of-scope path, undeclared dirty-path overlap, recursive delegation, or
+unapproved external effect blocks integration while preserving the worktree.
 
 Treat the complete common and worktree Git directories plus effective external
 hooks, ignore, and attributes paths as coordinator-owned administrative state.
-Snapshot every entry without exclusions so refs, reflogs, pseudo-refs, recovery
-state, object storage, config, hooks, behavior controls, HEAD, and index cannot
-hide behind a finite filename list. Reject lossy configured-path decoding,
-links, unreadable state, and partial producer output. A worker commit, staging
-operation, or any other Git-admin change is forbidden even when all changed
-working-tree paths are otherwise owned.
+Snapshot every entry within those declared surfaces without exclusions so refs,
+reflogs, pseudo-refs, recovery state, this repository's object storage, config,
+hooks, behavior controls, `HEAD`, and index remain bound. File-identity binding
+covers the two Git directories and the enumerated external behavior paths
+(`core.hooksPath`, `core.excludesFile`, and `core.attributesFile`). Configuration
+reached through `include` or `includeIf` outside those trees is bound by
+effective value and origin, not by file identity. External alternate object
+stores are declaration-bound only. Reject lossy configured-path decoding, links
+within the bound surfaces, unreadable state, and partial producer output. A
+worker commit, staging operation, or any other Git-admin change is forbidden
+even when all changed working-tree paths are otherwise owned.
 
 Prefer the least-capable suitable worker profile. Do not print or pass credentials
 to a worker. If the runtime provides capability isolation, use it; otherwise keep
@@ -125,7 +142,11 @@ sensitive or Forge-writing work with the coordinator.
 When Orca is selected and ready, Orca owns worktree creation, terminal and
 process identity, worker settlement, and cleanup. Flow42 supplies scope,
 ownership, checks, and integration policy; it does not recreate Orca's resource
-lifecycle.
+lifecycle. Flow42 therefore makes no independent process-identity claim;
+settlement is observed only through Orca's Run, Task, Dispatch, and
+`worker_done` records. In the native path Flow42 does not enumerate processes.
+`core/OWNERSHIP.md` governs path, content, and Git-administration decisions in
+both paths; it does not govern resource lifecycle.
 
 ## Release provenance
 
