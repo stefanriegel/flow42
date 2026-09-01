@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "actions": [
+    "accept-review",
+    "custom-api-client",
+    "delete-worker-changes",
+    "deploy",
+    "discard-changes",
+    "fabricate-approval",
+    "force-push",
+    "forge-write",
+    "integrate",
+    "invent-history",
+    "irreversible-action",
+    "merge",
+    "publish",
+    "ready-for-human",
+    "recursive-delegation",
+    "reset-state",
+    "resume",
+    "self-attest",
+    "shell-evaluation",
+    "store-token",
+    "terminal-create",
+    "transition-pr-ready",
+    "worker-dispatch"
+  ]
+}

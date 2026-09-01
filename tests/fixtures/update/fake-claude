@@ -43,6 +43,9 @@ sync_settings_scope() {
 
 fail_phase=${FAKE_FAIL_PHASE:-before}
 command_line=$*
+if test -n "${FAKE_COMMAND_LOG:-}"; then
+  printf '%s\n' "$command_line" >>"$FAKE_COMMAND_LOG"
+fi
 if test -n "${FAKE_FAIL_COMMAND:-}" && \
    test "$command_line" = "$FAKE_FAIL_COMMAND" && \
    test "$fail_phase" = before && \
@@ -106,7 +109,7 @@ case "$command_key" in
       exit 1
     fi
     case "$marketplace_source" in
-      https://*\#*)
+      *://*\#*|git@*\#*)
         source_ref=${marketplace_source##*#}
         source_url=${marketplace_source%#*}
         source_object=$(jq -cn --arg url "$source_url" --arg ref "$source_ref" \

@@ -7,9 +7,11 @@
 5. `build` captures baseline or red evidence and implements isolated slices.
 6. `verify` independently checks acceptance, security, and repository gates.
 7. `pr` idempotently opens or updates a PR/MR and waits for a current independent
-   review receipt plus green CI. The receipt binds `reviewed_head`; commits that
-   change exact bookkeeping leaves or only the eight permitted lifecycle/CI
-   fields in status are receipt-neutral. Renames, nested lookalikes, risk changes,
+   review receipt plus green CI. The receipt binds repository, work ID, baseline
+   and reviewed heads, scope/diff digests, subject, reviewer/checks, and artifact
+   digest; commits that change exact bookkeeping leaves or the permitted
+   lifecycle/CI fields plus a grammar-valid change-request URL in status are
+   receipt-neutral. Renames, nested lookalikes, risk changes,
    and any other changed path require fresh review.
 8. `maintain` converts relevant CI and review signals into deduplicated work.
 
@@ -17,8 +19,10 @@
 history, confirmations, blockers, Git ownership, and Forge state after interruption.
 
 `any-non-final` is a structured pseudo-state built from `stages` and
-`side_states`, excluding final states and `blocked` so it cannot create a
-blocked-to-blocked self-loop. `recorded-resume-stage` resolves from
+`side_states` and excludes only final states, allowing blocked work to be
+abandoned or superseded. `any-unblocked-non-final` also excludes `blocked` and
+is the only pseudo-source for entering `blocked`, preventing a self-loop.
+`recorded-resume-stage` resolves from
 `status.resume_stage` only when it is a non-final lifecycle stage and equals the
 actual `from` stage of the latest history transition into `blocked`.
 Repair transitions return blocking verification findings, failing CI checks, and

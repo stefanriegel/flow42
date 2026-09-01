@@ -73,6 +73,12 @@ for agent in "$root"/agents/*.md; do
     fail "agent bundle-root resolution missing: ${agent#"$root/"}"
   grep -Fq 'not the working directory' "$agent" ||
     fail "agent working-directory rejection missing: ${agent#"$root/"}"
+  grep -Fq 'delivery is not authentication' "$agent" ||
+    fail "agent delivery/authentication distinction missing: ${agent#"$root/"}"
+  grep -Fq 'Flow42 cannot demote them' "$agent" ||
+    fail "agent host-precedence residual missing: ${agent#"$root/"}"
+  grep -Fq 'an ambiguous source blocks' "$agent" ||
+    fail "agent ambiguous-source rejection missing: ${agent#"$root/"}"
   while IFS= read -r authority; do
     grep -Fq "$authority" "$agent" || fail "agent authority missing $authority: ${agent#"$root/"}"
   done <"$tmp/authorities"

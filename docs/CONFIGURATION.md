@@ -33,19 +33,23 @@ are required. A command token that looks like a repository path must exist,
 unless the value is `[auto]`. `auto` values must be resolved into work-item
 evidence before build. Configuration does not require an approval artifact or
 Forge interaction. Never execute command strings through a shell; each array
-element is one argument. The command policy rejects shell evaluation,
-substitution and operators, destructive Git/filesystem commands, Forge writes,
-and deploy or publish prefixes. For recognized control CLIs, validation fails
-closed when global options prevent the action from being normalized. This
-syntactic policy does not make an arbitrary repository script trustworthy;
-configured project tools still run inside the normal worker, ownership, and
-capability boundary.
+element is one argument, and empty or whitespace-bearing tokens are rejected as
+ambiguous. The command policy rejects shell evaluation, substitution and
+operators, destructive or wrapper-obscured commands, and every bare or
+path-qualified `git`, `gh`, `glab`, or `terraform` executable. The schema's
+shared read-only control-CLI allowlist is intentionally empty; adding an
+exception requires a new executable proof that the exact argv cannot mutate
+Git, Forge, or infrastructure state. This syntactic policy does not make an
+arbitrary repository script trustworthy or semantically sandboxed; configured
+project tools still run inside the normal worker, ownership, and capability
+boundary.
 
 The accepted YAML subset is deliberate: plain unquoted single-line scalars,
 two-space-indented mappings, inline comma-separated plain token arrays, and
 empty-inline or two-space block lists for paths and gates. Aliases, anchors,
 tags, merge keys, flow mappings, quoted/multiline scalars, and other YAML forms
 are rejected rather than interpreted differently by different harnesses.
+Comments are also rejected by this deliberately data-only subset.
 Duplicate mapping keys are also rejected before semantic validation.
 
 Model profiles are capability floors, not model allowlists. The orchestrator records the

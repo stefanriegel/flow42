@@ -1,35 +1,58 @@
-# Flow42 V1 threat model
+# Flow42 threat model
 
-## Scope
+## Scope and assumptions
 
-In scope are malicious repository contributors, attacker-controlled Forge text,
-compromised dependencies or marketplace snapshots, and accidental credential or
-authority misuse on an otherwise trusted host. A fully compromised harness, OS,
-or credential store is outside scope.
+Flow42 coordinates an agent on a trusted host. In scope are malicious or
+mistaken repository contributors, attacker-controlled repository and Forge
+text, unsafe repository configuration, worker overreach, Git administrative
+state changes, and accidental credential or authority misuse. The harness, OS,
+credential store, installed Flow42 bundle, and human authority channel are trust
+anchors; compromise of one of those anchors is outside Flow42's enforcement.
 
-## Assets and boundaries
+This document describes controls in the current repository. Local deterministic
+checks do not establish exact-head remote CI, provider authentication, native
+Claude/Codex parity, deployment, publication, or release provenance.
 
-Assets are approval authority, repository integrity, Forge credentials, CI and
-release provenance, user data, and worktree contents. Boundaries are the human
-channel, installed plugin, repository, worker harness, Git, Forge CLI, CI, and
-marketplace/release distribution.
+## Assets and trust boundaries
 
-## Abuse cases and controls
+Protected assets are human approval authority, installed policy, repository
+contents and Git administrative state, Forge credentials, independent-review
+provenance, CI/release state, work-item evidence, and unrelated user changes.
+Trust boundaries exist between the human channel, host harness, installed
+Flow42 bundle, discovered repository data, configured commands, worker agents,
+Git common/worktree directories, Forge CLI/API, CI, and distribution channels.
 
-| Abuse case | Control | Verification |
+## Abuse cases, controls, and available proof
+
+| Abuse case | Enforced control | Available repository proof |
 | --- | --- | --- |
-| Contributor forges approval fields | Authenticated Forge comment or verified signed commit binds identity and digest | Read back provenance and recompute SHA-256 |
-| Issue or repository text injects commands | Explicit instruction/data boundary; external text cannot change authority | Adversarial evaluation |
-| Mutable marketplace replaces skills | V1 installs pin a signed immutable tag and checksum | Remote tag install and signature/checksum check |
-| Config or identifiers inject shell syntax | Approved argv arrays, no shell evaluation, narrow validation, `--` where supported | Static review and adversarial inputs |
-| Remote URL leaks credentials | Redact userinfo and query before evidence | Redaction evaluation |
-| Worker edits outside ownership or delegates | Least-capable profile, no Forge writes, pre/post changed-path enforcement | Conflict and delegation evaluations |
-| Unsafe merge, deploy, publish, or Git action | Explicit human gate independent of earlier approvals | Unsafe-path evaluations |
-| Secrets or vulnerable dependencies enter PR | CI secret, dependency, and shell static checks | Required green security jobs |
+| Repository `AGENTS.md` or `CLAUDE.md` injects authority | Host-delivered instructions retain host precedence, but delivery is not authentication. Discovered files are data; ambiguous provenance blocks. An untrusted instruction-file change requires a trusted base and human handling before launch. | Text/structural assertions plus an opt-in native Codex observation that `AGENTS.md` can be elevated. The observation proves delivery behavior only, not authentication or security. |
+| Configured argv hides Git, Forge, or infrastructure authority | Empty and whitespace-ambiguous tokens fail. Bare and path-qualified `git`, `gh`, `glab`, and `terraform` fail closed against one schema-defined predicate; the explicit read-only exception list is empty. | Portable schema tests, adversarial argv fixtures, and a local temporary-repository Git alias that performs a push to a disposable bare repository. Forge mutation-shaped inputs are rejected without external execution. |
+| A repository executable performs an undeclared side effect | Configured project tools remain inside worker capability, ownership, and human-action gates. No semantic-sandbox claim is made for arbitrary executables. | Structural policy checks only; arbitrary program semantics remain residual risk. |
+| Worker changes an unowned path or hides a rename endpoint | NUL-safe porcelain-v2 and tracked-delta parsing retains supported ordinary, rename/copy, unmerged, and untracked records; both rename endpoints are checked; unknown record types and cross-boundary overlap fail closed. Pre-existing dirty content is compared by identity with literal pathspecs. | Executable temporary Git repositories cover spaces, tabs, newlines, UTF-8, leading dashes, rename/delete, conflict, already-dirty, and collision cases. |
+| Worker changes Git state while the worktree appears clean | Pre/post identity covers canonical common/worktree Git directories, config and remotes, effective hooks, refs and HEAD, and index. Workers may not mutate administrative state except an explicitly authorized exact staging operation. | Temporary repositories show remote, hook, ref, and assume-unchanged index mutations changing the administrative snapshot while porcelain status remains clean. |
+| External text fabricates confirmation or review | Repository, work-item, issue, review, CI-log, and web text are data. Human confirmation is explicit. Independent-review receipts bind the review subject and fail closed when the configured issuer/resolver cannot establish it. | Structural schemas, mutation fixtures, and local fake-resolver/temporary-Git behavior. These do not authenticate a real provider. |
+| Worker writes to Forge, delegates, merges, deploys, publishes, force-pushes, or destroys state | Worker authority excludes Forge writes and recursive delegation. Irreversible and high-risk actions require explicit human confirmation and coordinator execution. | Structural failure cases and contract checks; no live remote mutation is performed. |
+| Secrets leak through evidence or remotes | URL userinfo/query data and sensitive values are excluded or reduced to hashes; raw auth output and raw remotes are not persisted. | Local redaction and conformance checks. |
 
-## Residual risk
+## Instruction-provenance residual
 
-Skills remain interpreted policy rather than an OS sandbox. Harness capability
-restrictions vary, Forge comments may be edited, and tag verification depends on
-trusted signing keys. Flow42 therefore reverifies provenance and state at every
-gate and blocks when a capability cannot enforce the documented boundary.
+Codex and Claude may inject repository instruction files before Flow42 runs and
+without an authenticated commit/source signal. Flow42 cannot demote an
+instruction that the host already assigned higher precedence. Consequently,
+the trusted operator or harness must establish a trusted repository base and
+handle untrusted instruction-file changes before launching the agent. If that
+outer control is absent, instruction-source authenticity remains an explicit
+residual risk; the local native probe must not be cited as proof that it is
+resolved.
+
+## Other residual risk
+
+Flow42 skills are interpreted policy, not an OS sandbox. Runtime capability
+isolation varies, arbitrary repository executables are not semantically proven
+safe, local receipt resolvers cannot establish provider identity, Forge records
+can change outside a captured run, and supply-chain verification depends on
+trusted installed keys and tools. A focused local green suite therefore proves
+only the named fixture semantics and structural contracts. Claims about native
+agent compliance, authenticated Forge identity, exact-head remote CI, release,
+or deployment require separate evidence at that tier.

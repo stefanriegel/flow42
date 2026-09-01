@@ -126,10 +126,81 @@
   ShellCheck, `sh -n`, `dash -n`, `git diff --check`, and focused execution under
   `sh`, `dash`, and `ksh` passed. No general agent runtime, remote CI, Forge,
   release, or deployment proof is inferred from these local checks.
+- 2026-09-01T07:32:29Z; second exact-head independent reviews; reviewed head
+  `82214519776a1a5a0b0aea38fa76faec3d2241ca` against baseline
+  `65a7910b9b2ec1d44aa5724b13a319633d69bcc3`; expected fresh correctness and
+  security reviewers to challenge the repaired controls from a clean tree;
+  actual both `/root/final_correctness_review` and
+  `/root/final_security_review` returned `BLOCKED` and confirmed clean
+  before/after state. Executable reproducers exposed Git-alias and generic
+  Forge API command-policy bypasses, verified-source substitution during Git
+  marketplace updates, unobserved remote/hooks Git-administration mutations,
+  receipt replay and unauthenticated claim substitution, and quoted duplicate
+  status keys. The reviewers also found the change-request receipt fixed point,
+  high-risk gate namespace drift, contradictory repository-instruction
+  provenance, and stale persisted threat-model claims. All prior focused and
+  whole-tree local checks remained green, demonstrating that those checks did
+  not cover these boundaries. This transition consumes review loop 2, the
+  configured final automatic repair loop; another blocking final review must
+  transition the item to `blocked` rather than start a third repair.
+- 2026-09-01T07:32:29Z; independent tool-less Opus 5 review; reviewed the same
+  exact baseline-to-head diff through the local Claude wrapper; expected a
+  cross-model challenge independent of repository tools; actual verdict
+  `BLOCKED`. Opus independently confirmed the Git-alias and generic Forge API
+  surfaces, found the blocked-to-abandoned/superseded lifecycle regression,
+  and identified missing executable receipt-contract mutation coverage plus
+  lower-severity documentation, update-composition, and rollback-no-op gaps.
+  Opus performed no repository or Forge mutation.
+- 2026-09-01T08:02:17Z; second and final automatic repair integration;
+  expected every HIGH/MEDIUM finding from both Codex reviews and the Opus
+  challenge to have an executable or explicitly tiered control; actual
+  configured argv now rejects all bare/path-qualified Git, GitHub CLI, GitLab
+  CLI, and Terraform commands plus empty/whitespace-ambiguous tokens. Temporary
+  Git proves why aliases are unsafe without performing an external mutation.
+  Ownership identity now includes effective configuration/remotes, hook path
+  and content, refs/reftable/pseudo-refs, HEAD, and index. Receipt validation
+  binds independently expected repository, work, baseline/head, scope/diff,
+  reviewer/check, subject, and artifact identities; it rejects cross-repository,
+  cross-work/scope replay and unsupported status YAML while allowing a validated
+  change-request link as neutral bookkeeping. Blocked work can be abandoned or
+  superseded without a blocked self-loop, and the high-risk gate is consistently
+  `high-risk-plan`.
+- 2026-09-01T08:02:17Z; update/provenance repair integration; expected exact
+  verified-source fidelity and honest instruction provenance; actual GitHub and
+  Git marketplace convergence retain the recorded repository/source kind and
+  verified tag, directory sources stop before candidate discovery and route to
+  `scripts/install-local`, and a pre-effect first-remove failure performs no
+  rollback install/update mutation. Composed preflight-plus-transaction cases
+  cover candidate mismatch, source readback, installed-version readback, and 18
+  mutation points in each of before/after-effect phases across three mutable
+  configurations. All 12 skill preludes now distinguish host-assigned precedence
+  from authentication. The native Codex observation confirms that an `AGENTS.md`
+  can be elevated, but is explicitly not authentication or a security proof;
+  the persisted threat model records trusted-base handling as an outer control
+  and residual risk.
+- 2026-09-01T08:02:17Z; coordinator adversarial integration review; dirty diff
+  digest `c377a593f20686233d83ea8b383345e166944d75b4e8764f330e19bf952e6b10`;
+  expected owner-green tests not to end review; actual inspection found and
+  repaired three additional seams: status canonicalization had erased
+  significant title whitespace, command substitution had hidden a trailing
+  empty argv element, and the Git-admin fixture did not directly mutate
+  `core.hooksPath`. New temporary-repository/fixture regressions reject all
+  three, and a nested GitLab merge-request URL remains valid neutral bookkeeping.
+- 2026-09-01T08:02:17Z; post-repair complete local matrix; expected all
+  available gates green at one snapshot; actual parity, validation,
+  conformance, contracts, intent, prelude, ownership, receipt, configuration,
+  lifecycle, update, release checksum, security, dependency, 12-check eval
+  index, eight structural case evals, ShellCheck, `sh -n`, `dash -n`, JSON
+  parsing, and `git diff --check` passed. Focused behavioral suites passed under
+  `sh`, `dash`, and `ksh`; the opt-in native Codex instruction-delivery
+  observation also passed. `gitleaks` is unavailable. No remote CI, Forge,
+  Claude-native parity, authenticated provider, release, deployment, or live
+  marketplace claim is inferred.
 
 ## Known gaps
 
-The first receipt-subject reviews are BLOCKED and remediation plus fresh review
-is pending. `gitleaks` is unavailable, so no gitleaks result is claimed. No
+The second receipt-subject reviews are BLOCKED, their final automatic repair
+loop is complete, and final exact-head reviews are pending. `gitleaks` is
+unavailable, so no gitleaks result is claimed. No
 remote CI, Forge, merge, release, deployment, or live normal-harness mutation
 proof has been run.

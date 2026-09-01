@@ -3,7 +3,11 @@
   "levels": ["low", "medium", "high", "critical"],
   "baseline_checks": ["secrets", "dependencies", "static-analysis"],
   "behavior_change_evidence": ["observed-red", "observed-green"],
-  "high_risk_gates": ["plan-approval", "independent-verification"],
+  "high_risk_gates": ["high-risk-plan", "independent-verification"],
+  "gate_mapping": {
+    "high-risk-plan": {"workflow_gate": "high-risk-plan", "configuration_gate": "high-risk-plan", "kind": "human-confirmation"},
+    "independent-verification": {"workflow_gate": "verification-passed", "kind": "technical-control"}
+  },
   "security_triggers": [
     "authentication",
     "permissions",
@@ -25,16 +29,43 @@
     "strongest_available_issuer_required": true,
     "local_fallback_tier": "lower",
     "fallback_when_no_distinct_forge_reviewer": "local-independent-pass-receipt",
+    "receipt_required_fields": ["schema_version", "issuer_kind", "issuer_receipt_ref", "repository_id", "work_id", "baseline_head", "reviewed_head", "scope_digest", "diff_digest", "review_subject", "reviewer_principal", "reviewer_role", "dispatch_or_session_ref", "implementer", "verdict", "checks", "artifact_ref", "artifact_digest", "recorded_at"],
+    "subject_derivation": {
+      "repository_id": "normalized-origin-remote",
+      "work_id": "exact-work-item-directory",
+      "baseline_head": "git-rev-parse-verify",
+      "reviewed_head": "git-rev-parse-verify",
+      "scope_digest": "sha256-canonical-ordered-reviewed-path-set",
+      "diff_digest": "sha256-nul-safe-no-renames-baseline-to-head-path-content-diff",
+      "review_subject": "caller-expected-subject",
+      "artifact_digest": "sha256-persisted-artifact-bytes"
+    },
     "receipt_neutral_paths": ["evidence.md", "decisions.md", "history.jsonl", "status.yml"],
-    "status_neutral_fields": ["stage", "state_revision", "updated_at", "blockers", "resume_stage", "ci_state", "next_actions", "forge_item"],
+    "status_neutral_fields": ["stage", "state_revision", "updated_at", "blockers", "resume_stage", "ci_state", "next_actions", "forge_item", "change_request"],
     "status_required_fields": ["schema_version", "work_id", "title", "work_type", "stage", "risk", "state_revision", "created_at", "updated_at", "review_loops", "blockers", "resume_stage", "forge_item", "change_request", "ci_state", "next_actions"],
+    "status_yaml_subset": {
+      "mapping": "top-level-scalars-and-inline-string-sequences",
+      "duplicate_keys": "reject",
+      "quoted_keys": "reject",
+      "unknown_keys": "reject",
+      "unsupported_constructs": "reject",
+      "canonicalization": {
+        "quoted_scalar": "unquote",
+        "plain_scalar": "preserve",
+        "inline_string_sequence": "remove-insignificant-whitespace",
+        "field_order": "status_required_fields",
+        "comparison": "canonical-key-value"
+      },
+      "required_fields": ["schema_version", "work_id", "title", "work_type", "stage", "risk", "state_revision", "created_at", "updated_at", "review_loops", "blockers", "resume_stage", "forge_item", "change_request", "ci_state", "next_actions"],
+      "change_request_pattern": "^$|^https://[^/?#[:space:]@]+/[^/?#[:space:]]+/[^/?#[:space:]]+(/[^/?#[:space:]]+)*/(pull/[1-9][0-9]*|-/merge_requests/[1-9][0-9]*)$"
+    },
     "issuer_resolution": {
       "fail_closed": true,
       "required_for": ["authenticated-forge", "trusted-orchestrator"],
       "resolver_must_be_independent": true,
       "resolver_result_schema_version": 1,
       "resolver_result_requirements": ["resolved", "authenticated", "resolver-independent"],
-      "binding_fields": ["issuer_kind", "issuer_receipt_ref", "reviewer_principal", "dispatch_or_session_ref", "reviewed_head", "verdict", "artifact_ref"]
+      "binding_fields": ["issuer_kind", "issuer_receipt_ref", "repository_id", "work_id", "baseline_head", "reviewed_head", "scope_digest", "diff_digest", "review_subject", "reviewer_principal", "reviewer_role", "dispatch_or_session_ref", "implementer", "verdict", "checks", "artifact_ref", "artifact_digest"]
     },
     "grants_human_approval": false
   },

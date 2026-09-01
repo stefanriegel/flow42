@@ -4,13 +4,13 @@ title: "Architecture hardening"
 work_type: "bugfix-refactor"
 stage: verifying
 risk: medium
-state_revision: 7
+state_revision: 9
 created_at: "2026-09-01T05:37:26Z"
-updated_at: "2026-09-01T07:15:18Z"
-review_loops: 1
+updated_at: "2026-09-01T08:02:17Z"
+review_loops: 2
 blockers: []
 resume_stage: ""
 forge_item: ""
 change_request: ""
 ci_state: unknown
-next_actions: [commit-fresh-review-subject,run-independent-correctness-and-security-review,record-current-receipt]
+next_actions: [commit-final-review-subject,run-final-exact-head-correctness-review,run-final-exact-head-security-review,apply-final-review-verdict]
