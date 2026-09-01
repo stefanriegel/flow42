@@ -1,0 +1,16 @@
+schema_version: 3
+work_id: ""
+title: ""
+work_type: ""
+stage: draft-intent
+risk: ""
+state_revision: 1
+created_at: ""
+updated_at: ""
+review_loops: 0
+blockers: []
+resume_stage: ""
+forge_item: ""
+orca_run: ""
+ci_state: unknown
+next_actions: [capture-intent]

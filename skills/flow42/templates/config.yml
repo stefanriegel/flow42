@@ -1,0 +1,21 @@
+schema_version: 3
+forge: auto
+base_branch: auto
+concurrency: 4
+worktree_parent: auto
+commands:
+  format: []
+  lint: []
+  typecheck: []
+  test: []
+  build: []
+protected_paths: []
+mandatory_gates:
+  - high-risk-plan
+  - irreversible-action
+  - merge
+  - deploy
+model_profiles:
+  frontier: {agent: auto, model: auto, effort: high}
+  worker: {agent: auto, model: auto, effort: medium}
+  utility: {agent: auto, model: auto, effort: low}
