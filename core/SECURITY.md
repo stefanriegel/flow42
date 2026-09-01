@@ -122,18 +122,24 @@ Prefer the least-capable suitable worker profile. Do not print or pass credentia
 to a worker. If the runtime provides capability isolation, use it; otherwise keep
 sensitive or Forge-writing work with the coordinator.
 
+When Orca is selected and ready, Orca owns worktree creation, terminal and
+process identity, worker settlement, and cleanup. Flow42 supplies scope,
+ownership, checks, and integration policy; it does not recreate Orca's resource
+lifecycle.
+
 ## Release provenance
 
-Supported installs use an immutable V1 tag. Verify the resolved commit and tree,
-plugin version, release checksum, and signed tag before mutation. A later source,
-tag, or version readback is not installed-artifact provenance. Where the harness
-exposes marketplace and plugin cache paths, bind current-project identity and
-perform two sanitized full point-in-time tree observations against the verified
-candidate. Use an empty Git template and neutral attributes; exclude only
-validated, single-linked vendor PID-marker JSON. Canonicalize the config root,
-reject linked/multiply linked settings, and validate exact reproducible source
-shapes before invoking Git or the vendor CLI. A force-moved tag, missing path,
-malformed marker, byte/mode/path mismatch, or substituted cache fails closed and triggers
-rollback. These observations do not make a same-user mutable cache immutable;
-disclose the lack of a documented vendor lock. Mutable branches and local paths
-are development sources only.
+Supported installs use a semantic-version tag. Before mutation, use the
+already-installed verifier and signer allowlist to bind the remote tag object,
+signed commit and tree, manifest version, deterministic archive, and checksum.
+Create the candidate repository with an empty template and neutral Git config,
+replacement, alternate-object, hook, and attribute inputs. Candidate code never
+supplies its own trust policy or runs before verification.
+
+Installation and recovery use documented harness commands. Verify the native
+listing, installed version, manifest, authorities, and skill parity afterward.
+Do not read, modify, delete, or claim cryptographic identity for private harness
+caches. When no supported exact-byte restore operation exists, rollback is an
+honest best-effort reinstall of the recorded prior release, and incomplete
+recovery is reported without blocking unrelated project work. Mutable branches
+and local paths are development sources only.

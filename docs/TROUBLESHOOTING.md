@@ -25,15 +25,13 @@ block with a concrete limitation. Never mark the request trusted while CI fails.
 Stop integration, preserve every worktree, and compare the plan ownership map to
 the changed paths. Do not reset, delete, or overwrite another slice.
 
-## Claude update tree attestation fails
+## Flow42 update fails
 
-Treat the update as failed even when source, tag, and version strings look
-correct. Preserve the reported failed phase, let the declared transaction
-restore the prior marketplace and plugin versions, and verify that rollback
-readback. A missing `installLocation`/`installPath`, wrong `projectPath`,
-linked settings target, unsupported source shape, force-moved tag, malformed or
-multiply linked `.in_use` marker, unexpected cache file, or
-byte/mode/path mismatch requires investigation. Never bypass the tree comparison
-or claim immutable installed bytes: the supported proof is two consecutive
-point-in-time observations, and a same-user cache writer can act after them when
-no documented vendor lock exists.
+If release verification fails, keep the installed version and report the failed
+tag, signature, checksum, or manifest check. If a harness mutation fails, stop
+forward progress and use the harness's native commands to reinstall the recorded
+previous release. Verify the resulting listing and bundle structure. If recovery
+is incomplete, preserve the remaining state and report the exact manual
+reinstall command. Do not edit private harness caches or claim byte-identical
+rollback when the harness has no supported restore interface. Unrelated project
+work may continue while the previous Flow42 installation remains usable.

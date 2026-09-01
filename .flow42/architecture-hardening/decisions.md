@@ -124,3 +124,23 @@
   when rollback cannot reproduce the inspected declaration. These controls do
   not turn the mutable vendor cache into an atomic store.
 - Actor: coordinator self-review; no additional worker or Forge mutation.
+
+## 2026-09-01T12:46:23Z — simplify update and delegate execution isolation to Orca
+
+- Context: The cache-attestation update design grew to 846 lines, duplicated
+  harness package-manager responsibilities, still could not prove an atomic
+  rollback, and blocked unrelated project progress on unsupported guarantees.
+- Decision: Orca owns worktree, terminal, process, worker-settlement, and cleanup
+  lifecycle. Flow42 update is limited to inspecting one installation, verifying
+  a signed semantic-version release with the installed trust anchor, invoking
+  the harness-native installer, checking version/bundle structure, and reporting
+  best-effort recovery honestly.
+- Evidence basis: Official Claude Code documentation defines marketplace/plugin
+  installation, versioned cache behavior, native update commands, tag refs for
+  marketplace sources, and exact SHA pins for plugin sources. Official Git
+  documentation defines signed-tag verification. Neither provides Flow42 a
+  supported byte-perfect vendor-cache rollback interface.
+- Consequences: Private cache inspection and the two-observation mechanism are
+  removed. An unsafe or ambiguous update leaves the prior installation in place;
+  an incomplete recovery is reported but does not halt unrelated project work.
+- Actor: explicit user direction, implemented by coordinator.

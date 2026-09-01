@@ -36,10 +36,12 @@ changes, and non-ancestor heads invalidate the receipt. This does not add a
 second human gate or grant authorization authority. The
 trusted endpoint is an independently reviewed, CI-green PR/MR.
 
-Orca orchestration is used only through its live CLI-served contract. A real
+Orca orchestration is used only through its live CLI-served contract. When it is
+selected and ready, Orca owns worktrees, terminals, process identity, worker
+settlement, and cleanup. Flow42 provides the job scope, file ownership, checks,
+and integration decision; it does not duplicate Orca's resource manager. A real
 Run, Task, and Dispatch plus `worker_done` settlement distinguish orchestration
-from ordinary subagents or terminal management. Missing Orca falls back to the
-single-agent path.
+from ordinary subagents. Missing Orca falls back to the single-agent path.
 
 Planning represents two related graphs. The task schedule graph defines jobs,
 dependencies, parallelism, and synchronization barriers. The data flow graph
@@ -56,10 +58,8 @@ Trust boundaries are the human confirmation channel, repository and worktrees,
 agent harness, Forge CLI credential store, CI, and untrusted external text.
 Git worker ownership binds the complete common/worktree administrative trees
 without a finite filename allowlist, plus external behavior paths; workers never
-commit or stage. Release updates bind the signed candidate to Claude's fetched
-marketplace and exact current-project plugin identities with canonical config/
-settings targets, exact reproducible source shapes, and two sanitized
-point-in-time cache observations, so demonstrated template/filter, wrong-project,
-mutable-tag, and same-version substitution failures close. Claude exposes no
-documented atomic multi-cache lock, so post-observation same-user mutation remains
-an explicit residual boundary rather than a durable installed-byte claim.
+commit or stage. Release update security ends at a verified signed release input
+and the harness's documented installer. Flow42 verifies the tag object, commit,
+tree, version, checksum, installed manifest, and skill structure, but it does not
+reimplement or attest a harness's private cache. Recovery is a best-effort native
+reinstall and is never described as byte-identical without a vendor restore API.

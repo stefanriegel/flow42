@@ -651,3 +651,29 @@ have been released after transcript archival. Another repair cycle requires
 fresh human resume authority and fresh independent exact-head correctness and
 security reviews. No push, PR/MR, merge, release, deployment, or live normal-
 harness mutation was performed.
+
+## 2026-09-01 update simplification repair
+
+The user explicitly resumed the local reversible update slice and clarified
+that Orca owns worktree, terminal, process, and worker lifecycle. The prior
+Claude cache-attestation design was removed rather than extended. The update
+skill changed from 846 lines to 114 lines and the update contract test from
+1,489 lines to 94 lines. The new boundary verifies the signed release input,
+delegates install/reinstall to the harness, checks version and bundle structure,
+and describes rollback only as best-effort.
+
+Observed red after replacing the skill but before replacing its obsolete test:
+`sh tests/update.sh` exited 1. After the focused test and coupled contracts were
+updated, `sh tests/update.sh`, `sh tests/prelude.sh`, `sh scripts/validate.sh`,
+and `git diff --check` passed. The complete local CI command matrix then passed:
+parity, validation, conformance, contracts, prelude, ownership, review receipt,
+configuration schema, lifecycle transitions, update, release checksum,
+security, both eval suites, dependencies, ShellCheck, and `git diff --check`.
+The native-agent provenance probe remained opt-in and skipped. No gitleaks,
+remote CI, Forge action, live plugin mutation, release, or deployment is
+claimed.
+
+Coordinator self-review found no concrete security, correctness, performance,
+or maintainability defect in the simplified diff. This is not an independent
+review receipt. The work item therefore remains blocked pending resolution or
+explicit disposition of the non-update findings and a fresh independent review.

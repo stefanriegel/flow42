@@ -82,7 +82,7 @@ tr '\n' ' ' <"$root/skills/init/SKILL.md" |
 grep -q 'ready.*,.*optional.*,.*blocked' "$root/skills/init/SKILL.md"
 grep -Fq 'shellcheck scripts/*.sh scripts/install-local tests/*.sh' "$root/.github/workflows/ci.yml"
 
-for phrase in 'never use' 'explicit confirmation' 'coordinator owns those operations' 'immutable V1 tag'; do
+for phrase in 'never use' 'explicit confirmation' 'coordinator owns those operations' 'semantic-version tag'; do
   grep -qi "$phrase" "$root/core/SECURITY.md"
 done
 
