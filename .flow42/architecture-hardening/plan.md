@@ -204,3 +204,30 @@ bundle structure. It never edits or attests private harness caches. Failure
 keeps the current version when mutation has not started, otherwise attempts a
 best-effort native reinstall and reports incomplete recovery without blocking
 unrelated project work.
+
+## Human-directed promise reconciliation
+
+The 2026-09-01 follow-up directs Flow42 to reconcile its remaining architecture
+claims with observable behavior, fix the review-receipt producer failure and
+worker-staging contradiction, keep the hardlink mitigation small, and delegate
+execution isolation to Orca. It explicitly rejects recursive Git-object/config
+snapshots and another launcher denylist.
+
+- Claude Opus/high independently adjudicates the claims without repository
+  edits. Codex `gpt-5.6-sol`/xhigh workers own disjoint receipt, command-policy,
+  ownership, lifecycle-prose, and threat-model slices. All workers run under
+  Orca with delegation disabled; only the coordinator stages and commits.
+- Named `git`, `gh`, `glab`, and `terraform` tokens are rejected in every argv
+  position. The launcher list remains unchanged and explicitly illustrative;
+  accepted repository scripts pin the residual semantic gap.
+- External Git includes are bound by effective value, origin, and scope only.
+  External alternate stores are declaration-bound only, with refs, `HEAD`, the
+  index, and owned working-tree paths retained as compensating integration
+  surfaces. The residuals are tested and documented rather than recursively
+  snapshotted.
+- Receipt currency stores the Git diff producer output only after its exit status
+  succeeds. Evidence extraction adds only a point-in-time single-link predicate
+  and makes no atomic identity promise.
+- Fresh non-implementing exact-head correctness and security reviews are the
+  final risk-based release gate. They assess the named acceptance and threat
+  surfaces; they are not described as universal product-correctness proof.

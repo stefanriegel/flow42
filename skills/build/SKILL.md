@@ -47,7 +47,8 @@ path transcoding, unreadable entries, or partial producer output. A worker must
 not stage; any Git administrative mutation blocks integration even when the
 working-tree path snapshot is unchanged.
 Workers receive no Forge-write authority and cannot delegate. Block integration
-on out-of-scope paths or unauthorized processes while preserving the worktree.
+on out-of-scope paths while preserving the worktree; worker settlement and
+cleanup belong to the selected execution environment.
 
 After all planned slices integrate with local gates green, transition
 `building` to `verifying` using the canonical revision, atomic status,

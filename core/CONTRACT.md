@@ -112,8 +112,15 @@ Map that reference to the canonical repository-root
 file. Delimit the report with exactly one ordered pair of literal
 `<!-- flow42-review-section:<section-id>:begin -->` and
 `<!-- flow42-review-section:<section-id>:end -->` lines and hash the exact
-LF-terminated bytes strictly between them. Reject links, duplicate/missing/
-reordered markers, invalid section IDs, and path traversal.
+LF-terminated bytes strictly between them. Reject symbolic links,
+duplicate/missing/reordered markers, invalid section IDs, and path traversal.
+The extractor requires a regular non-symlink evidence path and observes a link
+count of one. Multiply linked evidence files are rejected when observed, but
+this small predicate and the extracted digest are point-in-time observations,
+not an atomic file-identity guarantee across extraction, hashing, resolution,
+and acceptance. A concurrent same-user replacement or mutation after either
+observation is a disclosed residual; rerun validation after any observed
+evidence change.
 Compare every caller-derived value to the receipt, which also binds reviewer
 identity and role, issuer provenance, session or dispatch, verdict, and time.
 Correctness and security receipts are separate and cannot substitute for one

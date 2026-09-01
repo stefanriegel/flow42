@@ -3,6 +3,14 @@
 Use a single agent by default. Delegate only when the user requests multi-agent
 work or independent slices materially benefit from parallel execution.
 
+This document governs path ownership, content identity, and Git-administration
+state. It does not govern resource lifecycle. When Orca is the selected and
+ready execution environment, Orca creates the worktree, owns terminal and
+process identity, settles workers, and performs cleanup; record the Orca-provided
+worktree path and dispatch reference rather than creating or removing a
+worktree. In the native path the coordinator creates and retains the worktree.
+The ownership decision below is identical in both paths.
+
 Before dispatch, persist the worktree path, base commit, allowed path prefixes,
 worker limit, selected model profile, required inputs, output schema, and
 `delegation_allowed: false` in the plan.
@@ -50,14 +58,35 @@ persist a complete content-and-metadata identity for every entry under both
 directories, without exclusions. This complete Git-admin tree, not a finite
 manifest of currently known files, binds configuration, refs, reflogs,
 pseudo-refs, recovery/sequencer/bisect state, hooks, ignore and attribute state,
-alternates, shallow/graft data, the object database, and the index. A producer
-error, unreadable entry, special file, symlink, or multiply linked regular file
-fails closed; do not accept a partial archive or hash pipeline. Also persist
-separate diagnostic identities, without raw secret-bearing values, for:
+the alternates and shallow/graft declarations,
+this repository's own object database, and the index.
+Within the two Git directories and the enumerated
+external behavior paths below, a producer error, unreadable entry, special file,
+symlink, or multiply linked regular file fails closed; do not accept a partial
+archive or hash pipeline.
+
+An external alternate object store is declaration-bound: Flow42 records and
+compares `objects/info/alternates` but does not resolve or snapshot an external
+object store. An object added there may become readable, but it cannot affect
+integration on its own: refs, `HEAD`, and the index are separately bound and
+forbidden to workers, while every working-tree change is bound to declared
+ownership and review. Record an alternates entry that points outside the two Git
+directories in dispatch evidence as a disclosed residual.
+
+Also persist separate diagnostic identities, without raw secret-bearing values,
+for:
 
 - the common config and worktree config, plus the exact-byte effective
-  `git config --null --show-origin --show-scope --list` stream so included
-  configuration, remotes, aliases, and `core.hooksPath` remain attributable;
+  `git config --null --show-origin --show-scope --list` stream. This binds the
+  effective value, origin path, and scope of included configuration, remotes,
+  aliases, and `core.hooksPath`. Configuration files outside the two Git
+  directories, including files reached through `include` and `includeIf`, are
+  bound by value and origin path only. Flow42 does not walk include chains and
+  does not bind the file identity of an external configuration file. A
+  same-user replacement that preserves every effective value and origin path,
+  such as replacing an included regular file with a link to an equal-content
+  target, is a disclosed residual rather than a detected change. Any effective
+  value or origin change is detected and blocks integration;
 - the effective hooks directory's complete tree, including modes and content,
   whether it is under the common directory or selected by `core.hooksPath`;
 - the effective `core.excludesFile` and `core.attributesFile` paths and content,
@@ -67,17 +96,20 @@ separate diagnostic identities, without raw secret-bearing values, for:
 Read configured paths as exactly one NUL-terminated byte record. Reject embedded
 newlines, invalid UTF-8 rather than allowing lossy transcoding, relative
 `XDG_CONFIG_HOME` or `HOME`, empty `core.hooksPath`, and any link or unreadable
-configured behavior path. Never pass a line-delimited or shell-trimmed
+enumerated configured behavior path. Never pass a line-delimited or shell-trimmed
 `core.hooksPath` to the snapshot; a trailing-newline path must fail closed.
 
 Repeat these identities after the worker. Workers must not mutate any Git
 administrative state, including a file not named in this document. Common or
 worktree configuration, remotes, aliases, hooks, hook paths, ignore or attribute
-controls, alternates, object storage, shallow or graft state, refs, reflogs,
-recovery state, `HEAD`, pseudo-refs, and index are coordinator-owned; any change
-blocks integration. A worker commit, staging operation, or other `HEAD`/ref
-change is forbidden rather than an integration mechanism. Ordinary ownership
-of product paths never grants Git-administration authority.
+controls, alternates declarations, this repository's object storage, shallow or
+graft state, refs, reflogs, recovery state, `HEAD`, pseudo-refs, and index are
+coordinator-owned; any change blocks integration. Effective-value or origin
+changes in external included configuration also block, while the disclosed
+file-identity and external-alternate residuals above do not expand worker
+authority. A worker commit, staging operation, or other `HEAD`/ref change is
+forbidden rather than an integration mechanism. Ordinary ownership of product
+paths never grants Git-administration authority.
 
 After worker completion, repeat both NUL-delimited snapshots with rename
 detection and compare them with the pre-dispatch path and content identities.

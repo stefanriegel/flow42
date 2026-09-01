@@ -16,8 +16,10 @@
 3. Active and template configuration are validated against one versioned schema;
    configured command paths and canonical gates cannot drift silently.
 4. Worker ownership snapshots are NUL-safe, include rename endpoints, preserve a
-   dirty baseline, reject unowned overlap, and detect behavior-affecting Git
-   administrative state including ignore, attributes, and alternates surfaces.
+   dirty baseline, reject unowned overlap, and bind the complete common/worktree
+   Git administrative trees plus enumerated external hooks, ignore, and
+   attributes paths. External included configuration is bound by effective
+   value, origin, and scope; external alternate stores are declaration-bound.
 5. Every directly invokable skill reaches the canonical contract and security
    authority; inert or competing rule copies are removed or made load-bearing.
 6. Update, lifecycle, ownership, and eval tests exercise observable behavior,
@@ -92,22 +94,25 @@ Do not persist secrets or raw authenticated CLI output.
   the only usable marketplace declaration; use malicious path bytes to evade
   ownership checks; or edit non-bookkeeping code while retaining a stale
   receipt.
-- Mitigations: fail-closed direct-argv validation with no control-CLI allowlist;
+- Mitigations: direct-argv validation rejects a named control CLI in any token
+  position and retains an empty control-CLI allowlist, while explicitly relying
+  on the worker capability boundary rather than claiming semantic sandboxing;
   Git's NUL-delimited name-status records plus pre/post Git-administration
-  identities covering behavior-affecting info trees and effective external
-  files; authenticated receipt resolution and caller-expected repository/work/
-  scope/diff/purpose/check/artifact plus provider-time binding; strict
-  escape-free status-subset parsing; non-final, recorded resume targets;
-  source-kind-preserving update convergence and rollback with candidate,
-  marketplace, and installed Git-tree equality; literal pathspec staging; and
-  receipt currency restricted to the reviewed work item's bookkeeping paths.
+  identities cover the declared repository and external behavior surfaces;
+  authenticated receipt resolution binds caller-expected repository/work/scope/
+  diff/purpose/check/artifact and provider time; strict escape-free status parsing
+  and non-final recorded resume targets constrain lifecycle state; release input
+  is verified before harness-native installation; coordinator-only literal
+  pathspec staging follows worker settlement and ownership checks; and receipt
+  currency is restricted to the reviewed work item's bookkeeping paths.
 - Residual risk: local independent review cannot authenticate an external
   principal and remains a lower proof tier; vendor CLI semantics can change;
-  custom validators can drift from their prose contracts; Flow42 cannot demote
-  an instruction the host already elevated and therefore requires trusted-base
-  handling outside the skill; local fixtures do not prove remote Forge,
-  normal-harness, or release behavior. These risks are
-  kept explicit and require fail-closed diagnostics or stronger live evidence
+  arbitrary scripts can reach authority without naming a control CLI; external
+  include file identity and external alternate object contents are not bound;
+  point-in-time link and digest checks are not atomic against a concurrent
+  same-user writer; Flow42 delegates process identity and settlement to Orca;
+  and local fixtures do not prove remote Forge, normal-harness, release, or
+  deployment behavior. These risks are explicit and require stronger evidence
   before a stronger proof tier is claimed.
 
 ## Acceptance criteria

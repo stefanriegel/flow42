@@ -144,3 +144,30 @@
   removed. An unsafe or ambiguous update leaves the prior installation in place;
   an incomplete recovery is reported but does not halt unrelated project work.
 - Actor: explicit user direction, implemented by coordinator.
+
+## 2026-09-01T13:15:00Z — reconcile guarantees with observable controls
+
+- Context: Research and exact disposable-repository reproducers showed that the
+  remaining architecture findings mixed real defects with promises broader than
+  Flow42's mechanisms. The user explicitly rejected recursive Git config/object
+  snapshots and a larger launcher denylist.
+- Decision: Fix named control-CLI reachability across all argv positions, the
+  swallowed Git diff producer error, the worker-staging contradiction, and a
+  small observed hardlink gap. Narrow external-include, external-alternate,
+  process-identity, and receipt file-identity guarantees to what the current
+  mechanisms actually observe; delegate worker lifecycle and isolation to Orca.
+- Evidence basis: Git documents that included configuration is inserted with
+  origin semantics and that alternates borrow external object stores. POSIX
+  pipeline status defaults to the last command, reproducing the old `git diff |
+  jq` false success. NIST SSDF PW.7 supports policy-selected peer or expert
+  review and issue triage, not a claim that a receipt proves universal
+  correctness.
+- Consequences: Residuals are executable and explicit. Named control-CLI tokens
+  fail closed, but arbitrary scripts and renamed tools remain inside the Orca
+  and ownership capability boundary. External include identity, external object
+  contents, and concurrent same-user mutation are not newly claimed. Fresh
+  exact-head correctness and security reviews remain required before PR-ready.
+- Actor: explicit user direction, Claude Opus adjudication task
+  `task_fc6b5967bd16`, Codex implementation tasks `task_819979b284fa`,
+  `task_ccacd8bb7cb4`, and `task_85c8f2c16fb7`, coordinated in Orca run
+  `run_b5ab6e7b3014`.

@@ -8,6 +8,52 @@ root=$(CDPATH=''; export CDPATH; cd -- "$(dirname -- "$0")/.." && pwd)
 workflow="$root/core/workflow.json"
 risk="$root/core/risk-policy.json"
 scenarios="$root/evals/scenarios.json"
+tmp=$(mktemp -d "${TMPDIR:-/tmp}/flow42-contracts.XXXXXX")
+trap 'rm -rf "$tmp"' 0 HUP INT TERM
+
+for contract_file in "$root/core/SECURITY.md" "$root/docs/CONFIGURATION.md"; do
+  tr '\n' ' ' <"$contract_file" | grep -Fq 'illustrative, not exhaustive'
+  grep -Fq 'naming check, not a semantic sandbox' "$contract_file"
+done
+grep -Fq 'by value and origin path only' "$root/core/OWNERSHIP.md"
+tr '\n' ' ' <"$root/core/OWNERSHIP.md" |
+  grep -Fq 'does not resolve or snapshot an external object store'
+
+for contract_file in "$root/core/SECURITY.md" "$root/core/OWNERSHIP.md"; do
+  grep -Fq 'does not govern resource lifecycle' "$contract_file"
+done
+grep -Fq 'no independent process-identity claim' "$root/core/SECURITY.md"
+grep -Fq 'no independent process-identity claim' "$root/docs/ARCHITECTURE.md"
+if grep -R -i -E 'untracked process|unauthorized process' \
+  "$root/core" "$root/skills" >/dev/null; then
+  echo 'Flow42 reacquired an execution-environment process-identity claim' >&2
+  exit 1
+fi
+
+for contract_file in "$root/core/CONTRACT.md" "$root/core/SECURITY.md" \
+  "$root/skills/verify/SKILL.md"; do
+  tr '\n' ' ' <"$contract_file" |
+    grep -Fq 'Multiply linked evidence files are rejected when observed'
+done
+
+validate_threat_model_staging() {
+  threat_model=$1
+  grep -Fq 'Workers never stage; only the coordinator may stage an exact reviewed path after the post-worker checks pass.' \
+    "$threat_model" || return 1
+  if tr '\n' ' ' <"$threat_model" |
+    grep -Eiq 'workers? may[^.]*stag|except an explicitly authorized exact staging operation'; then
+    return 1
+  fi
+}
+
+validate_threat_model_staging "$root/evidence/security/threat-model.md"
+cp "$root/evidence/security/threat-model.md" "$tmp/mutated-threat-model.md"
+printf '%s\n' 'Workers may perform an exact staging operation during dispatch.' \
+  >>"$tmp/mutated-threat-model.md"
+if validate_threat_model_staging "$tmp/mutated-threat-model.md"; then
+  echo 'threat-model worker-staging mutation survived' >&2
+  exit 1
+fi
 
 sh "$root/tests/intent.sh"
 sh "$root/tests/prelude.sh"
