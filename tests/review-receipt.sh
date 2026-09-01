@@ -6,6 +6,12 @@ root=$(CDPATH=''; export CDPATH; cd -- "$(dirname -- "$0")/.." && pwd)
 fixtures="$root/tests/fixtures/review-receipt"
 resolver="$fixtures/fake-resolver.sh"
 expected_head=0123456789abcdef0123456789abcdef01234567
+expected_baseline=1111111111111111111111111111111111111111
+expected_repository=repo:example/flow42
+expected_work_id=wi
+expected_subject=flow42-work-item
+expected_scope=sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+expected_diff=sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
 tmp=$(mktemp -d "${TMPDIR:-/tmp}/flow42-receipt.XXXXXX")
 trap 'rm -rf "$tmp"' 0 HUP INT TERM
 
@@ -13,8 +19,17 @@ jq -e '.independent_review.local_fallback_tier == "lower" and
   .independent_review.issuer_resolution.fail_closed == true and
   .independent_review.issuer_resolution.required_for == ["authenticated-forge","trusted-orchestrator"] and
   .independent_review.issuer_resolution.resolver_must_be_independent == true and
-  .independent_review.issuer_resolution.binding_fields == ["issuer_kind","issuer_receipt_ref","reviewer_principal","dispatch_or_session_ref","reviewed_head","verdict","artifact_ref"] and
-  .independent_review.status_neutral_fields == ["stage","state_revision","updated_at","blockers","resume_stage","ci_state","next_actions","forge_item"] and
+  .independent_review.issuer_resolution.binding_fields == ["issuer_kind","issuer_receipt_ref","repository_id","work_id","baseline_head","reviewed_head","scope_digest","diff_digest","review_subject","reviewer_principal","reviewer_role","dispatch_or_session_ref","implementer","verdict","checks","artifact_ref","artifact_digest"] and
+  .independent_review.status_neutral_fields == ["stage","state_revision","updated_at","blockers","resume_stage","ci_state","next_actions","forge_item","change_request"] and
+  .independent_review.status_yaml_subset.duplicate_keys == "reject" and
+  .independent_review.status_yaml_subset.quoted_keys == "reject" and
+  .independent_review.status_yaml_subset.unknown_keys == "reject" and
+  .independent_review.status_yaml_subset.unsupported_constructs == "reject" and
+  .independent_review.status_yaml_subset.canonicalization == {"quoted_scalar":"unquote","plain_scalar":"preserve","inline_string_sequence":"remove-insignificant-whitespace","field_order":"status_required_fields","comparison":"canonical-key-value"} and
+  .independent_review.status_yaml_subset.required_fields == .independent_review.status_required_fields and
+  .independent_review.subject_derivation == {"repository_id":"normalized-origin-remote","work_id":"exact-work-item-directory","baseline_head":"git-rev-parse-verify","reviewed_head":"git-rev-parse-verify","scope_digest":"sha256-canonical-ordered-reviewed-path-set","diff_digest":"sha256-nul-safe-no-renames-baseline-to-head-path-content-diff","review_subject":"caller-expected-subject","artifact_digest":"sha256-persisted-artifact-bytes"} and
+  (.independent_review.receipt_required_fields | length == 19) and
+  .independent_review.status_yaml_subset.change_request_pattern == "^$|^https://[^/?#[:space:]@]+/[^/?#[:space:]]+/[^/?#[:space:]]+(/[^/?#[:space:]]+)*/(pull/[1-9][0-9]*|-/merge_requests/[1-9][0-9]*)$" and
   (.independent_review.status_required_fields | type == "array" and length == 16)' "$root/core/risk-policy.json" >/dev/null || {
   echo RECEIPT-RESOLVER-POLICY >&2
   exit 1
@@ -25,23 +40,31 @@ validate_receipt() {
   reviewed_head=$2
   strongest=$3
   receipt_resolver=$4
-  failed=0
   check() {
     diagnostic=$1
     expression=$2
     if ! jq -e --arg head "$reviewed_head" --arg strongest "$strongest" "$expression" "$receipt" >/dev/null; then
       echo "$diagnostic" >&2
-      failed=1
+      return 1
     fi
   }
-  check RECEIPT-ISSUER '.issuer_kind | IN("authenticated-forge", "trusted-orchestrator", "local-independent-pass")'
-  check RECEIPT-PROVENANCE '(.issuer_receipt_ref | type == "string" and length > 0) and (.dispatch_or_session_ref | type == "string" and length > 0) and .issuer_kind == $strongest and (if .issuer_kind == "local-independent-pass" then (.stronger_issuer_unavailable_reason | type == "string" and length > 0) else true end)'
-  check RECEIPT-REVIEWER '(.reviewer_principal | type == "string" and length > 0) and .reviewer_role == "independent-reviewer" and .implementer == false'
-  check RECEIPT-HEAD '(.reviewed_head | type == "string" and test("^[0-9a-f]{40}$")) and .reviewed_head == $head'
-  check RECEIPT-VERDICT '.verdict | IN("pass", "blocked")'
-  check RECEIPT-CHECKS '(.checks | type == "array" and length > 0) and all(.checks[]; type == "string" and length > 0)'
-  check RECEIPT-ARTIFACT '(.artifact_ref | type == "string" and length > 0) and (.recorded_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")) and .schema_version == 1'
-  test "$failed" -eq 0 || return 1
+  check RECEIPT-ISSUER '.issuer_kind | IN("authenticated-forge", "trusted-orchestrator", "local-independent-pass")' || return 1
+  check RECEIPT-PROVENANCE '(.issuer_receipt_ref | type == "string" and length > 0) and (.dispatch_or_session_ref | type == "string" and length > 0) and .issuer_kind == $strongest and (if .issuer_kind == "local-independent-pass" then (.stronger_issuer_unavailable_reason | type == "string" and length > 0) else true end)' || return 1
+  check RECEIPT-REVIEWER '(.reviewer_principal | type == "string" and length > 0) and .reviewer_role == "independent-reviewer" and .implementer == false' || return 1
+  check RECEIPT-HEAD '(.reviewed_head | type == "string" and test("^[0-9a-f]{40}$")) and .reviewed_head == $head' || return 1
+  check RECEIPT-VERDICT '.verdict | IN("pass", "blocked")' || return 1
+  check RECEIPT-CHECKS '(.checks | type == "array" and length > 0) and all(.checks[]; type == "string" and length > 0)' || return 1
+  check RECEIPT-ARTIFACT '(.artifact_ref | type == "string" and length > 0) and (.artifact_digest | type == "string" and test("^sha256:[0-9a-f]{64}$")) and (.recorded_at | test("^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$")) and .schema_version == 1' || return 1
+  if ! jq -e --arg repository "$expected_repository" --arg work "$expected_work_id" \
+    --arg baseline "$expected_baseline" --arg head "$reviewed_head" --arg scope "$expected_scope" \
+    --arg diff "$expected_diff" --arg subject "$expected_subject" '
+      .repository_id == $repository and .work_id == $work and
+      (.baseline_head | test("^[0-9a-f]{40}$")) and .baseline_head == $baseline and
+      .reviewed_head == $head and .scope_digest == $scope and .diff_digest == $diff and
+      .review_subject == $subject' "$receipt" >/dev/null; then
+    echo RECEIPT-SUBJECT >&2
+    return 1
+  fi
 
   issuer=$(jq -r '.issuer_kind' "$receipt")
   test "$issuer" = local-independent-pass && return 0
@@ -59,11 +82,21 @@ validate_receipt() {
   if ! jq -e --argjson resolved "$resolved" '
     .issuer_kind == $resolved.issuer_kind and
     .issuer_receipt_ref == $resolved.issuer_receipt_ref and
+    .repository_id == $resolved.repository_id and
+    .work_id == $resolved.work_id and
+    .baseline_head == $resolved.baseline_head and
     .reviewer_principal == $resolved.reviewer_principal and
+    .reviewer_role == $resolved.reviewer_role and
     .dispatch_or_session_ref == $resolved.dispatch_or_session_ref and
+    .implementer == $resolved.implementer and
     .reviewed_head == $resolved.reviewed_head and
+    .scope_digest == $resolved.scope_digest and
+    .diff_digest == $resolved.diff_digest and
+    .review_subject == $resolved.review_subject and
     .verdict == $resolved.verdict and
-    .artifact_ref == $resolved.artifact_ref' "$receipt" >/dev/null; then
+    .checks == $resolved.checks and
+    .artifact_ref == $resolved.artifact_ref and
+    .artifact_digest == $resolved.artifact_digest' "$receipt" >/dev/null; then
     echo RECEIPT-BINDING >&2
     return 1
   fi
@@ -87,6 +120,7 @@ for fixture in "$fixtures"/invalid-*.json; do
     invalid-verdict) expected=RECEIPT-VERDICT ;;
     invalid-checks) expected=RECEIPT-CHECKS ;;
     invalid-artifact) expected=RECEIPT-ARTIFACT ;;
+    invalid-cross-repository | invalid-cross-work | invalid-cross-scope) expected=RECEIPT-SUBJECT; strongest=local-independent-pass ;;
     *) echo "unknown fixture: $name" >&2; exit 1 ;;
   esac
   log="$tmp/$name.log"
@@ -103,6 +137,95 @@ done
 
 tr '\n' ' ' <"$root/core/SECURITY.md" |
   grep -Fq 'Receipt-neutral changes to decisions.md never authenticate or supply human confirmation'
+
+validate_receipt_contract() {
+  contract=$1
+  security=$2
+  grep -Fq 'git diff --name-only --no-renames -z "$reviewed_head" HEAD --' "$contract" || { echo RECEIPT-CONTRACT-DIFF >&2; return 1; }
+  grep -Fq '`reviewed_head` is an ancestor of or equal to `HEAD`' "$contract" || { echo RECEIPT-CONTRACT-ANCESTRY >&2; return 1; }
+  grep -Fq 'exact receipt-neutral leaf in the work item under review' "$contract" || { echo RECEIPT-CONTRACT-PATHS >&2; return 1; }
+  grep -Fq 'canonical top-level key set exactly once' "$contract" || { echo RECEIPT-CONTRACT-STATUS >&2; return 1; }
+  grep -Fq '`change_request`' "$security" || { echo RECEIPT-CONTRACT-STATUS >&2; return 1; }
+  if ! grep -Fq 'canonical repository identity from normalized `origin`' "$contract" ||
+    ! grep -Fq 'the work ID from' "$contract" ||
+    ! grep -Fq 'scope digest from the canonical ordered reviewed path set' "$contract" ||
+    ! grep -Fq 'diff digest from the NUL-safe no-renames baseline-to-head path/content diff' "$contract" ||
+    ! grep -Fq 'artifact digest from the persisted review artifact bytes' "$contract"; then
+    echo RECEIPT-CONTRACT-SUBJECT >&2
+    return 1
+  fi
+}
+
+validate_receipt_contract "$root/core/CONTRACT.md" "$root/core/SECURITY.md"
+for mutation in contract-drop-no-renames contract-drop-ancestry contract-widen-neutral-path contract-drop-canonical-status contract-drop-subject-binding; do
+  sed -f "$fixtures/$mutation.sed" "$root/core/CONTRACT.md" >"$tmp/$mutation.md"
+  case "$mutation" in
+    contract-drop-no-renames) expected=RECEIPT-CONTRACT-DIFF ;;
+    contract-drop-ancestry) expected=RECEIPT-CONTRACT-ANCESTRY ;;
+    contract-widen-neutral-path) expected=RECEIPT-CONTRACT-PATHS ;;
+    contract-drop-canonical-status) expected=RECEIPT-CONTRACT-STATUS ;;
+    contract-drop-subject-binding) expected=RECEIPT-CONTRACT-SUBJECT ;;
+  esac
+  log="$tmp/$mutation.log"
+  if validate_receipt_contract "$tmp/$mutation.md" "$root/core/SECURITY.md" >"$log" 2>&1; then
+    echo "receipt contract mutation survived: $mutation" >&2; exit 1
+  fi
+  grep -Fxq "$expected" "$log"
+done
+
+validate_status_yaml() {
+  status_file=$1
+  policy=$2
+  canonical_file=$3
+  awk '
+    function unquote(value) {
+      if (value ~ /^"[^"]*"$/) return substr(value, 2, length(value) - 2)
+      return value
+    }
+    function placeholder(value) { return value ~ /^\{\{[a-z_][a-z0-9_]*\}\}$/ }
+    /^[[:space:]]*($|#)/ { next }
+    /^[[:space:]]/ { exit 10 }
+    !/^[a-z][a-z0-9_]*:[[:space:]]*/ { exit 11 }
+    {
+      key=$0; sub(/:.*/, "", key); if (seen[key]++) exit 13
+      value=$0; sub(/^[^:]*:[[:space:]]*/, "", value)
+      plain=unquote(value)
+      if (value ~ /^"/ && value !~ /^"[^"]*"$/) exit 12
+      if (plain ~ /(^|[[:space:]])[&*!]/ || plain ~ /<<:/ || plain ~ /^[|>]/ || (plain ~ /[{}]/ && !placeholder(plain))) exit 12
+      print key
+    }
+  ' "$status_file" >"$tmp/status-fields" || return 1
+  test "$(sort "$tmp/status-fields")" = "$(jq -r '.independent_review.status_yaml_subset.required_fields[]' "$policy" | sort)" || return 1
+  awk '
+    function unquote(value) {
+      if (value ~ /^"[^"]*"$/) return substr(value, 2, length(value) - 2)
+      return value
+    }
+    function placeholder(value) { return value ~ /^\{\{[a-z_][a-z0-9_]*\}\}$/ }
+    /^[[:space:]]*($|#)/ { next }
+    {
+      key=$0; sub(/:.*/, "", key)
+      value=$0; sub(/^[^:]*:[[:space:]]*/, "", value); value=unquote(value)
+      ok=0
+      if (key == "schema_version") ok = value == "1"
+      else if (key == "work_id") ok = placeholder(value) || (value ~ /^[a-z0-9][a-z0-9-]*$/ && length(value) <= 63)
+      else if (key == "title") ok = placeholder(value) || (length(value) > 0 && value !~ /[&*!]/)
+      else if (key == "work_type") ok = placeholder(value) || value ~ /^[a-z][a-z0-9-]*$/
+      else if (key == "stage") ok = value ~ /^[a-z][a-z0-9-]*$/
+      else if (key == "risk") ok = value ~ /^(unclassified|low|medium|high|critical)$/
+      else if (key == "state_revision" || key == "review_loops") ok = value ~ /^[0-9][0-9]*$/
+      else if (key == "created_at" || key == "updated_at") ok = placeholder(value) || value ~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z$/
+      else if (key == "blockers" || key == "next_actions") ok = value ~ /^\[[^][{}&*!]*\]$/
+      else if (key == "resume_stage") ok = value == "" || value ~ /^[a-z][a-z0-9-]*$/
+      else if (key == "forge_item") ok = value == "" || value ~ /^https:\/\/[^?#[:space:]]+$/
+      else if (key == "change_request") ok = value == "" || value ~ /^https:\/\/[^\/?#[:space:]@]+\/[^\/?#[:space:]]+\/[^\/?#[:space:]]+(\/[^\/?#[:space:]]+)*\/(pull\/[1-9][0-9]*|-\/merge_requests\/[1-9][0-9]*)$/
+      else if (key == "ci_state") ok = value ~ /^(unknown|pending|running|passed|failed|cancelled)$/
+      if (!ok) exit 20
+      if (key == "blockers" || key == "next_actions") gsub(/[[:space:]]+/, "", value)
+      print key "=" value
+    }
+  ' "$status_file" >"$canonical_file" || return 1
+}
 
 receipt_is_current() {
   repo=$1; reviewed=$2; work_id=$3; policy=$4
@@ -124,31 +247,25 @@ receipt_is_current() {
   fi
   git -C "$repo" show "$reviewed:$status_path" >"$tmp/status-before.yml" 2>/dev/null || return 1
   git -C "$repo" show "HEAD:$status_path" >"$tmp/status-after.yml" 2>/dev/null || return 1
-  required_fields=$(jq -r '.independent_review.status_required_fields[]' "$policy" | sort)
-  for status_file in "$tmp/status-before.yml" "$tmp/status-after.yml"; do
-    all_fields=$(awk '/^[A-Za-z_][A-Za-z0-9_]*:/ {key=$0; sub(/:.*/, "", key); print key}' "$status_file")
-    test "$(printf '%s\n' "$all_fields" | wc -l | tr -d ' ')" -eq \
-      "$(printf '%s\n' "$all_fields" | sort -u | wc -l | tr -d ' ')" || return 1
-    test "$(printf '%s\n' "$all_fields" | sort)" = "$required_fields" || return 1
-  done
-  status_fields=$(awk '/^[A-Za-z_][A-Za-z0-9_]*:/ {key=$0; sub(/:.*/, "", key); print key}' \
-    "$tmp/status-before.yml" "$tmp/status-after.yml" | sort -u)
+  validate_status_yaml "$tmp/status-before.yml" "$policy" "$tmp/status-before.canonical" || return 1
+  validate_status_yaml "$tmp/status-after.yml" "$policy" "$tmp/status-after.canonical" || return 1
+  status_fields=$(jq -r '.independent_review.status_required_fields[]' "$policy")
   allowed_fields=$(jq -r '.independent_review.status_neutral_fields[]' "$policy")
   for field in $status_fields; do
-    awk -v field="$field" '
-      $0 ~ "^" field ":" {inside=1}
-      inside && $0 !~ "^" field ":" && /^[A-Za-z_][A-Za-z0-9_]*:/ {exit}
-      inside {print}' "$tmp/status-before.yml" >"$tmp/status-before-field"
-    awk -v field="$field" '
-      $0 ~ "^" field ":" {inside=1}
-      inside && $0 !~ "^" field ":" && /^[A-Za-z_][A-Za-z0-9_]*:/ {exit}
-      inside {print}' "$tmp/status-after.yml" >"$tmp/status-after-field"
+    grep -F "$field=" "$tmp/status-before.canonical" >"$tmp/status-before-field"
+    grep -F "$field=" "$tmp/status-after.canonical" >"$tmp/status-after-field"
     if ! cmp -s "$tmp/status-before-field" "$tmp/status-after-field" &&
       ! printf '%s\n' "$allowed_fields" | grep -Fxq "$field"; then
       return 1
     fi
   done
 }
+
+validate_status_yaml "$root/templates/status.yml" "$root/core/risk-policy.json" "$tmp/template-status.canonical"
+for current_status in "$root"/.flow42/*/status.yml; do
+  test -f "$current_status" || continue
+  validate_status_yaml "$current_status" "$root/core/risk-policy.json" "$tmp/current-status.canonical"
+done
 
 repo="$tmp/repo"
 mkdir -p "$repo/.flow42/wi"
@@ -195,6 +312,52 @@ sed -e 's/^stage: verifying$/stage: pr-ready/' \
 mv "$tmp/status-neutral.yml" "$repo/.flow42/wi/status.yml"
 git -C "$repo" add . && git -C "$repo" commit -qm status-neutral
 git -C "$repo" branch status-neutral
+
+git -C "$repo" checkout -q -b status-change-request-case "$reviewed"
+sed 's|^change_request: ""$|change_request: https://github.com/example/flow42/pull/42|' \
+  "$repo/.flow42/wi/status.yml" >"$tmp/status-change-request.yml"
+mv "$tmp/status-change-request.yml" "$repo/.flow42/wi/status.yml"
+git -C "$repo" add . && git -C "$repo" commit -qm status-change-request
+git -C "$repo" branch status-change-request
+
+git -C "$repo" checkout -q -b status-nested-change-request-case "$reviewed"
+sed 's|^change_request: ""$|change_request: https://gitlab.example.invalid/group/subgroup/flow42/-/merge_requests/42|' \
+  "$repo/.flow42/wi/status.yml" >"$tmp/status-nested-change-request.yml"
+mv "$tmp/status-nested-change-request.yml" "$repo/.flow42/wi/status.yml"
+git -C "$repo" add . && git -C "$repo" commit -qm status-nested-change-request
+git -C "$repo" branch status-nested-change-request
+
+git -C "$repo" checkout -q -b status-title-whitespace-case "$reviewed"
+sed 's/^title: Fixture$/title: Fix ture/' \
+  "$repo/.flow42/wi/status.yml" >"$tmp/status-title-whitespace.yml"
+mv "$tmp/status-title-whitespace.yml" "$repo/.flow42/wi/status.yml"
+git -C "$repo" add . && git -C "$repo" commit -qm status-title-whitespace
+git -C "$repo" branch status-title-whitespace
+
+git -C "$repo" checkout -q -b status-canonical-quotes-case "$reviewed"
+sed -f "$fixtures/status-canonical-quotes.sed" "$repo/.flow42/wi/status.yml" >"$tmp/status-canonical-quotes.yml"
+mv "$tmp/status-canonical-quotes.yml" "$repo/.flow42/wi/status.yml"
+git -C "$repo" add . && git -C "$repo" commit -qm status-canonical-quotes
+git -C "$repo" branch status-canonical-quotes
+
+git -C "$repo" checkout -q -b status-invalid-change-request-case "$reviewed"
+sed -f "$fixtures/status-invalid-change-request.sed" "$repo/.flow42/wi/status.yml" >"$tmp/status-invalid-change-request.yml"
+mv "$tmp/status-invalid-change-request.yml" "$repo/.flow42/wi/status.yml"
+git -C "$repo" add . && git -C "$repo" commit -qm status-invalid-change-request
+git -C "$repo" branch status-invalid-change-request
+
+for mutation in quoted-key anchor; do
+  git -C "$repo" checkout -q -b "status-$mutation-case" "$reviewed"
+  sed -f "$fixtures/status-$mutation.sed" "$repo/.flow42/wi/status.yml" >"$tmp/status-$mutation.yml"
+  mv "$tmp/status-$mutation.yml" "$repo/.flow42/wi/status.yml"
+  git -C "$repo" add . && git -C "$repo" commit -qm "status-$mutation"
+  git -C "$repo" branch "status-$mutation"
+done
+
+git -C "$repo" checkout -q -b status-unknown-case "$reviewed"
+sed -n '1,999p' "$fixtures/status-unknown.append" >>"$repo/.flow42/wi/status.yml"
+git -C "$repo" add . && git -C "$repo" commit -qm status-unknown
+git -C "$repo" branch status-unknown
 
 git -C "$repo" checkout -q -b status-risk-case "$reviewed"
 sed 's/^risk: high$/risk: low/' "$repo/.flow42/wi/status.yml" >"$tmp/status-risk.yml"
@@ -254,7 +417,13 @@ git -C "$repo" checkout -q neutral
 receipt_is_current "$repo" "$reviewed" wi "$root/core/risk-policy.json"
 git -C "$repo" checkout -q status-neutral
 receipt_is_current "$repo" "$reviewed" wi "$root/core/risk-policy.json"
-for branch in spec config product root-evidence odd status-risk status-duplicate-risk nested rename-into-neutral nonancestor; do
+git -C "$repo" checkout -q status-change-request
+receipt_is_current "$repo" "$reviewed" wi "$root/core/risk-policy.json"
+git -C "$repo" checkout -q status-nested-change-request
+receipt_is_current "$repo" "$reviewed" wi "$root/core/risk-policy.json"
+git -C "$repo" checkout -q status-canonical-quotes
+receipt_is_current "$repo" "$reviewed" wi "$root/core/risk-policy.json"
+for branch in spec config product root-evidence odd status-risk status-duplicate-risk status-title-whitespace status-quoted-key status-anchor status-unknown status-invalid-change-request nested rename-into-neutral nonancestor; do
   git -C "$repo" checkout -q "$branch"
   if receipt_is_current "$repo" "$reviewed" wi "$root/core/risk-policy.json"; then
     echo "receipt remained current after $branch mutation" >&2

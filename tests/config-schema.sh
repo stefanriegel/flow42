@@ -11,6 +11,9 @@ test -f "$schema" || { echo CONFIG-SCHEMA-MISSING >&2; exit 1; }
 jq -e '.schema_version == 1 and .unknown_fields == "block" and .extra_gates == "allowed" and .command_paths == "must-exist-or-be-auto"' "$schema" >/dev/null
 jq -e '.fields.base_branch.validation == "git-check-ref-format---branch" and
   .command_policy.fail_closed == true and
+  .command_policy.authority_bearing_executables == ["git", "gh", "glab", "terraform"] and
+  .command_policy.read_only_control_cli_allowlist == [] and
+  (.command_policy.token_pattern | type == "string" and length > 0) and
   (.command_policy.shell_evaluation_prefixes | type == "array" and length > 0) and
   (.command_policy.disallowed_mutation_prefixes | type == "array" and length > 0) and
   (.command_policy.forbidden_token_pattern | type == "string" and length > 0)' "$schema" >/dev/null || {
@@ -56,92 +59,27 @@ validate_yaml_form() {
 
 validate_command() {
   value=$1
+  if ! printf '%s\n' "$value" | grep -Eq '^\[[^][[:space:],]+([[:space:]]*,[[:space:]]*[^][[:space:],]+)*\]$'; then
+    fail CONFIG-COMMAND-TOKEN
+    return
+  fi
   tokens=$(printf '%s\n' "$value" | sed 's/^\[//; s/\]$//' | tr ',' '\n' |
     sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+  token_pattern=$(jq -r '.command_policy.token_pattern' "$schema")
+  if printf '%s\n' "$tokens" | grep -Ev "$token_pattern" >/dev/null; then
+    fail CONFIG-COMMAND-TOKEN
+    return
+  fi
   first=$(printf '%s\n' "$tokens" | sed -n '1p')
   first=${first##*/}
   canonical=$(printf '%s\n' "$tokens" | awk -v first="$first" 'NR == 1 {$0=first} {if (NR > 1) printf "\t"; printf "%s", $0} END {print ""}')
-  semantic=$canonical
 
-  token_count=$(printf '%s\n' "$tokens" | awk 'END {print NR}')
-  token_at() { printf '%s\n' "$tokens" | sed -n "$1p"; }
-  case "$first" in
-    git)
-      index=2
-      action=
-      while test "$index" -le "$token_count"; do
-        token=$(token_at "$index")
-        case "$token" in
-          -C | -c | --git-dir | --work-tree | --namespace | --config-env)
-            index=$((index + 2))
-            ;;
-          --git-dir=* | --work-tree=* | --namespace=* | --config-env=* | --exec-path=*)
-            index=$((index + 1))
-            ;;
-          --)
-            index=$((index + 1))
-            action=$(token_at "$index")
-            break
-            ;;
-          -*)
-            fail CONFIG-COMMAND-UNSAFE
-            return
-            ;;
-          *)
-            action=$token
-            break
-            ;;
-        esac
-      done
-      semantic=$(printf 'git\t%s' "$action")
-      ;;
-    gh | glab)
-      index=2
-      resource=
-      action=
-      while test "$index" -le "$token_count"; do
-        token=$(token_at "$index")
-        case "$token" in
-          -R | --repo | --hostname)
-            index=$((index + 2))
-            ;;
-          --repo=* | --hostname=*)
-            index=$((index + 1))
-            ;;
-          --)
-            index=$((index + 1))
-            resource=$(token_at "$index")
-            action=$(token_at "$((index + 1))")
-            break
-            ;;
-          -*)
-            fail CONFIG-COMMAND-UNSAFE
-            return
-            ;;
-          *)
-            resource=$token
-            action=$(token_at "$((index + 1))")
-            break
-            ;;
-        esac
-      done
-      semantic=$(printf '%s\t%s\t%s' "$first" "$resource" "$action")
-      ;;
-    terraform)
-      index=2
-      action=
-      while test "$index" -le "$token_count"; do
-        token=$(token_at "$index")
-        case "$token" in
-          -chdir=*) index=$((index + 1)) ;;
-          --) index=$((index + 1)); action=$(token_at "$index"); break ;;
-          -*) fail CONFIG-COMMAND-UNSAFE; return ;;
-          *) action=$token; break ;;
-        esac
-      done
-      semantic=$(printf 'terraform\t%s' "$action")
-      ;;
-  esac
+  if jq -e --arg executable "$first" \
+    '.command_policy.authority_bearing_executables | index($executable) != null' \
+    "$schema" >/dev/null; then
+    fail CONFIG-COMMAND-CONTROL-CLI
+    return
+  fi
 
   forbidden_pattern=$(jq -r '.command_policy.forbidden_token_pattern' "$schema")
   if printf '%s\n' "$tokens" | grep -Eq "$forbidden_pattern"; then
@@ -154,9 +92,7 @@ validate_command() {
 $(jq -r '.command_policy.shell_evaluation_prefixes[] | @tsv' "$schema")
 EOF
   while IFS= read -r prefix; do
-    for candidate in "$canonical" "$semantic"; do
-      case "$candidate" in "$prefix" | "$prefix""$(printf '\t')"*) fail CONFIG-COMMAND-UNSAFE; return ;; esac
-    done
+    case "$canonical" in "$prefix" | "$prefix""$(printf '\t')"*) fail CONFIG-COMMAND-UNSAFE; return ;; esac
   done <<EOF
 $(jq -r '.command_policy.disallowed_mutation_prefixes[] | @tsv' "$schema")
 EOF
@@ -206,13 +142,27 @@ validate_config() {
   done
 
   pattern=$(jq -r '.fields.model_profiles.properties.frontier.pattern' "$schema")
-  section_pairs "$file" model_profiles | while IFS="$(printf '\t')" read -r key value; do
-    test "$value" = auto || printf '%s\n' "$value" | grep -Eq "$pattern" || exit 7
-  done || { fail CONFIG-MODEL-ID; return; }
+  model_failed=0
+  while IFS="$(printf '\t')" read -r key value; do
+    if test "$value" != auto && ! printf '%s\n' "$value" | grep -Eq "$pattern"; then
+      model_failed=1
+      break
+    fi
+  done <<EOF
+$(section_pairs "$file" model_profiles)
+EOF
+  test "$model_failed" -eq 0 || { fail CONFIG-MODEL-ID; return; }
 
-  section_pairs "$file" commands | while IFS="$(printf '\t')" read -r key value; do
-    printf '%s\n' "$value" | grep -Eq '^\[[^]]*\]$' || exit 8
-  done || { fail CONFIG-COMMAND-ARRAY; return; }
+  command_array_failed=0
+  while IFS="$(printf '\t')" read -r key value; do
+    if ! printf '%s\n' "$value" | grep -Eq '^\[[^]]*\]$'; then
+      command_array_failed=1
+      break
+    fi
+  done <<EOF
+$(section_pairs "$file" commands)
+EOF
+  test "$command_array_failed" -eq 0 || { fail CONFIG-COMMAND-ARRAY; return; }
 
   command_failed=0
   while IFS="$(printf '\t')" read -r key value; do
@@ -225,10 +175,22 @@ $(section_pairs "$file" commands)
 EOF
   test "$command_failed" -eq 0 || return 1
 
-  section_pairs "$file" commands | cut -f2- | tr -d '[]' | tr ',' '\n' | while IFS= read -r token; do
+  command_path_failed=0
+  while IFS= read -r token; do
     token=$(printf '%s' "$token" | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
-    case "$token" in ''|auto|-*) continue ;; */*) test -e "$root/$token" || exit 9 ;; esac
-  done || { fail CONFIG-COMMAND-PATH; return; }
+    case "$token" in
+      ''|auto|-*) continue ;;
+      */*)
+        if ! test -e "$root/$token"; then
+          command_path_failed=1
+          break
+        fi
+        ;;
+    esac
+  done <<EOF
+$(section_pairs "$file" commands | cut -f2- | tr -d '[]' | tr ',' '\n')
+EOF
+  test "$command_path_failed" -eq 0 || { fail CONFIG-COMMAND-PATH; return; }
 
   path_pattern=$(jq -r '.fields.protected_paths.item_pattern' "$schema")
   for protected_path in $(list_values "$file" protected_paths); do
@@ -259,6 +221,8 @@ for fixture in retired-gate missing-canonical-gate unknown-field scalar-command 
   unsafe-worktree-home unsafe-worktree-parent bare-parent-protected-path \
   command-path-qualified-rm command-sudo-rm command-env-rm command-wrapper-rm \
   command-git-global-push command-gh-global-merge command-terraform-chdir-apply \
+  command-git-alias-push command-git-status command-gh-api-post command-glab-api-post \
+  command-terraform-plan command-empty-token command-trailing-empty-token command-whitespace-token \
   unsupported-yaml-form unsupported-quoted-scalar unsupported-duplicate-key \
   unknown-schema-version; do
   case "$fixture" in
@@ -274,20 +238,47 @@ for fixture in retired-gate missing-canonical-gate unknown-field scalar-command 
     unsupported-yaml-form | unsupported-quoted-scalar | unsupported-duplicate-key) expected=CONFIG-YAML-FORM ;;
     missing-command-path) expected=CONFIG-COMMAND-PATH ;;
     shell-eval-command | shell-eval-env-command | command-substitution-command) expected=CONFIG-COMMAND-SHELL-EVAL ;;
-    destructive-command | forge-mutation-command | command-path-qualified-rm | \
-      command-sudo-rm | command-env-rm | command-wrapper-rm | command-git-global-push | \
-      command-gh-global-merge | command-terraform-chdir-apply) expected=CONFIG-COMMAND-UNSAFE ;;
+    command-path-qualified-rm | command-sudo-rm | command-env-rm | \
+      command-wrapper-rm) expected=CONFIG-COMMAND-UNSAFE ;;
+    destructive-command | forge-mutation-command | command-git-global-push | \
+      command-gh-global-merge | command-terraform-chdir-apply | \
+      command-git-alias-push | command-git-status | command-gh-api-post | \
+      command-glab-api-post | command-terraform-plan) expected=CONFIG-COMMAND-CONTROL-CLI ;;
+    command-empty-token | command-trailing-empty-token | command-whitespace-token) expected=CONFIG-COMMAND-TOKEN ;;
     unknown-schema-version) expected=CONFIG-SCHEMA-VERSION ;;
   esac
   log="$tmp/$fixture.log"
-  if validate_config "$fixtures/$fixture.yml" >"$log" 2>&1; then echo "config mutation survived: $fixture" >&2; exit 1; fi
+  validation_rc=0
+  (set +e; validate_config "$fixtures/$fixture.yml") >"$log" 2>&1 || validation_rc=$?
+  if test "$validation_rc" -eq 0; then echo "config mutation survived: $fixture" >&2; exit 1; fi
   test "$(grep -c '^CONFIG-' "$log")" -eq 1
   grep -Fxq "$expected" "$log"
 done
+
+alias_repo="$tmp/git-alias-repo"
+alias_remote="$tmp/git-alias-remote.git"
+git init -q "$alias_repo"
+git init -q --bare "$alias_remote"
+git -C "$alias_repo" config user.name 'Flow42 config fixture'
+git -C "$alias_repo" config user.email 'config-fixture@example.invalid'
+printf '%s\n' fixture >"$alias_repo/file.txt"
+git -C "$alias_repo" add file.txt
+git -C "$alias_repo" commit -qm baseline
+git -C "$alias_repo" remote add origin "$alias_remote"
+git -C "$alias_repo" config alias.publish-safely 'push origin HEAD:refs/heads/injected'
+if git --git-dir="$alias_remote" show-ref --verify --quiet refs/heads/injected; then
+  echo CONFIG-GIT-ALIAS-PRECONDITION >&2
+  exit 1
+fi
+git -C "$alias_repo" publish-safely >/dev/null 2>&1
+git --git-dir="$alias_remote" show-ref --verify --quiet refs/heads/injected || {
+  echo CONFIG-GIT-ALIAS-NOT-EXECUTABLE >&2
+  exit 1
+}
 
 schema_fields=$(jq -r '.fields | to_entries[] | if (.value.type == "object") then .key as $p | .value.properties | keys[] | $p + "." + . else .key end' "$schema" | sort)
 doc_fields=$(awk -F'`' '/^\| `/ {print $2}' "$root/docs/CONFIGURATION.md" | sort)
 test "$schema_fields" = "$doc_fields" || { echo CONFIG-DOC-DRIFT >&2; exit 1; }
 grep -q '^## Configuration: removed approval gates$' "$root/docs/MIGRATION.md"
 
-echo 'config schema ok: Git refs, safe paths/YAML, normalized argv policy, strict fixtures, documentation drift'
+echo 'config schema ok: Git refs, safe paths/YAML, fail-closed argv policy, strict fixtures, documentation drift'

@@ -17,6 +17,11 @@
     "any-non-final": {
       "include_sets": ["stages", "side_states"],
       "exclude_sets": ["final_states"],
+      "exclude_states": []
+    },
+    "any-unblocked-non-final": {
+      "include_sets": ["stages", "side_states"],
+      "exclude_sets": ["final_states"],
       "exclude_states": ["blocked"]
     }
   },
@@ -38,7 +43,7 @@
     {"from": "drafting-spec", "to": "planning"},
     {"from": "planning", "to": "plan-gate", "when": "risk-high-or-critical"},
     {"from": "planning", "to": "building", "when": "risk-low-or-medium"},
-    {"from": "plan-gate", "to": "building", "gate": "plan"},
+    {"from": "plan-gate", "to": "building", "gate": "high-risk-plan"},
     {"from": "building", "to": "verifying"},
     {"from": "verifying", "to": "pr-ready", "gate": "verification-passed"},
     {"from": "pr-ready", "to": "ci-running", "gate": "change-request-open"},
@@ -46,7 +51,7 @@
     {"from": "ready-for-human", "to": "complete", "gate": "human-authorized-close"}
   ],
   "side_transitions": [
-    {"from": "any-non-final", "to": "blocked", "gate": "reason-and-resume-stage"},
+    {"from": "any-unblocked-non-final", "to": "blocked", "gate": "reason-and-resume-stage"},
     {"from": "blocked", "to": "recorded-resume-stage", "gate": "blockers-cleared-and-state-valid-and-resume-bound"},
     {"from": "any-non-final", "to": "abandoned", "gate": "human-authorization"},
     {"from": "any-non-final", "to": "superseded", "gate": "human-authorization-and-replacement-link"}
@@ -69,7 +74,7 @@
     },
     {"from": "ci-running", "to": "building", "gate": "recorded-failing-check"},
     {"from": "ready-for-human", "to": "building", "gate": "recorded-change-request"},
-    {"from": "any-non-final", "to": "blocked", "gate": "state-inconsistency-recorded-with-repair-proposal"}
+    {"from": "any-unblocked-non-final", "to": "blocked", "gate": "state-inconsistency-recorded-with-repair-proposal"}
   ],
   "lifecycle_commands": ["flow", "init", "intent", "spec", "plan", "build", "verify", "pr", "maintain", "status", "resume"],
   "maintenance_commands": ["update"],

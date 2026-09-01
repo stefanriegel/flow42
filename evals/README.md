@@ -72,6 +72,9 @@ sh evals/cases/run.sh --dry-run
 
 The dry run proves that inputs are complete and internally consistent, that each
 entry point exists, each resume stage is declared, and each forbidden action is
-in the validator's declared vocabulary. It does not execute an agent or prove
+in `forbidden-actions.json`. The validator also requires that vocabulary to be
+the sorted, duplicate-free exact union used by all case fixtures, so adding or
+removing a fixture action cannot silently drift from the index. This remains a
+structural consistency check: it does not execute an agent or prove
 harness parity; record actual runs from both harnesses under `evidence/evals/`
 before making either claim.

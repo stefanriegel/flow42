@@ -113,6 +113,72 @@ dirty_overlap_allowed() {
     test "$explicitly_handed_off" = true
 }
 
+hash_file_or_missing() {
+  if test -f "$1"; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  else
+    printf '%s\n' missing
+  fi
+}
+
+hash_tree_or_missing() {
+  if test -d "$1"; then
+    tar -cf - -C "$1" . | shasum -a 256 | awk '{print $1}'
+  else
+    printf '%s\n' missing
+  fi
+}
+
+absolute_git_dir() {
+  snapshot_repo=$1
+  selector=$2
+  raw=$(git -C "$snapshot_repo" rev-parse "$selector")
+  case "$raw" in
+    /*) printf '%s\n' "$raw" ;;
+    *) (CDPATH=''; export CDPATH; cd -- "$snapshot_repo/$raw" && pwd -P) ;;
+  esac
+}
+
+admin_snapshot() {
+  snapshot_repo=$1
+  output=$2
+  common_dir=$(absolute_git_dir "$snapshot_repo" --git-common-dir)
+  git_dir=$(absolute_git_dir "$snapshot_repo" --git-dir)
+  hooks_dir="$common_dir/hooks"
+  configured_hooks=$(git -C "$snapshot_repo" config --path --get core.hooksPath || true)
+  if test -n "$configured_hooks"; then
+    case "$configured_hooks" in
+      /*) hooks_dir=$configured_hooks ;;
+      *) hooks_dir="$snapshot_repo/$configured_hooks" ;;
+    esac
+  fi
+  hooks_identity=$(hash_tree_or_missing "$hooks_dir")
+  effective_config_identity=$(git -C "$snapshot_repo" config --null \
+    --show-origin --show-scope --list | shasum -a 256 | awk '{print $1}')
+  refs_identity=$(git -C "$snapshot_repo" for-each-ref \
+    --format='%(refname)%00%(objectname)%00%(symref)' | shasum -a 256 | awk '{print $1}')
+  pseudo_refs_identity=$(
+    for pseudo_ref in HEAD ORIG_HEAD FETCH_HEAD MERGE_HEAD CHERRY_PICK_HEAD \
+      REVERT_HEAD AUTO_MERGE BISECT_START; do
+      printf '%s=%s\n' "$pseudo_ref" "$(hash_file_or_missing "$git_dir/$pseudo_ref")"
+    done | shasum -a 256 | awk '{print $1}'
+  )
+  {
+    printf 'common-dir=%s\n' "$common_dir"
+    printf 'git-dir=%s\n' "$git_dir"
+    printf 'common-config=%s\n' "$(hash_file_or_missing "$common_dir/config")"
+    printf 'worktree-config=%s\n' "$(hash_file_or_missing "$git_dir/config.worktree")"
+    printf 'effective-config=%s\n' "$effective_config_identity"
+    printf 'hooks-dir=%s\n' "$hooks_dir"
+    printf 'hooks=%s\n' "$hooks_identity"
+    printf 'refs=%s\n' "$refs_identity"
+    printf 'packed-refs=%s\n' "$(hash_file_or_missing "$common_dir/packed-refs")"
+    printf 'reftable=%s\n' "$(hash_tree_or_missing "$common_dir/reftable")"
+    printf 'pseudo-refs=%s\n' "$pseudo_refs_identity"
+    printf 'index=%s\n' "$(hash_file_or_missing "$git_dir/index")"
+  } >"$output"
+}
+
 validate_contract() {
   contract=$1
   grep -Fq 'git status --porcelain=v2 -z --untracked-files=all' "$contract" || {
@@ -154,6 +220,21 @@ validate_contract() {
     printf '%s\n' 'OWNERSHIP-CONTRADICTORY-EXCEPTION' >&2
     return 1
   fi
+  if ! grep -Fq 'git rev-parse --git-common-dir' "$contract" ||
+    ! grep -Fq 'git rev-parse --git-dir' "$contract"; then
+    printf '%s\n' 'OWNERSHIP-GIT-ADMIN-ROOTS' >&2
+    return 1
+  fi
+  tr '\n' ' ' <"$contract" |
+    grep -Eiq 'common.*config.*remote.*hook.*ref.*index' || {
+    printf '%s\n' 'OWNERSHIP-GIT-ADMIN-IDENTITY' >&2
+    return 1
+  }
+  tr '\n' ' ' <"$contract" |
+    grep -Eiq 'worker.*(must not|forbidden|block).*Git administrative|Git administrative.*worker.*(must not|forbidden|block)' || {
+    printf '%s\n' 'OWNERSHIP-GIT-ADMIN-BLOCK' >&2
+    return 1
+  }
 }
 
 git init -q "$repo"
@@ -304,6 +385,53 @@ printf 'R100\0outside/truncated\0' >"$tmp/truncated-name-status"
 if parse_diff_name_status_paths "$tmp/truncated-name-status" >"$tmp/truncated-diff-paths.json" 2>/dev/null; then
   fail OWNERSHIP-TRUNCATED-NAME-STATUS-ACCEPTED
 fi
+
+admin_repo="$tmp/admin-repo"
+admin_remote="$tmp/admin-remote.git"
+git init -q "$admin_repo"
+git init -q --bare "$admin_remote"
+git -C "$admin_repo" config user.name 'Flow42 admin fixture'
+git -C "$admin_repo" config user.email 'ownership-admin@example.invalid'
+printf '%s\n' tracked >"$admin_repo/tracked.txt"
+git -C "$admin_repo" add tracked.txt
+git -C "$admin_repo" commit -qm baseline
+
+admin_snapshot "$admin_repo" "$tmp/admin-before-remote"
+git -C "$admin_repo" remote add injected "$admin_remote"
+test -z "$(git -C "$admin_repo" status --porcelain)" || fail OWNERSHIP-ADMIN-REMOTE-DIRTY-WORKTREE
+admin_snapshot "$admin_repo" "$tmp/admin-after-remote"
+cmp -s "$tmp/admin-before-remote" "$tmp/admin-after-remote" && fail OWNERSHIP-ADMIN-REMOTE-UNDETECTED
+git -C "$admin_repo" remote remove injected
+
+admin_snapshot "$admin_repo" "$tmp/admin-before-hooks-path"
+git -C "$admin_repo" config core.hooksPath ../outside-hooks
+test -z "$(git -C "$admin_repo" status --porcelain)" || fail OWNERSHIP-ADMIN-HOOKS-PATH-DIRTY-WORKTREE
+admin_snapshot "$admin_repo" "$tmp/admin-after-hooks-path"
+cmp -s "$tmp/admin-before-hooks-path" "$tmp/admin-after-hooks-path" && fail OWNERSHIP-ADMIN-HOOKS-PATH-UNDETECTED
+git -C "$admin_repo" config --unset core.hooksPath
+
+admin_snapshot "$admin_repo" "$tmp/admin-before-hook"
+admin_common=$(absolute_git_dir "$admin_repo" --git-common-dir)
+printf '%s\n' '#!/bin/sh' 'exit 0' >"$admin_common/hooks/pre-commit"
+chmod +x "$admin_common/hooks/pre-commit"
+test -z "$(git -C "$admin_repo" status --porcelain)" || fail OWNERSHIP-ADMIN-HOOK-DIRTY-WORKTREE
+admin_snapshot "$admin_repo" "$tmp/admin-after-hook"
+cmp -s "$tmp/admin-before-hook" "$tmp/admin-after-hook" && fail OWNERSHIP-ADMIN-HOOK-UNDETECTED
+find "$admin_common/hooks/pre-commit" -delete
+
+admin_snapshot "$admin_repo" "$tmp/admin-before-ref"
+git -C "$admin_repo" update-ref refs/heads/injected HEAD
+test -z "$(git -C "$admin_repo" status --porcelain)" || fail OWNERSHIP-ADMIN-REF-DIRTY-WORKTREE
+admin_snapshot "$admin_repo" "$tmp/admin-after-ref"
+cmp -s "$tmp/admin-before-ref" "$tmp/admin-after-ref" && fail OWNERSHIP-ADMIN-REF-UNDETECTED
+git -C "$admin_repo" update-ref -d refs/heads/injected
+
+admin_snapshot "$admin_repo" "$tmp/admin-before-index"
+git -C "$admin_repo" update-index --assume-unchanged tracked.txt
+test -z "$(git -C "$admin_repo" status --porcelain)" || fail OWNERSHIP-ADMIN-INDEX-DIRTY-WORKTREE
+admin_snapshot "$admin_repo" "$tmp/admin-after-index"
+cmp -s "$tmp/admin-before-index" "$tmp/admin-after-index" && fail OWNERSHIP-ADMIN-INDEX-UNDETECTED
+git -C "$admin_repo" update-index --no-assume-unchanged tracked.txt
 
 validate_contract "$root/core/OWNERSHIP.md"
 

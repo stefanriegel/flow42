@@ -53,35 +53,45 @@ Do not persist secrets or raw authenticated CLI output.
 
 ### Threat model
 
-- Assets: repository integrity; the exact reviewed Git identity; worker path
-  ownership; human confirmation state; configured command argv; plugin source,
-  version, installation scopes, and rollback state; and review provenance.
+- Assets: repository integrity; the reviewed repository, baseline, head, scope,
+  diff, and artifact identities; worker path and Git-administration ownership;
+  human confirmation state; configured command argv; plugin source, version,
+  installation scopes, and rollback state; and review provenance.
 - Actors: the accountable human; the coordinating agent; non-implementing
   reviewers; bounded implementation workers; authenticated Forge and
   orchestrator principals; vendor CLIs; and an attacker able to control
-  repository text, issue/review text, configuration values, Git pathnames, or
-  an unauthenticated receipt claim.
+  repository text, issue/review text, configuration values, Git pathnames or
+  administrative state, a harness-elevated repository instruction, or a
+  replayed/unauthenticated receipt claim.
 - Trust boundaries: human request to coordinator; repository data to executable
   agent instructions; configuration tokens to process execution; coordinator
   to worker worktree; Git's byte-oriented path records to ownership decisions;
   vendor marketplace state to the update adapter; and a review provider's
-  authenticated record to local receipt validation.
-- Abuse cases: inject shell evaluation through configured argv; smuggle an
+  authenticated record to local receipt validation; and host instruction
+  precedence to Flow42's later interpreted policy.
+- Abuse cases: hide a push behind a Git alias or generic Forge API command;
+  substitute a Git marketplace with an unrelated GitHub source after candidate
+  verification; redirect a coordinator push through remote/hook mutation while
+  leaving the worktree clean; replay a valid receipt across work items/scopes or
+  add unauthenticated review claims; use a quoted duplicate status key; smuggle an
   unowned source through a committed rename; claim a forged trusted review;
   resume from `blocked` directly to a final state; make update rollback delete
   the only usable marketplace declaration; use malicious path bytes to evade
   ownership checks; or edit non-bookkeeping code while retaining a stale
   receipt.
-- Mitigations: declarative schema validation plus direct argv execution; Git's
-  NUL-delimited name-status records with both rename endpoints; authenticated
-  receipt resolution and exact-field binding; non-final, recorded resume
-  targets; step-aware update rollback with exact state readback; literal
-  pathspec staging; and receipt currency restricted to the reviewed work
-  item's bookkeeping paths.
+- Mitigations: fail-closed direct-argv validation with no control-CLI allowlist;
+  Git's NUL-delimited name-status records plus pre/post Git-administration
+  identities; authenticated receipt resolution and expected repository/work/
+  scope/diff/artifact binding; strict status-subset parsing; non-final, recorded
+  resume targets; source-kind-preserving update convergence and rollback with
+  exact state readback; literal pathspec staging; and receipt currency restricted
+  to the reviewed work item's bookkeeping paths.
 - Residual risk: local independent review cannot authenticate an external
   principal and remains a lower proof tier; vendor CLI semantics can change;
-  custom validators can drift from their prose contracts; local fixtures do
-  not prove remote Forge, normal-harness, or release behavior. These risks are
+  custom validators can drift from their prose contracts; Flow42 cannot demote
+  an instruction the host already elevated and therefore requires trusted-base
+  handling outside the skill; local fixtures do not prove remote Forge,
+  normal-harness, or release behavior. These risks are
   kept explicit and require fail-closed diagnostics or stronger live evidence
   before a stronger proof tier is claimed.
 

@@ -39,6 +39,29 @@ and absent content. Do not persist secret-bearing content. If a path cannot be
 identified without disclosing a secret, record that attribution is unavailable
 and fail closed before dispatch.
 
+The working-tree snapshot is not sufficient for Git administrative state. From
+the repository root, resolve and canonicalize both
+`git rev-parse --git-common-dir` and `git rev-parse --git-dir`. Before dispatch,
+persist content identities, without raw secret-bearing values, for:
+
+- the common config and worktree config, plus a hash of the effective
+  `git config --null --show-origin --show-scope --list` stream so included
+  configuration, remotes, aliases, and `core.hooksPath` remain attributable;
+- the effective hooks directory's relative names, modes, and file-content
+  hashes, whether it is under the common directory or selected by
+  `core.hooksPath`;
+- `HEAD`, the refs/reftable or packed-refs state, pseudo-refs, and the
+  `git for-each-ref` name/object/symref stream; and
+- the worktree index content identity.
+
+Repeat these identities after the worker. Workers must not mutate Git
+administrative state: common or worktree configuration, remotes, aliases,
+hooks, hook paths, refs, and pseudo-refs are coordinator-owned and any change
+blocks integration. An index change also blocks unless the dispatch explicitly
+authorized staging each exact reviewed path under the literal-pathspec rule
+below; its resulting index identity must match that declared staging operation.
+Ordinary ownership of product paths never grants Git-administration authority.
+
 After worker completion, repeat both NUL-delimited snapshots with rename
 detection and compare them with the pre-dispatch path and content identities.
 Normalize only after NUL-safe parsing; reject absolute paths, `..` components,
@@ -59,8 +82,9 @@ integration.
 Block integration when a new path is outside ownership, the worker launched a
 delegate, or the observed worktree differs from the dispatched worktree.
 Preserve all files and report the exact mismatch, including rename endpoints
-and dirty-path collisions. Workers do not perform Forge writes; the coordinator
-owns any later real issue or PR/MR operation.
+dirty-path collisions, and Git administrative identity changes. Workers do not
+perform Forge writes; the coordinator owns any later real issue or PR/MR
+operation.
 
 Keep the task schedule graph separate from the data flow graph. Schedule edges
 define dependencies and synchronization barriers. Data edges name a versioned

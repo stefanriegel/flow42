@@ -18,7 +18,10 @@ validate_workflow() {
   jq -e '
     .pseudo_states["any-non-final"].include_sets == ["stages", "side_states"] and
     .pseudo_states["any-non-final"].exclude_sets == ["final_states"] and
-    .pseudo_states["any-non-final"].exclude_states == ["blocked"] and
+    .pseudo_states["any-non-final"].exclude_states == [] and
+    .pseudo_states["any-unblocked-non-final"].include_sets == ["stages", "side_states"] and
+    .pseudo_states["any-unblocked-non-final"].exclude_sets == ["final_states"] and
+    .pseudo_states["any-unblocked-non-final"].exclude_states == ["blocked"] and
     .state_sets.resumable_stages.include_sets == ["stages"] and
     .state_sets.resumable_stages.exclude_sets == ["final_states"] and
     .dynamic_targets["recorded-resume-stage"].source == "status.resume_stage" and
@@ -26,7 +29,10 @@ validate_workflow() {
     .dynamic_targets["recorded-resume-stage"].must_equal == "history.latest-transition-to-blocked.from"' "$file" >/dev/null || { fail LIFECYCLE-DECLARATION; return; }
 
   jq -e 'any(.side_transitions[]; .from == "blocked" and .to == "recorded-resume-stage" and .gate == "blockers-cleared-and-state-valid-and-resume-bound") and
-    (all(.side_transitions[]; (.from == "blocked" and .to == "blocked") == false))' "$file" >/dev/null || { fail LIFECYCLE-RESUME-EDGE; return; }
+    any(.side_transitions[]; .from == "any-unblocked-non-final" and .to == "blocked") and
+    any(.side_transitions[]; .from == "any-non-final" and .to == "abandoned") and
+    any(.side_transitions[]; .from == "any-non-final" and .to == "superseded") and
+    (all(.side_transitions[]; (.from == "any-non-final" and .to == "blocked") == false))' "$file" >/dev/null || { fail LIFECYCLE-RESUME-EDGE; return; }
 
   stages=$(jq -r '.stages[]' "$file")
   reachable=' draft-intent '
@@ -70,12 +76,19 @@ validate_workflow() {
   jq -e 'all(.repair_transitions[]; (.gate | type == "string" and length > 0))' "$file" >/dev/null || { fail LIFECYCLE-REPAIR-GATE-MISSING; return; }
   jq -e 'all(.repair_transitions[]; (.gate | ascii_downcase | contains("human")) == false)' "$file" >/dev/null || { fail LIFECYCLE-REPAIR-HUMAN; return; }
   jq -e '.mandatory_gates == ["high-risk-plan","irreversible-action","merge","deploy"]' "$file" >/dev/null || { fail LIFECYCLE-MANDATORY-GATES; return; }
+  jq -e --slurpfile risk "$root/core/risk-policy.json" --slurpfile schema "$root/core/config-schema.json" '
+    (.mandatory_gates == $schema[0].canonical_mandatory_gates) and
+    any(.transitions[]; .from == "plan-gate" and .to == "building" and .gate == "high-risk-plan") and
+    ($risk[0].high_risk_gates == ["high-risk-plan", "independent-verification"]) and
+    ($risk[0].gate_mapping["high-risk-plan"].workflow_gate == "high-risk-plan") and
+    ($risk[0].gate_mapping["high-risk-plan"].configuration_gate == "high-risk-plan") and
+    ($risk[0].gate_mapping["independent-verification"].workflow_gate == "verification-passed")' "$file" >/dev/null || { fail LIFECYCLE-GATE-MAPPING; return; }
   jq -e '
     (.repair_transitions | length == 4) and
     any(.repair_transitions[]; .from == "verifying" and .to == "building" and .gate == "recorded-blocking-finding") and
     any(.repair_transitions[]; .from == "ci-running" and .to == "building" and .gate == "recorded-failing-check") and
     any(.repair_transitions[]; .from == "ready-for-human" and .to == "building" and .gate == "recorded-change-request") and
-    any(.repair_transitions[]; .from == "any-non-final" and .to == "blocked" and .gate == "state-inconsistency-recorded-with-repair-proposal")' "$file" >/dev/null || { fail LIFECYCLE-REPAIR-EDGES; return; }
+    any(.repair_transitions[]; .from == "any-unblocked-non-final" and .to == "blocked" and .gate == "state-inconsistency-recorded-with-repair-proposal")' "$file" >/dev/null || { fail LIFECYCLE-REPAIR-EDGES; return; }
   jq -e '.automatic_review_limit == 2 and
     any(.repair_transitions[];
       .from == "verifying" and .to == "building" and
@@ -86,9 +99,9 @@ validate_workflow() {
       .counter.on_exhausted.effect == "escalate")' "$file" >/dev/null || { fail LIFECYCLE-REVIEW-LIMIT; return; }
   jq -e --slurpfile mismatch "$root/evals/cases/status-history-mismatch.json" --slurpfile ci "$root/evals/cases/ci-failure.json" '
     ($mismatch[0].expect.result == "blocked" and $mismatch[0].expect.repair_proposal_required == true and
-      any(.repair_transitions[]; .from == "any-non-final" and .to == "blocked" and .gate == "state-inconsistency-recorded-with-repair-proposal")) and
+      any(.repair_transitions[]; .from == "any-unblocked-non-final" and .to == "blocked" and .gate == "state-inconsistency-recorded-with-repair-proposal")) and
     ($ci[0].expect.result == "blocked" and $ci[0].expect.resume_stage == "ci-running" and
-      any(.side_transitions[]; .from == "any-non-final" and .to == "blocked"))' "$file" >/dev/null || { fail LIFECYCLE-SIMULATION; return; }
+      any(.side_transitions[]; .from == "any-unblocked-non-final" and .to == "blocked"))' "$file" >/dev/null || { fail LIFECYCLE-SIMULATION; return; }
 }
 
 validate_resume_fixture() {
@@ -136,7 +149,8 @@ done
 simulate_review_repairs
 
 for mutation in add-human-gate-to-repair undeclared-target repair-from-final disconnect-pr-ready \
-  resume-target-complete missing-repair-gate remove-review-loop-limit; do
+  resume-target-complete missing-repair-gate remove-review-loop-limit blocked-self-loop \
+  blocked-cannot-abandon drift-high-risk-gate; do
   jq -f "$fixtures/$mutation.jq" "$workflow" >"$tmp/$mutation.json"
   case "$mutation" in
     add-human-gate-to-repair) expected=LIFECYCLE-REPAIR-HUMAN ;;
@@ -146,6 +160,8 @@ for mutation in add-human-gate-to-repair undeclared-target repair-from-final dis
     resume-target-complete) expected=LIFECYCLE-RESUME-EDGE ;;
     missing-repair-gate) expected=LIFECYCLE-REPAIR-GATE-MISSING ;;
     remove-review-loop-limit) expected=LIFECYCLE-REVIEW-LIMIT ;;
+    blocked-self-loop | blocked-cannot-abandon) expected=LIFECYCLE-RESUME-EDGE ;;
+    drift-high-risk-gate) expected=LIFECYCLE-GATE-MAPPING ;;
   esac
   log="$tmp/$mutation.log"
   if validate_workflow "$tmp/$mutation.json" >"$log" 2>&1; then echo "lifecycle mutation survived: $mutation" >&2; exit 1; fi

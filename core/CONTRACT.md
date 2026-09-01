@@ -44,10 +44,13 @@ mutation. Commit artifacts so another session can resume without chat history.
 
 ## Lifecycle and recovery
 
-The stages in `workflow.json` are the only ordered forward transitions. Its
-declared `pseudo_states` expand symbolic sources, and its declared
-`pseudo_states` declare their included and excluded sets; `blocked` is excluded
-from `any-non-final` to prevent a self-loop. `dynamic_targets` resolve fields
+The stages in `workflow.json` are the only ordered forward transitions.
+`state_sets` are named collections used for membership checks; `pseudo_states`
+are symbolic transition sources expanded from declared included and excluded
+sets. `any-non-final` includes `blocked`, so blocked work may be abandoned or
+superseded. `any-unblocked-non-final` excludes `blocked` and is the only
+pseudo-state allowed as a source for entering `blocked`, preventing a
+blocked-to-blocked self-loop. `dynamic_targets` resolve fields
 such as `status.resume_stage` only to a non-final stage that equals the actual
 pre-block stage in the latest history transition. Work may enter `blocked` while
 retaining `resume_stage`; resume only after blockers clear, the history binding
@@ -92,30 +95,42 @@ security review. Independent means a separate review pass by an agent or person
 that did not implement the change, not a second human approver. The implementing
 agent cannot supply that attestation.
 
-Persist each review as a schema-versioned JSON receipt in `evidence.md`, binding
-the verdict to `reviewed_head`, reviewer identity and role, issuer provenance,
-session or dispatch, checks, artifact, and time. Use the strongest issuer
+Persist each review as a schema-versioned JSON receipt in `evidence.md`. Derive
+the canonical repository identity from normalized `origin`, the work ID from
+the exact `.flow42/<work-id>/` directory, both SHAs with `git rev-parse
+--verify`, the scope digest from the canonical ordered reviewed path set, the
+diff digest from the NUL-safe no-renames baseline-to-head path/content diff, and
+the artifact digest from the persisted review artifact bytes. Compare them and
+the expected review subject to the receipt, which also binds reviewer identity
+and role, issuer provenance, session or dispatch, checks, verdict, artifact
+reference, and time. Use the strongest issuer
 available: `authenticated-forge`, then `trusted-orchestrator`, then
 `local-independent-pass`. The local fallback remains valid when neither stronger
 issuer is available, but must record why and must still be a distinct pass that
 did not implement the change. It is explicitly lower-tier. A Forge or
 orchestrator receipt is valid only when an independent resolver authenticates
-the issuer record and exactly binds issuer reference, reviewer principal,
-session or dispatch, reviewed SHA, verdict, and artifact; missing, unavailable,
+the issuer record and exactly binds issuer reference, repository identity, work
+ID, baseline and reviewed SHAs, scope and diff digests, expected subject,
+reviewer principal and role, implementer flag, session or dispatch, checks,
+verdict, and artifact reference and digest; missing, unavailable,
 unauthenticated, or mismatched resolution fails closed. Review evidence never
 grants human approval.
 
 A receipt for `reviewed_head` remains current at `HEAD` only when
-`reviewed_head` is an ancestor of or equal to `HEAD` and every NUL-delimited path
-from `git diff --name-only --no-renames -z "$reviewed_head" HEAD --` is an exact
-receipt-neutral leaf in the work item under review. Renames retain both endpoints;
+`reviewed_head` is an ancestor of or equal to `HEAD`. Every NUL-delimited path
+from `git diff --name-only --no-renames -z "$reviewed_head" HEAD --` must be an
+exact receipt-neutral leaf in the work item under review. Renames retain both endpoints;
 nested and unrelated lookalike paths are invalid. `evidence.md`, `decisions.md`,
 and `history.jsonl` are neutral bookkeeping artifacts. In `status.yml`, neutrality
 is field-level and limited to `stage`, `state_revision`, `updated_at`, `blockers`,
-`resume_stage`, `ci_state`, `next_actions`, and `forge_item`; changing `risk`,
+`resume_stage`, `ci_state`, `next_actions`, `forge_item`, and a grammar-valid
+`change_request`; changing `risk`,
 identity, work type, review loops, or another field requires fresh review. Both
-status versions must contain the canonical top-level key set exactly once;
-duplicate, missing, or unknown keys fail closed before comparison.
+status versions must contain the canonical top-level key set exactly once.
+Quoted keys and duplicate, missing, or unknown keys fail closed. Values must use
+the declared scalar or inline string-list subset; canonical quoted scalar values
+are accepted, while anchors, aliases, tags, merge keys, nested mappings, and
+block scalars are rejected before comparison.
 These are the only receipt-neutral bookkeeping paths and status fields.
 Receipt-neutral decisions never authenticate human confirmation. Changes to any
 other path, including `intent.md`, `spec.md`, `plan.md`, `.flow42/config.yml`,

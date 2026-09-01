@@ -88,6 +88,23 @@ independent review; remediation and fresh review if needed.
   direct skill and worker pointer resolves authority from the bundle's actual
   great-grandparent root.
 
+## Second and final automatic review repair
+
+- Update: bind the verified candidate URL to the recorded GitHub/Git source,
+  stop directory sources before discovery, compose preflight and transaction,
+  and avoid rollback mutation after a pre-effect first-remove failure.
+- Control plane: bind receipts to independently derived repository/work/scope/
+  diff/artifact identities, strictly parse the status subset, make a valid
+  change-request link neutral, fix blocked side transitions, and unify the
+  high-risk gate ID.
+- Ownership/security: reject all configured control CLIs, snapshot Git
+  administrative state, make host-instruction provenance and residual risk
+  honest, update the threat model, and centralize eval vocabulary.
+- Coordinator seams: preserve title whitespace during status canonicalization,
+  reject trailing empty argv elements, cover `core.hooksPath`, and keep silence
+  distinct from authorization. This consumes `automatic_review_limit: 2`; a
+  further blocking exact-head verdict must transition to `blocked`.
+
 ## Risks and rollback
 
 Each worker owns exact paths and makes no commits or Forge writes. A failed slice

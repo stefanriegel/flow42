@@ -13,7 +13,7 @@ commands:
   format: [auto]
   lint: [auto]
   typecheck: [auto]
-  test: [sh, -c, echo safe]
+  test: [sh, -c, echo]
   build: [auto]
 protected_paths: []
 mandatory_gates:

@@ -52,6 +52,20 @@
 - Consequences: Headless and interactive flows can progress through safe intent
   uncertainty, while auth, permissions, sensitive data, money, production,
   infrastructure, migrations, destructive, high-risk, and irreversible choices
-  remain fail-closed. Silence is never consent.
+  remain fail-closed. Silence never supplies authorization; a documented safe
+  provisional default is an assumption, not an answer or permission.
 - Actor: user request, implemented by coordinator from the selectively reviewed
   `feat/intent-safe-fallback` branch.
+
+## 2026-09-01T07:35:00Z — project configuration migration
+
+- Context: The architecture hardening introduced the schema-authoritative
+  configuration contract and retired configuration approval gates.
+- Decision: Migrate `.flow42/config.yml` to schema version 1, retain the four
+  canonical high-risk/irreversible/merge/deploy gates, use direct-argv command
+  arrays, and remove nonexistent command paths.
+- Validation: `tests/config-schema.sh`, `scripts/validate.sh`,
+  `tests/contracts.sh`, and `scripts/check-parity.sh` passed after migration.
+- Consequences: Unknown or unsupported syntax blocks execution; the migration
+  creates no approval artifact and grants no Forge authority.
+- Actor: coordinator.

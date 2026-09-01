@@ -21,7 +21,7 @@ test "$(jq '.side_transitions | length' "$workflow")" -eq 4
 test "$(jq '.repair_transitions | length' "$workflow")" -eq 4
 jq -e '.transitions[] | select(.from == "draft-intent" and .to == "drafting-spec" and (has("gate") | not))' "$workflow" >/dev/null
 jq -e '.transitions[] | select(.from == "drafting-spec" and .to == "planning" and (has("gate") | not))' "$workflow" >/dev/null
-jq -e '.transitions[] | select(.from == "plan-gate" and .to == "building" and .gate == "plan")' "$workflow" >/dev/null
+jq -e '.transitions[] | select(.from == "plan-gate" and .to == "building" and .gate == "high-risk-plan")' "$workflow" >/dev/null
 jq -e '.transitions[] | select(.to == "ready-for-human" and .gate == "independently-reviewed-and-ci-green")' "$workflow" >/dev/null
 jq -e '.terminal_outcome == "ready-for-human"' "$workflow" >/dev/null
 jq -e '.side_states == ["blocked", "abandoned", "superseded"]' "$workflow" >/dev/null

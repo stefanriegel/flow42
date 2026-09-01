@@ -108,7 +108,8 @@ check_intent_inventory() {
   require_phrase 'State each decision neutrally'
   require_phrase 'credible alternatives and tradeoffs on equal footing'
   require_phrase 'recommended answer is non-binding'
-  require_phrase 'Never treat silence, lack of objection, or the recommendation itself as consent'
+  require_phrase 'Silence, lack of objection, and the recommendation itself never supply authorization'
+  require_phrase 'The provisional default is an assumption, not an answer, consent, or permission'
   require_phrase 'data minimization'
   require_phrase 'Never request or persist secrets, credentials, private records, or raw personal or customer data'
   require_phrase 'trivial-change fast path'
@@ -140,7 +141,7 @@ check_intent_semantics() {
     'recommendation remains non-binding until the user explicitly answers' \
     'recommended answer is non-binding' \
     'explicitly ask the user to answer' \
-    'Never treat silence, lack of objection, or the recommendation itself as consent'
+    'Silence, lack of objection, and the recommendation itself never supply authorization'
   require_paragraph_sequence \
     'material uncertainty, not a question count, controls the stop condition' \
     'objective stop condition after initial inspection and every answer' \
@@ -172,7 +173,7 @@ check_intent_semantics() {
     '(ask|question)[^.;]{0,96}before[[:space:]]+(repository[[:space:]]+)?(inspection|inspecting)'
   reject_semantic_pattern \
     'silence can become consent' \
-    'as consent[[:space:]]+(unless|except|if|when|until)|silence[^.;]{0,80}(means|counts as|is|signals|implies)[[:space:]]+(user[[:space:]]+)?consent'
+    'as consent[[:space:]]+(unless|except|if|when|until)|silence[^.;]{0,120}(means|counts as|is|signals|implies|supplies|grants)[[:space:]]+(user[[:space:]]+)?(consent|authorization|permission)|silence[^.;]{0,120}(authorizes|permits)[[:space:]]+'
   reject_semantic_pattern \
     'fixed question count' \
     'stop[[:space:]]+after[[:space:]]+((one|two|three|four|five|six|seven|eight|nine|ten|[[:digit:]]+)[[:space:]]+questions?|a[[:space:]]+fixed[[:space:]]+question[[:space:]]+(count|limit|cap))|stop[^.;]{0,80}(even|despite|while)[^.;]{0,48}material[[:space:]]+(uncertainty|question|decision|branch)'
@@ -190,7 +191,7 @@ check_intent_semantics() {
     '(cannot answer|answer is unavailable)[^.;]{0,96}(immediately|directly)[^.;]{0,32}block'
   reject_semantic_pattern \
     'unsafe default authorization' \
-    'Never use a default as authorization[^.]{0,240}(unless|except)'
+    '(Never use a default as authorization|provisional default is an assumption)[^.]{0,240}(unless|except)|provisional default[^.;]{0,160}(authorizes|permits|grants|supplies)[[:space:]]+'
 
   test "$intent_contract_failed" -eq 0
 }
