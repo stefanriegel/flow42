@@ -196,11 +196,46 @@
   observation also passed. `gitleaks` is unavailable. No remote CI, Forge,
   Claude-native parity, authenticated provider, release, deployment, or live
   marketplace claim is inferred.
+- 2026-09-01T08:20:05Z; final exact-head correctness review; reviewer
+  `/root/final_correctness_review`; reviewed subject
+  `bac4ad95e3d9d46fb60c275e6c526cfea7407abd` against baseline
+  `65a7910b9b2ec1d44aa5724b13a319633d69bcc3`; expected a clean independent
+  pass after the final automatic repair; actual `VERDICT: BLOCKED`. Disposable
+  execution proved that accepted `[xcrun,git,push]` can create a remote ref and
+  that `.git/info/exclude` can hide an out-of-scope file from both implemented
+  ownership snapshots. MEDIUM findings showed lossy YAML escape handling in
+  status canonicalization, unrelated neutral change-request URLs, an
+  unauthenticated receipt timestamp, and a contract conflict between allowed
+  worker commits and blanket ref/HEAD blocking. LOW: earlier durable evidence
+  overstated directory-source rollback coverage. The reviewer confirmed exact
+  HEAD and a clean tree before/after and performed no repository or Forge write.
+- 2026-09-01T08:20:05Z; final exact-head security review; reviewer
+  `/root/final_security_review`; reviewed the same exact subject/baseline;
+  actual `SECURITY VERDICT: BLOCKED`. It independently reproduced the
+  `.git/info/exclude` ownership bypass; proved that a `spellcheck-only` local
+  PASS with an unrelated artifact reference/digest still satisfies receipt
+  validation because required review kind/check set/artifact bytes are not
+  caller-bound; and reproduced a verified-to-installed TOCTOU in which a tag is
+  force-moved after candidate verification but before Claude fetches the same
+  URL/tag. It also found the neutral change-request URL unbound to repository,
+  provider, or reviewed head. Exact HEAD and clean state were confirmed before
+  and after; no repository or Forge write occurred outside disposable fixtures.
+- 2026-09-01T08:20:05Z; final cross-model attempt; expected tool-less Opus 5 to
+  review the identical full diff without repository tools; actual Claude Code
+  reached its session limit before returning a review. No Opus verdict or
+  evidence is claimed, and no repository/Forge mutation occurred.
+- 2026-09-01T08:20:05Z; exhausted-loop disposition; expected
+  `automatic_review_limit: 2` to prevent an unbounded third silent repair;
+  actual revision 10 transitions `verifying` to `blocked` with
+  `resume_stage: verifying` and the four HIGH blocker identifiers. A human
+  resume is required before another implementation loop. The exact reviewed
+  subject remains `bac4ad95e3d9d46fb60c275e6c526cfea7407abd`; no PASS receipt
+  is issued.
 
 ## Known gaps
 
-The second receipt-subject reviews are BLOCKED, their final automatic repair
-loop is complete, and final exact-head reviews are pending. `gitleaks` is
-unavailable, so no gitleaks result is claimed. No
+The final exact-head correctness and security reviews are BLOCKED after the
+second and final automatic repair loop. Human resume is required before another
+implementation loop. `gitleaks` is unavailable, so no gitleaks result is claimed. No
 remote CI, Forge, merge, release, deployment, or live normal-harness mutation
 proof has been run.
