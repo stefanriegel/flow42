@@ -1,3 +1,5 @@
+> LEGACY (recorded against v0.x–v2 schemas; describes retired stages/counts. Kept for provenance; superseded by V3 live evals.)
+
 # Claude Code installation evidence
 
 - Date: 2026-08-27

@@ -1,14 +1,16 @@
 # Contributing
 
-Open an issue before large changes. Keep the canonical contract harness-neutral;
-put native behavior in adapters. Behavior changes require a failing test first.
-Run:
+Open an issue before large changes. Keep `skills/flow42/` reading cleanly for
+both Claude and Codex — no harness-specific tool names or assumptions.
+
+Before sending a change, run everything CI runs:
 
 ```bash
-sh scripts/check-parity.sh
-sh scripts/validate.sh
-sh tests/conformance.sh
+for f in tests/*.sh; do sh "$f"; done
+shellcheck tests/*.sh
 ```
 
-Do not copy prompts or implementation from reference projects. Cite high-level
-inspiration and contribute original wording, schemas, code, and tests.
+That list is the whole CI contract now — see `.github/workflows/ci.yml`.
+
+Do not copy prompts or implementation from reference projects. Cite
+high-level inspiration and contribute original wording, schemas, and tests.

@@ -1,3 +1,5 @@
+> LEGACY (recorded against v0.x–v2 schemas; describes retired stages/counts. Kept for provenance; superseded by V3 live evals.)
+
 # Pi and Orca ADE evidence
 
 - Date: 2026-08-28

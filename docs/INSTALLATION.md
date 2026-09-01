@@ -1,153 +1,55 @@
 # Installation
 
-Flow42 requires Git and a supported coding-agent harness. Forge operations also
-require authenticated `gh` for GitHub or `glab` for GitLab. Flow42 has no runtime.
+Flow42 is distributed as a single skill through the community skills CLI, not
+a per-harness marketplace plugin. It requires `git` and `jq`, and Orca with
+orchestration enabled. `gh` or `glab` are needed only for Forge work.
 
-`flow42:update` shipped in v2.0.0, so an installation from before v2.0.0 has
-no such skill to run. For that first upgrade, remove the existing `flow42`
-marketplace pin first, then use the marketplace add and plugin install commands
-for the relevant harness below.
-
-## Onboarding check
-
-After installation, invoke `flow42:init` from the target repository. The harness
-runs the onboarding preflight through the installed skill: Flow42 files and
-version, Git worktree, repository instructions, and optional Orca readiness. It
-reports blocking and optional gaps before it proposes configuration. Onboarding
-does not create or update Forge issues or comments. Users do not need a Flow42 checkout or its validation
-scripts for onboarding.
-
-## Development checkout
-
-Clone Flow42 and validate the plugin before installation:
+## Install
 
 ```sh
-git clone https://github.com/stefanriegel/flow42.git
-cd flow42
-sh scripts/check-parity.sh
+npx skills add stefanriegel/flow42 --skill flow42
 ```
 
-Validate and install the current checkout through a harness-native local source:
+This works the same way for a Claude Code target and a Codex target — the
+skills CLI resolves the harness itself. `orca skills install` performs the
+same operation through Orca's UI, and is the recommended path when you are
+already working inside Orca.
+
+## Verify the install
 
 ```sh
-scripts/install-local claude
-scripts/install-local codex
-scripts/install-local pi
+npx skills list
 ```
 
-The script validates the checkout before installation and never writes directly
-to a harness cache. Add `--dry-run` to run any read-only discovery needed to
-select and print the real harness-installation plan; no harness mutation or
-install commands and no plugin validation are executed. Released installations
-can invoke `flow42:update` instead.
+or the harness-native equivalent (`skills installed`). Confirm `flow42` is
+listed at the version you expect, then start a fresh agent session — an
+already-running session does not pick up a new install.
 
-This path is executable before release: run Claude directly with `--plugin-dir`
-as shown below, or point Codex at the checkout's `skills/` through its native
-local skill discovery. It does not depend on a tag, marketplace publication, or
-the pending 90-second claim.
-
-## Claude Code
-
-Test a checkout without persistent installation:
+## Update
 
 ```sh
-claude --plugin-dir "$PWD"
+npx skills add stefanriegel/flow42 --skill flow42
 ```
 
-The skills are namespaced as `/flow42:flow`, `/flow42:init`, and so on.
+at the tag you want (see [Migration](MIGRATION.md) for the v2 → v3 path), or
+run the skill's own `update` stage from inside a repository, which reports the
+installed version and refreshes it through this same mechanism. If your
+runtime pins skill versions through Orca Settings, update there instead.
 
-Install and start Claude Code from the current immutable tag:
+## Uninstall
+
+Use the skills CLI's or harness's native removal command for the `flow42`
+skill; there is no separate marketplace entry or plugin cache to clean up
+beyond that.
+
+## Enable Orca orchestration
+
+Flow42 requires a ready Orca runtime. In Orca, enable orchestration under
+**Settings → Experimental**, then confirm it with:
 
 ```sh
-claude plugin marketplace add stefanriegel/flow42@v2.0.1
-claude plugin install flow42@flow42
-claude
+orca status --json
 ```
 
-Invoke `/flow42:init`, then `/flow42:flow <request>`. Invoke `/flow42:update` to
-move the immutable marketplace pin and refresh the plugin. Uninstall with:
-
-```sh
-claude plugin uninstall flow42@flow42
-claude plugin marketplace remove flow42
-```
-
-## Codex
-
-Codex installs plugins from marketplace snapshots. Install from the current
-immutable tag:
-
-```sh
-codex plugin marketplace add stefanriegel/flow42 --ref v2.0.1
-codex plugin add flow42@flow42
-codex
-```
-
-Ask Codex to invoke `flow42:init`, then `flow42:flow` for the request. Invoke
-`flow42:update` to move the immutable marketplace pin and refresh the plugin.
-Uninstall with:
-
-```sh
-codex plugin remove flow42@flow42
-codex plugin marketplace remove flow42
-```
-
-## Pi
-
-Install the immutable Git package and start Pi:
-
-```sh
-pi install git:github.com/stefanriegel/flow42@v2.0.1
-pi
-```
-
-Invoke `/skill:init`, then `/skill:flow <request>`. For a checkout-only test,
-run `pi --skill "$PWD/skills"`. Invoke `/skill:update` to install the newest
-immutable tag explicitly. Uninstall with:
-
-```sh
-pi remove git:github.com/stefanriegel/flow42
-```
-
-Pi asks the user to trust project-local resources before loading them. Review the
-skills first; Flow42 never bypasses this harness trust gate.
-
-## Orca ADE
-
-Flow42 detects Orca only when `orca status --json` reports a ready runtime. The
-published evidence proves an Orca-created worktree, explicit-model Pi terminal,
-coordinator model-profile escalation, and durable intent creation. Broader lifecycle,
-resume, and fallback behavior retain their existing contract but are not yet
-claimed as Orca end-to-end evidence. Orca is an optional execution environment,
-not a required Flow42 runtime. See
-[model routing](../core/MODEL-ROUTING.md) for Pi and explicit-model launch forms.
-
-Before install, verify the selected tag and published checksum against the resolved commit. Each
-harness needs a new session after installation or update. Local and remote
-same-version install/update/removal paths were exercised; a version-changing
-upgrade has not run for Claude Code or Codex. Current-head Codex invocation passed, while current-head
-Claude invocation was blocked by missing authentication in the isolated test
-scope; earlier authenticated Claude invocation evidence remains valid for its
-recorded commit. See [installation evidence](../evidence/install/).
-
-## Release checksum
-
-From a clean checkout containing the published tag, create the deterministic
-source archive and checksum with:
-
-```sh
-sh scripts/release-checksum.sh refs/tags/v2.0.1 dist
-```
-
-The script accepts only an exact annotated semantic-version tag ref, verifies
-its SSH signature against the repository's committed `.github/allowed_signers`,
-requires signer identity `flow42-release@stefanriegel`, and requires all three
-manifests in that tag to declare the matching version. It then uses `git archive` and the
-platform's native `sha256sum` or `shasum -a 256`, writing
-`dist/flow42-v2.0.1.tar` and the adjacent `.sha256` file. Verify after download
-with one of:
-
-```sh
-sha256sum -c flow42-v2.0.1.tar.sha256
-shasum -a 256 -c flow42-v2.0.1.tar.sha256
-```
+`runtime.state` must report `ready`. Without it, every stage blocks at its
+first preflight check rather than falling back silently.

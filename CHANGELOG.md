@@ -1,16 +1,77 @@
 # Changelog
 
-## [Unreleased]
+## Unreleased / Next
+
+Folding forward the surviving intent of the retired `ROADMAP.md` (removed in
+3.0.0): three real-repository dogfoods of the V3 lifecycle, public results
+from the scheduled live evals (`evals/live/`, decision 14), and a stable
+contract once those results land.
+
+## 3.0.0
+
+V3 is a full rebuild: one self-contained Orca-native skill in
+`skills/flow42/` (`SKILL.md` router + `core/CONTRACT.md` + `core/policy.json`
++ `stages/*.md` + `templates/*`) replaces the old 12-skill-directory bundle,
+`agents/`, and the seven separate root-level core files.
 
 ### Added
 
-- Added a bounded adaptive intent interview with durable question resumption,
+- `explore`: an opt-in, pre-lifecycle stage that diverges on 3–6 candidate
+  directions and converges on a pick that seeds `intent`.
+- Local completion: `verifying → complete` with `forge: none` plus an
+  explicit human close — no CI gate required for local-only work.
+- A maintenance loop with a durable `.flow42/signals.md` (triage-judged,
+  deduplicated), a decision-gated hand-off from a `now` signal into a fresh
+  `intent`, and a scheduled Orca automation to run it on a cadence.
+- Three structural tests (`tests/structure.sh`, `tests/workflow.sh`,
+  `tests/history.sh`) plus 3–5 live agent evals (`evals/live/`) run as
+  scheduled Orca automations rather than per-push CI.
+
+### Changed
+
+- **Orca-native.** Orca with a ready runtime is required. The Claude
+  marketplace, Codex plugin, and Pi plugin surfaces are dropped; Flow42 is
+  distributed as a single skill through the community skills CLI (`npx skills
+  add stefanriegel/flow42 --skill flow42`, or `orca skills install`).
+- **Review evidence.** The 20-field receipt schema, issuer tiers, resolver
+  doctrine, and marker-pair byte digests are replaced by one line in
+  `evidence.md`: an Orca run/task/dispatch ref, reviewer agent, review kind,
+  verdict, reviewed SHA, and UTC time. The staleness rule is unchanged —
+  `reviewed_head` must be an ancestor of, or equal to, `HEAD`.
+- **Worker ownership** collapses to Orca worktree isolation by default plus
+  five bounded observations (`HEAD`, the ref stream, effective config, the
+  hooks tree, porcelain status); workers never commit, stage, or push.
+- `agents/*.md` are deleted; specialists are now `orca orchestration
+  worker-start` model profiles (`frontier`/`worker`/`utility`, each an
+  agent/model/effort default) declared in `policy.json .model_profiles`.
+- `status.yml` drops `change_request`. Work-item and policy `schema_version`
+  is 3.
+- CI slims to the three structural tests, `shellcheck`, and `gitleaks`.
+- Version 3.0.0.
+
+### Removed
+
+- The entire V2 plugin bundle, prose-pinning test tier (exact-sentence `grep`
+  assertions and `sed` mutation fixtures), and the signed-release `update`
+  machinery (`scripts/release-checksum.sh`, `.github/allowed_signers`). See
+  [Migration](docs/MIGRATION.md) for the v2 → v3 path.
+
+## Unreleased (pre-3.0.0 hardening, superseded)
+
+This work landed on `fix/architecture-hardening` ahead of the V3 rebuild and
+was never tagged as its own release; 3.0.0 replaces the mechanisms it added
+(receipt-subject review evidence, NUL-safe ownership fixtures) with the
+simpler Orca-provenance model above. Kept here for provenance.
+
+### Added
+
+- A bounded adaptive intent interview with durable question resumption,
   headless blocking, consent-safe recommendations, data minimization, and a
   trivial-change fast path.
-- Added a versioned configuration authority, legal lifecycle repair transitions,
-  receipt-subject review evidence, behavioral temporary-Git fixtures for NUL-safe
-  ownership and review currency, and structural/text-conformance coverage for
-  configuration, lifecycle, and update instructions.
+- A versioned configuration authority, legal lifecycle repair transitions,
+  receipt-subject review evidence, behavioral temporary-Git fixtures for
+  NUL-safe ownership and review currency, and structural/text-conformance
+  coverage for configuration, lifecycle, and update instructions.
 
 ### Changed
 
