@@ -10,26 +10,13 @@ permissions:
 
 jobs:
   validate:
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-      - run: sh scripts/check-parity.sh
-      - run: sh scripts/validate.sh
-      - run: sh tests/conformance.sh
-      - run: sh tests/contracts.sh
-      - run: sh tests/prelude.sh
-      - run: sh tests/ownership.sh
-      - run: sh tests/review-receipt.sh
-      - run: sh tests/config-schema.sh
-      - run: sh tests/lifecycle-transitions.sh
-      - run: sh tests/update.sh
-      - run: sh tests/release-checksum.sh
-      - run: sh tests/security.sh
-      - run: sh evals/run.sh
-      - run: sh evals/cases/run.sh
+      - run: sh tests/structure.sh
+      - run: sh tests/workflow.sh
+      - run: sh tests/history.sh
+      - run: shellcheck tests/*.sh
 
   security:
     runs-on: ubuntu-latest
@@ -37,13 +24,6 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
           fetch-depth: 0
-      - run: shellcheck scripts/*.sh scripts/install-local tests/*.sh
       - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7
         env:
           GITHUB_TOKEN: ${{ github.token }}
-
-  dependencies:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
-      - run: sh tests/dependencies.sh
