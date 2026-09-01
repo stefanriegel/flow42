@@ -1,4 +1,5 @@
 #!/bin/sh
+# shellcheck disable=SC1091,SC2034,SC2154
 set -eu
 . "$(dirname -- "$0")/lib.sh"
 TEST_NAME=structure
