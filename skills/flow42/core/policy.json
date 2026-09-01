@@ -1,0 +1,95 @@
+{
+  "schema_version": 3,
+  "flow42_version": "3.0.0",
+  "workflow": {
+    "stages": ["draft-intent", "drafting-spec", "planning", "plan-gate", "building", "verifying", "pr-ready", "ci-running", "ready-for-human", "complete"],
+    "side_states": ["blocked", "abandoned", "superseded"],
+    "final_states": ["complete", "abandoned", "superseded"],
+    "pseudo_states": {
+      "any-non-final": {"include_sets": ["stages", "side_states"], "exclude_sets": ["final_states"], "exclude_states": []},
+      "any-unblocked-non-final": {"include_sets": ["stages", "side_states"], "exclude_sets": ["final_states"], "exclude_states": ["blocked"]}
+    },
+    "state_sets": {
+      "resumable_stages": {"include_sets": ["stages"], "exclude_sets": ["final_states"]}
+    },
+    "dynamic_targets": {
+      "recorded-resume-stage": {"source": "status.resume_stage", "must_be_in": "resumable_stages", "must_equal": "history.latest-transition-to-blocked.from"}
+    },
+    "transitions": [
+      {"from": null, "to": "draft-intent", "gate": "work-item-created"},
+      {"from": "draft-intent", "to": "drafting-spec"},
+      {"from": "drafting-spec", "to": "planning"},
+      {"from": "planning", "to": "plan-gate", "when": "risk-high-or-critical"},
+      {"from": "planning", "to": "building", "when": "risk-low-or-medium"},
+      {"from": "plan-gate", "to": "building", "gate": "high-risk-plan"},
+      {"from": "building", "to": "verifying"},
+      {"from": "verifying", "to": "pr-ready", "gate": "verification-passed"},
+      {"from": "verifying", "to": "complete", "when": "forge-none", "gate": "human-authorized-close"},
+      {"from": "pr-ready", "to": "ci-running", "gate": "change-request-open"},
+      {"from": "ci-running", "to": "ready-for-human", "gate": "independently-reviewed-and-ci-green"},
+      {"from": "ready-for-human", "to": "complete", "gate": "human-authorized-close"}
+    ],
+    "side_transitions": [
+      {"from": "any-unblocked-non-final", "to": "blocked", "gate": "reason-and-resume-stage"},
+      {"from": "blocked", "to": "recorded-resume-stage", "gate": "blockers-cleared-and-state-valid-and-resume-bound"},
+      {"from": "any-non-final", "to": "abandoned", "gate": "human-authorization"},
+      {"from": "any-non-final", "to": "superseded", "gate": "human-authorization-and-replacement-link"}
+    ],
+    "repair_transitions": [
+      {"from": "verifying", "to": "building", "gate": "recorded-blocking-finding", "counter": {"field": "status.review_loops", "increment": 1, "maximum_from": "automatic_review_limit", "on_exhausted": {"to": "blocked", "gate": "automatic-review-limit-reached", "effect": "escalate"}}},
+      {"from": "ci-running", "to": "building", "gate": "recorded-failing-check"},
+      {"from": "ready-for-human", "to": "building", "gate": "recorded-change-request"},
+      {"from": "any-unblocked-non-final", "to": "blocked", "gate": "state-inconsistency-recorded-with-repair-proposal"}
+    ],
+    "lifecycle_commands": ["flow", "init", "explore", "intent", "spec", "plan", "build", "verify", "pr", "maintain", "status", "resume"],
+    "maintenance_commands": ["update"],
+    "automatic_review_limit": 2,
+    "review_loop_rule": "always-increment-never-freeze; each post-limit repair requires fresh recorded human authorization",
+    "mandatory_gates": ["high-risk-plan", "irreversible-action", "merge", "deploy"],
+    "terminal_outcome": "ready-for-human"
+  },
+  "risk": {
+    "levels": ["low", "medium", "high", "critical"],
+    "baseline_checks": ["secrets", "dependencies", "static-analysis"],
+    "behavior_change_evidence": ["observed-red", "observed-green"],
+    "security_triggers": ["authentication", "permissions", "sensitive-data", "networking", "payments", "infrastructure", "production-configuration"],
+    "security_gates": ["threat-model", "independent-security-review"],
+    "human_approval": {"accountable_approvers_per_gate": 1, "second_human_required": false}
+  },
+  "review": {
+    "implementer_may_review": false,
+    "review_kinds": ["correctness", "security"],
+    "evidence": "one-line-stamp-in-evidence.md",
+    "stamp_fields": ["orca_ref", "reviewer_agent", "review_kind", "verdict", "reviewed_head", "recorded_at"],
+    "orca_ref_format": "run:<run_id>/task:<task_id>/dispatch:<dispatch_id>",
+    "staleness_rule": "reviewed_head-must-be-ancestor-of-or-equal-to-HEAD",
+    "provenance_authority": "orca-run-task-dispatch-records"
+  },
+  "config_schema": {
+    "unknown_fields": "block",
+    "fields": {
+      "schema_version": {"required": true, "type": "integer", "enum": [3]},
+      "forge": {"required": true, "type": "string", "enum": ["auto", "github", "gitlab", "none"], "default": "auto"},
+      "base_branch": {"required": true, "type": "string", "pattern": "^(auto|[A-Za-z0-9][A-Za-z0-9._/-]{0,127})$", "default": "auto"},
+      "concurrency": {"required": true, "type": "integer", "minimum": 1, "maximum": 4, "default": 4},
+      "worktree_parent": {"required": true, "type": "string", "pattern": "^(auto|[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*)$", "default": "auto"},
+      "bootstrap": {"required": false, "type": "string", "enum": ["required", "done"], "default": null},
+      "commands": {"required": true, "type": "object", "keys": ["format", "lint", "typecheck", "test", "build"], "value_type": "token-array"},
+      "protected_paths": {"required": true, "type": "path-array", "item_pattern": "^[A-Za-z0-9._/-]+$", "default": []},
+      "mandatory_gates": {"required": true, "type": "gate-array", "must_include_all": ["high-risk-plan", "irreversible-action", "merge", "deploy"]},
+      "model_profiles": {"required": true, "type": "object", "keys": ["frontier", "worker", "utility"], "value_shape": {"agent": "claude|codex|auto", "model": "string-or-auto", "effort": "off|minimal|low|medium|high|xhigh|max|auto"}}
+    },
+    "command_policy_rules": [
+      "commands are token arrays, never shell strings",
+      "every token is printable ASCII (^[!-~]+$)",
+      "no token contains $ ` ; | & < > ( )",
+      "the first token is not a shell or launcher: sh, bash, dash, zsh, env, eval, command, xargs, nohup, timeout",
+      "the first token is not an authority CLI: git, gh, glab, terraform, kubectl, helm"
+    ]
+  },
+  "model_profiles": {
+    "frontier": {"use_for": "intent synthesis, architecture, planning, integration, review synthesis", "default": {"agent": "auto", "model": "auto", "effort": "high"}},
+    "worker": {"use_for": "bounded implementation, tests, focused research, specialist review", "default": {"agent": "auto", "model": "auto", "effort": "medium"}},
+    "utility": {"use_for": "formatting, renaming, mechanical extraction", "default": {"agent": "auto", "model": "auto", "effort": "low"}}
+  }
+}
