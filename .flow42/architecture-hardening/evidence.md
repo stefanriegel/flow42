@@ -914,3 +914,328 @@ logic, recursive snapshot, or prose-guard family was added. This is local
 implementation proof, not fresh exact-head review or remote CI evidence. The
 worker did not stage, commit, push, mutate Forge, delegate, or edit
 `status.yml`, `history.jsonl`, or `handoff.md`.
+
+## Final exact-head PASS reviews for `739f5b8`
+
+### Correctness report
+
+<!-- flow42-review-section:final-correctness-739f5b8:begin -->
+# Independent final correctness review: architecture-hardening
+
+## Verdict
+
+**PASS** at exact subject `739f5b86df0430e5712a0c370c84c3c2bb9b14b4` against baseline `65a7910b9b2ec1d44aa5724b13a319633d69bcc3`.
+
+No CRITICAL, HIGH, or MEDIUM correctness finding remains in the reviewed 166-path baseline diff. This verdict is limited to the repository-local behavior and contracts named below; it is not a security-review substitute, authenticated Forge receipt, remote-CI result, release authorization, or deployment proof.
+
+## Review identity and scope
+
+- Repository: `/Users/sr/orca/flow42`
+- Branch observed: `fix/architecture-hardening`
+- Baseline: `65a7910b9b2ec1d44aa5724b13a319633d69bcc3`
+- Exact reviewed head: `739f5b86df0430e5712a0c370c84c3c2bb9b14b4`
+- Ancestry: baseline is an ancestor of reviewed head; 12 commits are in scope.
+- Complete scope: 166 canonical NUL-sorted paths; 7,621 insertions and 773 deletions.
+- Canonical scope digest: `sha256:61deab84922120a002399aa8df5f7edc6edb699fa2956547f3b7364e2f9dc25d`
+- Raw no-renames diff digest: `sha256:db8ac5e02b441fd73b70963df40dd0422da8d9edd3a1814a0d22d8d1ab3102b2`
+- Digest commands used `git diff --name-only --no-renames -z ... | LC_ALL=C sort -z` and `git diff --raw --no-renames -z --abbrev=64 ...` with pipeline failure propagation enabled; every producer/consumer exited zero.
+- Worktree before review: exact head matched; `git status --porcelain=v2 -z --untracked-files=all` contained zero bytes.
+
+I inspected the complete baseline-to-head diff and the current full authority, workflow, ownership, update, receipt, lifecycle, agent, documentation, test, fixture, and seven-file work-item surfaces. All 166 changed paths are regular tracked files; the diff contains no binary change, symlink, or unexpected mode transition.
+
+## Findings and earlier-blocker disposition
+
+No material blocker remains.
+
+### Configured-command matching
+
+- `tests/config-schema.sh:45-72` implements one `matches_ordered_signature` predicate. It considers every token as a possible executable, strips its path, ASCII-casefolds its basename under `LC_ALL=C`, and matches remaining signature tokens as an ordered subsequence.
+- `tests/config-schema.sh:117-154` routes blocked-launcher singletons, authority-bearing singleton executables, named-shell evaluation signatures, and declared mutation signatures through that shared predicate. Intervening/global options and `arch` wrapping therefore do not create a privileged first-token exception.
+- The named-shell-only extension at `tests/config-schema.sh:62-65` treats an ASCII-letter short-option cluster containing lowercase `c` as declared `-c`. The shipped cases reject `sh -lc`, `bash -xc`, and `arch -arm64 sh -lc`; additional read-only stream mutations rejected `dash -ec`, `zsh -fc`, both `arch`-wrapped variants, and a path/case/global-option variant under `sh`, `dash`, and `ksh`.
+- The authority inventory remains exactly `git`, `gh`, `glab`, and `terraform`; the blocked-launcher inventory remains exactly `xcrun`. Authority, launcher, shell-prefix, and mutation inventories compare byte-for-byte equal to `53e22ed4d86badedfd1b6fd4aa07f8ed1c287ea5`; their combined canonical inventory digest is `700d2cc2c5677317ab79e38b61df2dc9a59bdd7bc66bce80e9a7f527c4d37ee1`.
+- `core/config-schema.json:52-76` binds printable ASCII, the empty read-only control-CLI allowlist, the shared matching semantics, and the named-shell cluster rule. `tests/config-schema.sh:104-155` rejects malformed/non-ASCII and dollar-bearing tokens before execution; `tests/config-schema.sh:360-390` exercises Unicode lookalikes and `${IFS}`. `tests/config-schema.sh:414-421` retains safe direct `[sh, tests/conformance.sh]` and validates the configured lint argv.
+- No platform branch or Unicode/filesystem emulation appears in the implementation. APFS/macOS is explanatory evidence only; the matcher is portable C-locale awk/grep logic. The deliberately narrowed residual remains accurate: arbitrary repository executables, copied/renamed binaries, and unlisted launchers are not a semantic sandbox.
+
+### Orca context, ownership, and worker authority
+
+- `core/OWNERSHIP.md:6-18`, `skills/build/SKILL.md:27-31`, and the agent/architecture contracts use the exact Orca-provided context and recorded worktree. A current-worktree selection requires disjoint ownership plus explicit schedule and integration barriers; Flow42 does not claim isolated worktrees or independent process-lifecycle enforcement.
+- NUL-safe porcelain-v2 and rename-aware tracked-delta parsing, both rename endpoints, dirty overlap identities, literal pathspec staging, unmerged records, and producer failure are exercised in disposable Git repositories by `tests/ownership.sh`.
+- `core/OWNERSHIP.md:106-143` consistently forbids worker commits, staging, pushes, Git-administration changes, and Forge writes; coordinator-only exact literal staging occurs only after the post-worker barrier. Cross-document mutations in `tests/ownership.sh:1172-1201` reject permissive staging, push, and Forge-write drift.
+- External Git guarantees are correctly narrowed. External include configuration is bound by effective value/origin/scope, not equal-value file identity; external alternate declarations are bound, not recursively snapshotted. The latent-ref and equal-value-link fixtures pin those residuals rather than claiming detection. No recursive snapshot, launcher expansion, sandbox, or verifier redesign is required by the stated contract.
+
+### Receipt, NUL producer, and hardlink boundaries
+
+- `tests/review-receipt.sh:43-70` rejects NUL-bearing evidence before marker extraction and requires a regular, non-symlink evidence file with observed link count one. The hardlink fixture at `tests/review-receipt.sh:325-340` accepts the single-link control and rejects the same artifact after a second link is created.
+- The evidence/status NUL mutations reject distinct hidden bytes before digest/YAML interpretation. Receipt currency writes `git diff --name-only --no-renames -z` to a file and checks the Git producer before parsing (`tests/review-receipt.sh:518-535`). The missing-tree fixture at `tests/review-receipt.sh:805-827` reproduces the old POSIX-pipeline false success and proves the current producer-checked path fails closed.
+- Review purpose, exact ordered checks, repository/work/baseline/head/scope/diff subject, expected evidence reference and extracted bytes, reviewer/implementer role, strongest available independently resolved issuer, and real observed UTC time are all bound by the v2 receipt tests. Receipt-neutral paths remain exact work-item leaves, status neutrality is field-limited, and Forge observations remain non-authoritative.
+- The current work item contains exactly the canonical seven files. `status.yml` is intentionally still `blocked` at revision 12 with `resume_stage: verifying`; the last history record is the matching `verifying -> blocked` revision 12 event. The only persisted v2 receipt is the older blocked security receipt for `bfcb565...`; no stale PASS is claimed for this subject. A coordinator may persist this exact-head result and perform only a legal, independently validated lifecycle transition; this report itself does not mutate lifecycle state.
+
+### Update proof tiers and lifecycle
+
+- `tests/update.sh` is explicitly structural/text-conformance evidence. The separate signed-tag/archive/checksum fixture is local cryptographic evidence. Neither is presented as live Claude/Codex/Pi update convergence, provider authentication, private-cache identity, or byte-identical rollback.
+- Update instructions retain installed trusted-root verification, ambient-Git rejection, immutable signed-tag binding, harness-native installation/readback, and honest best-effort recovery without reintroducing private-cache machinery.
+- Workflow endpoints, side states, recorded non-final resume targets, blocked self-loop prevention, final-state closure, high-risk gate mapping, and the two-loop automatic repair cap passed executable structural mutations. The current blocked status/history pair is internally legal; correctness PASS alone does not satisfy a separately required security receipt or authorize PR/merge/release action.
+
+## Checks run
+
+All commands below exited zero unless explicitly described as a skipped/unavailable tier.
+
+### Complete local `sh` matrix
+
+- `sh scripts/check-parity.sh`
+- `sh scripts/validate.sh`
+- `sh tests/conformance.sh`
+- `sh tests/contracts.sh`
+- `sh tests/intent.sh`
+- `sh tests/prelude.sh`
+- `sh tests/ownership.sh`
+- `sh tests/review-receipt.sh`
+- `sh tests/config-schema.sh`
+- `sh tests/lifecycle-transitions.sh`
+- `sh tests/update.sh`
+- `sh tests/release-checksum.sh`
+- `sh tests/security.sh`
+- `sh tests/dependencies.sh`
+- `sh evals/run.sh`
+- `sh evals/cases/run.sh`
+- `sh evals/cases/run.sh --dry-run`
+
+### Supported-shell portability
+
+Each repository test from `conformance`, `contracts`, `intent`, `prelude`, `ownership`, `review-receipt`, `config-schema`, `lifecycle-transitions`, `update`, `release-checksum`, `security`, and `dependencies` passed under both `dash` and `ksh`; the same tests passed under macOS `/bin/sh`. The targeted added command mutations also passed under all three shells.
+
+### Static, syntax, JSON, diff, and bounded secret checks
+
+- `shellcheck scripts/*.sh scripts/install-local tests/*.sh evals/*.sh evals/cases/*.sh`
+- `sh -n`, `dash -n`, and `ksh -n` over repository shell scripts
+- `jq -e .` over every tracked `.json` file and every event in the work-item `history.jsonl`
+- `git diff --check 65a7910... 739f5b8...`
+- Bounded added-diff private-key/common-token heuristic: zero matches (not a gitleaks substitute)
+
+## Unavailable or deliberately unclaimed proof tiers
+
+- `gitleaks` is not installed locally. The pinned CI gitleaks job was inspected but not observed remotely.
+- The opt-in native Codex instruction-delivery probe was skipped; no native-agent policy-compliance or Claude/Codex parity claim is made.
+- No remote exact-head CI, authenticated Forge/provider receipt resolution, PR/MR, push, merge, release publication, deployment, live plugin/harness mutation, or private-cache observation was performed.
+- Execution was on Darwin arm64 with macOS `/bin/sh`, Dash, and Ksh. This is supported-shell local proof, not Linux-runner proof.
+- Temporary-Git and fake-resolver suites prove only their named local behavior. They do not authenticate a provider, establish an OS sandbox, or remove the documented same-user concurrency, external-include identity, external-alternate content, arbitrary-executable, or unlisted-launcher residuals.
+
+## Clean-state result
+
+Repository HEAD, index, refs, Git administration, worktree files, and Forge state were not modified by this review. The final exact-head and zero-byte porcelain check is recorded in the task completion after this report was written.
+<!-- flow42-review-section:final-correctness-739f5b8:end -->
+
+```json
+{"schema_version":2,"review_kind":"correctness","issuer_kind":"trusted-orchestrator","issuer_receipt_ref":"orca:run_b5ab6e7b3014/task_ac232ea4703f","repository_id":"https://github.com/stefanriegel/flow42","work_id":"architecture-hardening","baseline_head":"65a7910b9b2ec1d44aa5724b13a319633d69bcc3","reviewed_head":"739f5b86df0430e5712a0c370c84c3c2bb9b14b4","scope_digest":"sha256:61deab84922120a002399aa8df5f7edc6edb699fa2956547f3b7364e2f9dc25d","diff_digest":"sha256:db8ac5e02b441fd73b70963df40dd0422da8d9edd3a1814a0d22d8d1ab3102b2","review_subject":"architecture-hardening final exact-head verification","reviewer_principal":"orca:task_ac232ea4703f","reviewer_role":"independent-reviewer","dispatch_or_session_ref":"orca:ctx_b1f95926d3d0","stronger_issuer_unavailable_reason":"not-applicable","implementer":false,"verdict":"pass","checks":["acceptance-criteria","baseline-checks","configured-repository-gates","independent-verification"],"artifact_ref":"evidence:.flow42/architecture-hardening/evidence.md#final-correctness-739f5b8","artifact_digest":"sha256:e6cc7cbd42611e23ffc62f11ec98c15ab0499c052962642dab61d390c69b0557","recorded_at":"2026-09-01T16:58:56Z"}
+```
+
+### Security report
+
+<!-- flow42-review-section:final-security-739f5b8:begin -->
+# Flow42 — Final Independent Security & Threat-Boundary Review
+
+**Verdict: PASS** — no material security blocker.
+
+## Scope and integrity
+
+| Item | Value |
+|---|---|
+| Repository | `/Users/sr/orca/flow42` |
+| Subject (exact SHA) | `739f5b86df0430e5712a0c370c84c3c2bb9b14b4` |
+| Baseline | `65a7910b9b2ec1d44aa5724b13a319633d69bcc3` |
+| Paths in diff | 166 |
+| Insertions / deletions | 7621 / 773 |
+| Canonical NUL-sorted scope digest | `61deab84922120a002399aa8df5f7edc6edb699fa2956547f3b7364e2f9dc25d` |
+| Raw NUL diff digest | `6dbd968254e1963baef9519b437c7b3779d5093bed9ea8838694973d9df6c3ba` |
+| Porcelain before / after | empty / empty |
+| Review mode | read-only; no edit, stage, commit, push, or Forge mutation |
+
+Scope digest = `git diff --name-only -z BASE HEAD` → NUL-split → `LC_ALL=C sort` → NUL-joined → SHA-256.
+Raw diff digest = `git diff --no-color -z BASE HEAD` → SHA-256.
+
+`git rev-parse HEAD`, `git status --porcelain`, `git stash list`, and `git reflog` were
+re-checked after all probing: SHA unchanged, porcelain empty, no stash, reflog tip unchanged.
+All mutation testing ran against `git archive` extracts in a scratch directory; the working
+tree was never written to.
+
+## Local verification matrix (14/14 PASS)
+
+`check-parity.sh`, `validate.sh`, `conformance.sh`, `contracts.sh`, `prelude.sh`,
+`ownership.sh`, `review-receipt.sh`, `config-schema.sh`, `lifecycle-transitions.sh`,
+`update.sh`, `release-checksum.sh`, `security.sh`, `intent.sh`, `dependencies.sh`,
+plus `evals/run.sh` and `evals/cases/run.sh`. All pass on darwin/BSD userland.
+
+**Unavailable tiers** (not run here, disclosed rather than assumed):
+- `ubuntu-latest` / GNU-userland leg of the CI matrix (macOS only locally).
+- `shellcheck` and `gitleaks` CI jobs (not installed locally).
+- Any live agent or harness runtime — by design, `evals/run.sh` prints
+  *"no agent or harness runtime executed"*; all eval tiers are structural or text-conformance.
+- Live Forge/network operations — intentionally not exercised.
+
+## Retest of prior security blockers
+
+### Configured-command argv policy
+
+The normative source is `core/config-schema.json` `command_policy`. All 12 skills carry a
+byte-identical contract prelude (pinned by `tests/prelude.sh`) that requires reading both
+`core/SECURITY.md` and `core/config-schema.json`, so the runtime agent always reaches the schema.
+
+I drove the reference validator (`matches_ordered_signature` / `validate_command` /
+`validate_config`, extracted verbatim from `tests/config-schema.sh`) with hostile inputs.
+
+**Short-option clusters containing `c` — all rejected (`CONFIG-COMMAND-SHELL-EVAL`):**
+`sh -c`, `sh -lc`, `sh -xc`, `sh -ec`, `bash -lc`, `bash -euxc`, `dash -ec`, `zsh -ic`,
+`zsh -c`, `sh --command`, `bash -eux -c`.
+
+**Arch-wrapped and any-position wrappers — all rejected:**
+`arch sh -c`, `arch -x86_64 bash -lc`, `arch -arm64 zsh -c`, `/bin/sh -c`,
+`arch /bin/bash -lc`, `/usr/bin/BaSh -Lc`, `make deploy git push`, `npx foo terraform apply`.
+
+**Shared matcher families — all four confirmed live** (authority-bearing singletons,
+blocked-launcher singletons, shell-evaluation signatures, declared mutation signatures),
+each matching from *any* token position with basename ASCII-casefold:
+`git push`, `git status`, `git -C sub push`, `gh api -X POST`, `glab api`, `terraform plan`,
+`a b c d git push`, `/usr/bin/git push`, `GIT push`, `Terraform apply`, `rm -rf`, `sudo rm`,
+`env FOO=1 rm`, `/bin/rm -rf`, `nice -n 5 rm`, `timeout 5 rm`, `xargs rm`, `command rm`,
+`eval`, `kubectl apply`, `npm publish`, `docker push`, `xcrun foo`, `a xcrun foo`.
+
+**Safe direct shell script argv — correctly accepted:**
+`[sh, tests/contracts.sh]`, `[bash, tests/contracts.sh]`, `[shellcheck, tests/contracts.sh]`,
+`[sh, -eu, tests/contracts.sh]`. The evaluation/execution distinction holds.
+
+**Printable ASCII and bare-dollar rejection — all rejected:**
+bare `$`, `$HOME`, `${HOME}`, `$(id)`, backticks, `;`, `|`, `||`, `&&`, `>`, `<`,
+mid-token `foo$bar`, empty token, trailing empty token, whitespace token, tab,
+DEL 0x7f, Latin-1 high byte, non-ASCII `café`, and the Cyrillic homoglyph `рm`.
+The repo additionally pins the long-s Unicode casefold trap (`ſh`, `baſh`, `ſhutdown`),
+which Unicode-casefolds to `sh`/`bash`/`shutdown` but must fail as non-ASCII.
+
+**One accepted case examined and cleared:** `[SH, -C, ls]` is accepted. This is correct, not a
+gap. The executable is casefolded (filesystems may be case-insensitive) but options are matched
+case-sensitively, and uppercase `-C` is `noclobber`, not a command string. I confirmed this
+empirically against all four shells: `sh -C echo hi`, `bash -C echo hi`, `dash -C echo hi`,
+`zsh -C echo hi` all attempt to *open a script file* named `echo`, never evaluate. No exploit.
+
+**OS independence:** the matcher runs under `LC_ALL=C awk`. Identical reject decisions under
+`LC_ALL=C`, `en_US.UTF-8`, `tr_TR.UTF-8`, and `tr_TR.ISO8859-9` — the Turkish dotless-i casefold
+trap does not move the boundary. Shipped scripts contain no GNU-only constructs;
+`stat` has BSD-then-GNU fallbacks and hashers have `sha256sum`/`shasum` fallbacks.
+
+**Schema mutation testing (12/12 caught)** by `config-schema.sh` + `contracts.sh`:
+weakening `named_shell_short_option_cluster`, `executable_position`, `executable_normalization`,
+`remaining_signature_tokens`, `token_pattern`, `forbidden_token_pattern`, `fail_closed`,
+`read_only_control_cli_allowlist`, dropping `terraform`, dropping `dash`/`zsh` shell-eval
+prefixes, dropping `rm`, dropping `git push`. Every weakening of the normative policy is caught.
+
+### NUL rejection, evidence extraction, status parsing
+
+`extract_review_section` orders its predicates correctly: regular-file and non-symlink →
+link-count-1 → NUL byte-comparison → marker cardinality → extraction. NUL is rejected
+**before** any marker inspection or parsing. 14/14 adversarial probes rejected: NUL inside
+section, NUL outside section, NUL at EOF, symlink, hardlink (nlink=2), duplicate begin marker,
+duplicate end marker, end-before-begin, missing end, marker with trailing whitespace, missing
+file, directory, FIFO.
+
+**Digest-collapse proof:** two files differing only by an embedded NUL have distinct raw
+SHA-256; the second is rejected before extraction, so distinct bytes cannot collapse into one
+extracted digest.
+
+`validate_status_yaml` calls `reject_nul_file` first. 22/22 status probes correct, including
+NUL `change_request` (cannot canonicalize as empty), NUL in `schema_version`, duplicate key,
+quoted key, missing key, unknown key, anchor, alias, tag, merge key, block scalar, folded
+scalar, nested mapping, lossy quoted escape, invalid enums, non-https `forge_item`, negative
+`review_loops`, wrong `schema_version`. Canonical quoted scalars without escapes remain accepted.
+
+### Producer status and producer failure
+
+`receipt_is_current` checks the Git diff producer's exit status directly
+(`if ! git diff ... >"$diff_paths"; then return 1; fi`) and feeds `jq` from the file by
+redirect, so no pipeline can mask producer failure. The suite proves this rather than asserting
+it: it builds a repository with a deliberately unlinked tree object, confirms raw `git diff`
+now fails, confirms the *old* POSIX pipeline form would still have returned success (masking),
+and asserts the current implementation fails closed.
+
+### Hardlink point-in-time boundary
+
+The extractor requires `find <file> -prune -links 1`. Hardlinked evidence is rejected when
+observed. `core/SECURITY.md` explicitly declines to claim atomic file identity across
+extraction, hashing, resolution, and acceptance, and discloses concurrent same-user replacement
+as residual. The claim matches the control.
+
+### Ownership, Orca, delegation, worker prohibitions
+
+`tests/ownership.sh` carries explicit named assertions for every claim in scope:
+external Git residuals (`OWNERSHIP-EXTERNAL-GIT-RESIDUALS`, plus four
+`EXTERNAL-ALTERNATE-*` assertions including false-inertness and integration-inputs);
+Orca worktree (`ORCA-ISOLATED-WORKTREE-CLAIM`, `ORCA-PROVIDED-CONTEXT`, `ORCA-EXACT-WORKTREE`,
+`ORCA-CURRENT-WORKTREE-BARRIERS`, `BUILD-ORCA-EXACT-CONTEXT`, `BUILD-CURRENT-WORKTREE-BARRIERS`);
+worker process delegation (`DELEGATION-OBSERVATION-BOUNDARY`, `DELEGATION-UNQUALIFIED-BLOCK`,
+`DELEGATION-NATIVE-RESIDUAL`, `DELEGATION-FALSE-NATIVE-PROOF`); and worker staging/push/Forge
+prohibitions (`WORKER-STAGING-FORBIDDEN`, `WORKER-STAGING-EXCEPTION`, `WORKER-PUSH-EXCEPTION`,
+`WORKER-FORGE-WRITE-EXCEPTION`, `WORKER-COMMIT-FORBIDDEN`, `WORKER-HEAD-REF-FORBIDDEN`).
+Git-admin snapshotting rejects symlinks, multiply-linked regular files, special files, and
+partial `tar`/`shasum` producer output, with dedicated `failing-tar` and `failing-shasum` fixtures.
+
+### Update and receipt proof claims
+
+`tests/update.sh` enforces that the update-instructions eval stays labeled
+`text-conformance` and actively rejects an upgrade of that label to `behavioural-reference`
+(`UPDATE-EVAL-TIER`). `evals/run.sh` states "no agent or harness runtime executed".
+`evidence/security/threat-model.md` names the cluster rule, arch-wrapped coverage, and the
+repository-script residual, and explicitly refuses a semantic-sandbox claim. Proof claims are
+bounded and honest; no tier is overstated.
+
+### Unchanged inventories
+
+`evidence/install/claude-code.md` records "11 skills and 4 agents" while the repo has 12 skills
+and 4 agents. This entry is a **dated historical observation** (2026-08-27 / 2026-08-28) bound to
+a named commit `f9a8f77`, not a current-state claim, and the skill count was already 12 at the
+baseline — so the discrepancy is pre-existing and not introduced by this diff. Structural
+inventory currency is separately enforced: `tests/prelude.sh` pins exactly 12 direct skills
+against `core/workflow.json`, and `check-parity.sh` confirms 12 commands and 3 harness paths.
+Non-blocking.
+
+## Findings
+
+**No material security blocker.**
+
+### F1 — Low / non-blocking: two `core/SECURITY.md` prose sentences are not text-pinned
+
+Removing the whole named-shell `-c` cluster sentence (lines 44–45), or the any-position
+shared-matcher sentence (lines 40–43), from `core/SECURITY.md` survives the entire local
+matrix. Verified on a pristine `git archive` extract after discarding one earlier contaminated
+result (a background mutation battery had raced on the shared scratch tree; the clean rerun
+is the one reported here).
+
+This is prose-only and exposes **no behavior contradiction**:
+
+- The normative source is `core/config-schema.json`, whose
+  `named_shell_short_option_cluster` and `executable_position` values are pinned by exact
+  equality in `config-schema.sh` and independently caught by 12/12 schema mutations.
+- Behavior is pinned by six shell-evaluation argv cases (`sh -lc`, `bash -xc`,
+  `arch -arm64 sh -lc`, and three more) and six control-CLI any-position cases, each asserting
+  an exact diagnostic code.
+- Every skill's byte-identical prelude requires reading `core/config-schema.json`, so the
+  runtime agent still receives the rule even with the prose removed.
+
+Recommendation (hardening, not a gate): add a text-conformance grep pinning these two
+sentences alongside the existing `core/SECURITY.md` pins in `review-receipt.sh`.
+
+### Out of scope, correctly excluded
+
+Configured argv such as `python3 -c <expr>` is accepted. This does not contradict a stated
+guarantee: `core/SECURITY.md` and the threat model both state the predicate is a naming check,
+not a semantic sandbox, that the blocked-launcher list is illustrative and non-exhaustive, and
+that the worker capability and ownership boundary — not the argv predicate — is the control.
+Per the narrowed scope, launcher expansion was not pursued further. No recursive snapshots,
+Unicode subsystem, sandbox, or verifier redesign was undertaken; no concrete exploit was found
+that would have justified reopening them.
+<!-- flow42-review-section:final-security-739f5b8:end -->
+
+```json
+{"schema_version":2,"review_kind":"security","issuer_kind":"trusted-orchestrator","issuer_receipt_ref":"orca:run_b5ab6e7b3014/task_7e33797c5026","repository_id":"https://github.com/stefanriegel/flow42","work_id":"architecture-hardening","baseline_head":"65a7910b9b2ec1d44aa5724b13a319633d69bcc3","reviewed_head":"739f5b86df0430e5712a0c370c84c3c2bb9b14b4","scope_digest":"sha256:61deab84922120a002399aa8df5f7edc6edb699fa2956547f3b7364e2f9dc25d","diff_digest":"sha256:db8ac5e02b441fd73b70963df40dd0422da8d9edd3a1814a0d22d8d1ab3102b2","review_subject":"architecture-hardening final exact-head verification","reviewer_principal":"orca:task_7e33797c5026","reviewer_role":"independent-reviewer","dispatch_or_session_ref":"orca:ctx_2b1802ac82a5","stronger_issuer_unavailable_reason":"not-applicable","implementer":false,"verdict":"pass","checks":["threat-model","baseline-checks","configured-repository-security-gates","independent-security-review"],"artifact_ref":"evidence:.flow42/architecture-hardening/evidence.md#final-security-739f5b8","artifact_digest":"sha256:fdadc223b24f4e1eaccba6c55603ee90aad1c93045edf29558f28513fdbdcd7c","recorded_at":"2026-09-01T16:56:49Z"}
+```
+
+### Architecture disposition
+
+Claude Code Opus independently returned PASS at exact subject `739f5b86df0430e5712a0c370c84c3c2bb9b14b4`; report `/tmp/flow42-final-architecture-739f5b8.md` had SHA-256 `b31040bcf31fb0f41de510e364f0267946c041d96c8645d0179583aa45e925ad`. The review confirmed the final cluster repair stays inside the one shared matcher, preserves inventories and direct argv, delegates worktree topology to Orca, keeps NUL controls at parse boundaries, and adds no OS branch, Unicode subsystem, recursive snapshot, sandbox, or duplicate update flow. Its three optional cleanups (one mapping cross-check, prose-only drift guards, and mixed-tier eval labels) do not contradict behavior or block this work item and are deliberately not expanded into this bounded repair.
