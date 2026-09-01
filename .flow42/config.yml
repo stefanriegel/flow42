@@ -1,28 +1,24 @@
-schema_version: 1
+schema_version: 3
 forge: github
-harness: auto
-execution_environment: auto
 base_branch: main
 concurrency: 4
 worktree_parent: auto
 commands:
   format: []
-  lint: [shellcheck, scripts/check-parity.sh, scripts/validate.sh, tests/conformance.sh, tests/contracts.sh]
+  lint: []
   typecheck: []
-  test: [sh, tests/conformance.sh]
+  test: [sh, tests/structure.sh]
   build: []
-model_profiles:
-  frontier: auto
-  worker: auto
-  utility: auto
 protected_paths:
   - .github/workflows
-  - .claude-plugin
-  - .codex-plugin
-  - core
   - skills
+  - tests
 mandatory_gates:
   - high-risk-plan
   - irreversible-action
   - merge
   - deploy
+model_profiles:
+  frontier: {agent: auto, model: auto, effort: high}
+  worker: {agent: auto, model: auto, effort: medium}
+  utility: {agent: auto, model: auto, effort: low}

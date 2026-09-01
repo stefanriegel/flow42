@@ -11,6 +11,5 @@ review_loops: 2
 blockers: []
 resume_stage: ""
 forge_item: ""
-change_request: ""
 ci_state: unknown
 next_actions: [open-change-request]

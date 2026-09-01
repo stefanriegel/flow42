@@ -11,6 +11,5 @@ review_loops: 2
 blockers: [public-repeatable-eval-packaging,strict-identical-scenario-parity,timed-90-second-quickstart]
 resume_stage: verifying
 forge_item: "https://github.com/stefanriegel/flow42/issues/1"
-change_request: ""
 ci_state: unknown
 next_actions: [package-public-repeatable-evals,prove-identical-scenario-parity,time-90-second-quickstart,resume-verifying]
