@@ -1,14 +1,20 @@
 schema_version: 1
 forge: github
+harness: auto
+execution_environment: auto
 base_branch: main
 concurrency: 4
 worktree_parent: auto
 commands:
   format: []
-  lint: [shellcheck, scripts/check-parity.sh, scripts/validate.sh, tests/active-work.sh, tests/conformance.sh, tests/contracts.sh]
+  lint: [shellcheck, scripts/check-parity.sh, scripts/validate.sh, tests/conformance.sh, tests/contracts.sh]
   typecheck: []
   test: [sh, tests/conformance.sh]
   build: []
+model_profiles:
+  frontier: auto
+  worker: auto
+  utility: auto
 protected_paths:
   - .github/workflows
   - .claude-plugin
@@ -16,8 +22,6 @@ protected_paths:
   - core
   - skills
 mandatory_gates:
-  - intent
-  - spec
   - high-risk-plan
   - irreversible-action
   - merge

@@ -28,17 +28,22 @@ Lifecycle state appears only in `status.yml`; Markdown artifacts must not
 duplicate mutable lifecycle fields.
 
 Repository initialization creates `.flow42/config.yml`. Validate it against the
-schema before use; configuration changes do not require a separate approval
-artifact or Forge interaction.
+versioned authority in `core/config-schema.json` before use; unknown fields,
+schema versions, retired gates, scalar commands, invalid model identifiers, and
+missing repository command paths block use with a migration instruction.
+Configuration changes do not require a separate approval artifact or Forge
+interaction.
 
 Use a temporary sibling and atomic rename when supported, then reread every
 mutation. Commit artifacts so another session can resume without chat history.
 
 ## Lifecycle and recovery
 
-The stages in `workflow.json` are the only ordered forward transitions. Work may
-enter `blocked` while retaining `resume_stage`; resume only after blockers clear
-and ownership is consistent. `abandoned` and `superseded`
+The stages in `workflow.json` are the only ordered forward transitions. Its
+declared `pseudo_states` expand symbolic sources, and its declared
+`dynamic_targets` resolve fields such as `status.resume_stage` only to a real
+stage. Work may enter `blocked` while retaining `resume_stage`; resume only after
+blockers clear and ownership is consistent. `abandoned` and `superseded`
 are final; superseded work links its replacement. `complete` follows an
 authorized merge or explicit closure. The normal endpoint is `ready-for-human`:
 a reviewed, CI-green PR/MR.
@@ -47,6 +52,13 @@ Every transition increments `state_revision`, updates `updated_at`, appends a
 history event with revision, UTC time, actor, from, to, and reason, and derives
 `next_actions`. If status and history disagree, block and propose repair; never
 invent history.
+
+Repair transitions are declared separately in `workflow.json` but use that same
+revision, append-only history, atomic status, and read-back procedure. A blocking
+verification finding, failing CI check, or requested change may return work to
+`building`. A state inconsistency enters `blocked` with the recorded repair
+proposal; it does not invent or rewrite history. Repair gates are evidence-based
+workflow conditions, not approval gates.
 
 ## Human confirmation
 
@@ -66,9 +78,25 @@ dependency, and static checks are always baseline. Behavior changes and bugs
 require observed red-green evidence. High/critical work requires an independent
 verifier; security-sensitive work also requires a threat model and independent
 security review. Independent means a separate review pass by an agent or person
-that did not implement the change, not a second human approver. The review must
-bind its verdict to the exact head SHA and be persisted in `evidence.md`. The
-implementing agent cannot supply that attestation.
+that did not implement the change, not a second human approver. The implementing
+agent cannot supply that attestation.
+
+Persist each review as a schema-versioned JSON receipt in `evidence.md`, binding
+the verdict to `reviewed_head`, reviewer identity and role, issuer provenance,
+session or dispatch, checks, artifact, and time. Use the strongest issuer
+available: `authenticated-forge`, then `trusted-orchestrator`, then
+`local-independent-pass`. The local fallback remains valid when neither stronger
+issuer is available, but must record why and must still be a distinct pass that
+did not implement the change. Review evidence never grants human approval.
+
+A receipt for `reviewed_head` remains current at `HEAD` only when
+`reviewed_head` is an ancestor of or equal to `HEAD` and every NUL-delimited path
+from `git diff --name-only -z "$reviewed_head" HEAD --` is one of these files in
+the work item under review: `evidence.md`, `decisions.md`, `history.jsonl`, or
+`status.yml`. Those are receipt-neutral bookkeeping paths. Changes to any other
+path, including `intent.md`, `spec.md`, `plan.md`, `.flow42/config.yml`, product,
+contract, skill, test, or CI files invalidate the receipt and require a fresh
+non-implementer review.
 
 Detect the Forge from `git remote get-url origin` and preflight `gh auth status`
 or `glab auth status`. Use official CLIs, never stored credentials or a custom

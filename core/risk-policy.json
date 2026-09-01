@@ -20,8 +20,11 @@
   },
   "independent_review": {
     "implementer_may_review": false,
-    "exact_head_sha_required": true,
-    "fallback_when_no_distinct_forge_reviewer": "sha-pinned-pr-or-mr-comment",
+    "receipt_schema_version": 1,
+    "issuer_kinds": ["authenticated-forge", "trusted-orchestrator", "local-independent-pass"],
+    "strongest_available_issuer_required": true,
+    "fallback_when_no_distinct_forge_reviewer": "local-independent-pass-receipt",
+    "receipt_neutral_paths": ["evidence.md", "decisions.md", "history.jsonl", "status.yml"],
     "grants_human_approval": false
   },
   "automatic_review_limit": 2

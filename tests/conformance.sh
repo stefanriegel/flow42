@@ -55,7 +55,7 @@ sh "$prose_case/scripts/check-parity.sh" >/dev/null
 
 missing_pin_case="$tmp/parity-missing-pin"
 cp -R "$parity_fixture" "$missing_pin_case"
-sed '/^claude plugin marketplace add stefanriegel\/flow42#/d' \
+sed '/^claude plugin marketplace add stefanriegel\/flow42@/d' \
   "$missing_pin_case/README.md" >"$missing_pin_case/README.md.new"
 mv "$missing_pin_case/README.md.new" "$missing_pin_case/README.md"
 if sh "$missing_pin_case/scripts/check-parity.sh" >/dev/null 2>&1; then
@@ -65,11 +65,21 @@ fi
 
 mutable_pin_case="$tmp/parity-mutable-pin"
 cp -R "$parity_fixture" "$mutable_pin_case"
-sed 's|^claude plugin marketplace add stefanriegel/flow42#v[0-9][0-9.]*$|claude plugin marketplace add stefanriegel/flow42#main|' \
+sed 's|^claude plugin marketplace add stefanriegel/flow42@v[0-9][0-9.]*$|claude plugin marketplace add stefanriegel/flow42@main|' \
   "$mutable_pin_case/README.md" >"$mutable_pin_case/README.md.new"
 mv "$mutable_pin_case/README.md.new" "$mutable_pin_case/README.md"
 if sh "$mutable_pin_case/scripts/check-parity.sh" >/dev/null 2>&1; then
   echo 'parity accepted a mutable install pin' >&2
+  exit 1
+fi
+
+mixed_grammar_case="$tmp/parity-mixed-grammar"
+cp -R "$parity_fixture" "$mixed_grammar_case"
+sed 's|^claude plugin marketplace add stefanriegel/flow42@v|claude plugin marketplace add stefanriegel/flow42#v|' \
+  "$mixed_grammar_case/README.md" >"$mixed_grammar_case/README.md.new"
+mv "$mixed_grammar_case/README.md.new" "$mixed_grammar_case/README.md"
+if sh "$mixed_grammar_case/scripts/check-parity.sh" >/dev/null 2>&1; then
+  echo 'parity accepted mixed Claude marketplace shorthand grammar' >&2
   exit 1
 fi
 

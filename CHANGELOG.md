@@ -7,9 +7,17 @@
 - Added a bounded adaptive intent interview with durable question resumption,
   headless blocking, consent-safe recommendations, data minimization, and a
   trivial-change fast path.
+- Added a versioned configuration authority, legal lifecycle repair transitions,
+  receipt-subject review evidence, and behavioral tests for update convergence,
+  NUL-safe ownership, configuration, lifecycle, and review currency.
 
 ### Changed
 
+- Added a clarification and conservative-default fallback before intent blocking,
+  while keeping high-risk or irreversible choices fail-closed.
+- Made every direct skill load one canonical contract prelude and hardened Claude
+  updates with install-then-update convergence, exact scope/version readback,
+  source-kind-preserving rollback, and canonical `owner/repo@ref` syntax.
 - Hardened trusted Flow42 updates so release verification completes before any
   harness mutation, while preserving Claude marketplace and plugin scopes
   through updates and rollbacks.

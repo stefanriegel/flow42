@@ -22,7 +22,7 @@ Install the current release, [`v2.0.1`](https://github.com/stefanriegel/flow42/r
 Claude Code:
 
 ```sh
-claude plugin marketplace add stefanriegel/flow42#v2.0.1
+claude plugin marketplace add stefanriegel/flow42@v2.0.1
 claude plugin install flow42@flow42
 claude
 ```
@@ -67,7 +67,7 @@ Use `flow <request>` to run the stages in order, or invoke a stage directly.
 | `plan` | List implementation slices, file ownership, checks, recovery, and confirmation points. |
 | `build` | Record the starting behavior, change the code, and capture the result. |
 | `verify` | Run the required checks and review the change independently. |
-| `pr` | Open or update the PR/MR and wait for exact-head review and green CI. |
+| `pr` | Open or update the PR/MR and wait for a current independent review receipt and green CI. |
 | `maintain` | Record relevant CI or review feedback as follow-up work. |
 | `status` | Show the current stage, blockers, confirmations, and next actions. |
 | `resume` | Check the saved files, decisions, history, Git state, and PR/MR before continuing. |

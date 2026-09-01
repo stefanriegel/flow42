@@ -1,8 +1,17 @@
 # Public evaluations
 
-Flow42 evaluates workflow outcomes, not prose similarity. Every fixture defines
-an initial repository, intent, allowed actions, required gates, expected
-artifacts, and observable pass/fail conditions.
+Flow42 uses three explicitly separate proof levels:
+
+- **Behavioural:** disposable Git repositories and stateful fake harnesses
+  observe end state, including update, ownership, receipt-currency,
+  configuration, and lifecycle-transition controls.
+- **Structural:** JSON/YAML shape, declared workflow targets, schema validation,
+  and byte-identical direct-skill preludes.
+- **Text conformance:** normative prose remains present. This detects accidental
+  deletion but does not prove Git behaviour or agent semantics.
+
+Every portable fixture defines an initial repository, intent, allowed actions,
+required gates, expected artifacts, and observable pass/fail conditions.
 
 Planned fixture families:
 
@@ -33,8 +42,8 @@ the deterministic suite and are required before a harness-parity claim.
 
 ## Portable failure cases
 
-`cases/*.json` are executable, harness-neutral inputs for both Claude Code and
-Codex. A harness reads `entrypoint` as the Flow42 skill to invoke, materializes
+`cases/*.json` are harness-neutral inputs for both Claude Code and Codex. A
+future stable harness reads `entrypoint` as the Flow42 skill to invoke, materializes
 the durable state described by `given`, performs `when.request`, and compares
 the observed durable state and attempted actions with `expect`. Values under
 `forbidden` are negative assertions: observing any one of them fails the case.
@@ -47,9 +56,11 @@ worker delegation. Validate their common schema and scenario-specific invariants
 with the command below. Unsafe model identifiers also fail before invocation.
 
 ```sh
-sh evals/cases/run.sh
+sh evals/cases/run.sh --dry-run
 ```
 
-Passing the fixture validator proves that the inputs are complete and internally
-consistent. It does not by itself prove harness parity; record actual runs from
-both harnesses under `evidence/evals/` before making that claim.
+The dry run proves that inputs are complete and internally consistent, that each
+entry point exists, each resume stage is declared, and each forbidden action is
+in the validator's declared vocabulary. It does not execute an agent or prove
+harness parity; record actual runs from both harnesses under `evidence/evals/`
+before making either claim.

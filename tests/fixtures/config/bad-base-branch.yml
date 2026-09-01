@@ -1,0 +1,23 @@
+schema_version: 1
+forge: auto
+harness: auto
+execution_environment: auto
+base_branch: feature;deploy
+concurrency: 4
+worktree_parent: auto
+model_profiles:
+  frontier: auto
+  worker: auto
+  utility: auto
+commands:
+  format: [auto]
+  lint: [auto]
+  typecheck: [auto]
+  test: [auto]
+  build: [auto]
+protected_paths: []
+mandatory_gates:
+  - high-risk-plan
+  - irreversible-action
+  - merge
+  - deploy

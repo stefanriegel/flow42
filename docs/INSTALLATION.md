@@ -59,7 +59,7 @@ The skills are namespaced as `/flow42:flow`, `/flow42:init`, and so on.
 Install and start Claude Code from the current immutable tag:
 
 ```sh
-claude plugin marketplace add stefanriegel/flow42#v2.0.1
+claude plugin marketplace add stefanriegel/flow42@v2.0.1
 claude plugin install flow42@flow42
 claude
 ```

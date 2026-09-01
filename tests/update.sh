@@ -59,6 +59,7 @@ assert_trusted_release_instructions() {
       require_after_verification("claude plugin marketplace remove")
       require_after_verification("claude plugin marketplace add")
       require_after_verification("claude plugin install")
+      require_after_verification("claude plugin update")
       require_after_verification("codex plugin marketplace remove")
       require_after_verification("codex plugin marketplace add")
       require_after_verification("codex plugin add")
@@ -84,18 +85,22 @@ assert_trusted_release_instructions() {
 assert_trusted_release_instructions "$root/skills/update/SKILL.md"
 
 # Claude exposes marketplace and plugin scopes through different state. The
-# update and rollback instructions must therefore keep both values literal and
-# must use the current GitHub shorthand ref form.
+# update and rollback instructions must preserve every plugin scope and the
+# declaration's original source kind.
 # shellcheck disable=SC2016
 assert_claude_scope_instructions() {
   skill=$1
   grep -Fq 'marketplace_scope=<recorded-marketplace-declaration-scope>' "$skill" || return 1
-  grep -Fq 'plugin_scope=<recorded-plugin-installation-scope>' "$skill" || return 1
+  grep -Fq "plugin_scopes='<space-separated-recorded-plugin-installation-scopes>'" "$skill" || return 1
+  grep -Fq 'recorded_marketplace_source=<source-object-reconstructed-add-argument>' "$skill" || return 1
   grep -Fq 'target_marketplace_source=<owner>/<repo>@<tag>' "$skill" || return 1
   grep -Fq 'claude plugin marketplace add "$target_marketplace_source" --scope "$marketplace_scope"' "$skill" || return 1
   grep -Fq 'claude plugin marketplace add "$recorded_marketplace_source" --scope "$marketplace_scope"' "$skill" || return 1
   test "$(grep -Fc 'claude plugin marketplace remove flow42 --scope "$marketplace_scope"' "$skill")" -ge 2 || return 1
   test "$(grep -Fc 'claude plugin install flow42@flow42 --scope "$plugin_scope" -y' "$skill")" -ge 2 || return 1
+  test "$(grep -Fc 'claude plugin update flow42@flow42 --scope "$plugin_scope" -y' "$skill")" -ge 2 || return 1
+  grep -Fq 'object to deep-equal the recorded source' "$skill" || return 1
+  grep -Fq 'require every selected `version` to equal that target version' "$skill" || return 1
   if grep -Fq '<owner>/<repo>#<tag>' "$skill"; then
     echo 'update skill: Claude GitHub shorthand uses obsolete #ref syntax' >&2
     return 1
@@ -103,6 +108,22 @@ assert_claude_scope_instructions() {
 }
 
 assert_claude_scope_instructions "$root/skills/update/SKILL.md"
+
+assert_claude_declaration_safety() {
+  skill=$1
+  grep -Fq 'Require exactly one declaring scope;' "$skill" || return 1
+  grep -Fq 'stop before mutation and report the exact declaring scopes' "$skill" || return 1
+  grep -Fq 'from the settings source object, not' "$skill" || return 1
+}
+
+assert_claude_declaration_safety "$root/skills/update/SKILL.md"
+
+for install_doc in "$root/README.md" "$root/docs/INSTALLATION.md"; do
+  if grep -Fq 'marketplace add stefanriegel/flow42#' "$install_doc"; then
+    echo "update docs: non-canonical Claude marketplace shorthand in $install_doc" >&2
+    exit 1
+  fi
+done
 
 assert_early_mutation_rejected() {
   mutation=$1
@@ -237,6 +258,190 @@ if assert_trusted_release_instructions "$mutated_skill" >/dev/null 2>&1; then
 fi
 rm -f "$mutated_skill"
 
+extract_claude_update_block() {
+  skill=$1
+  output=$2
+  awk '
+    /^For Claude Code,/ { in_claude = 1 }
+    in_claude && /^```sh$/ { in_block = 1; next }
+    in_block && /^```$/ { exit }
+    in_block { print }
+  ' "$skill" >"$output"
+  test -s "$output"
+}
+
+extract_claude_rollback_block() {
+  skill=$1
+  output=$2
+  awk '
+    /^Treat the add,/ { in_rollback = 1 }
+    in_rollback && /^```sh$/ { in_block = 1; next }
+    in_block && /^```$/ { exit }
+    in_block { print }
+  ' "$skill" >"$output"
+  test -s "$output"
+}
+
+render_claude_block() {
+  source_block=$1
+  rendered_block=$2
+  plugin_scopes=$3
+  sed \
+    -e 's|<recorded-marketplace-declaration-scope>|user|g' \
+    -e "s|<space-separated-recorded-plugin-installation-scopes>|$plugin_scopes|g" \
+    -e "s|<recorded-plugin-installation-scope>|$plugin_scopes|g" \
+    -e 's|<source-object-reconstructed-add-argument>|owner/flow42@v1.0.1|g' \
+    -e 's|<exact-current-add-source>|owner/flow42@v1.0.1|g' \
+    -e 's|<owner>/<repo>@<tag>|owner/flow42@v1.0.2|g' \
+    "$source_block" >"$rendered_block"
+}
+
+run_stateful_update_scenario() {
+  scenario=$1
+  skill=$2
+  declarations=$3
+  installs=$4
+  plugin_scopes=$5
+  state=$stateful_tmp/$scenario.json
+  extracted=$stateful_tmp/$scenario.extracted.sh
+  instructions=$stateful_tmp/$scenario.sh
+
+  jq -n --argjson declarations "$declarations" --argjson installs "$installs" '
+    {
+      declarations: $declarations,
+      installs: $installs,
+      available: "1.0.1"
+    }
+  ' >"$state"
+  extract_claude_update_block "$skill" "$extracted"
+  render_claude_block "$extracted" "$instructions" "$plugin_scopes"
+
+  FAKE_STATE=$state PATH="$stateful_bin:$PATH" sh -e "$instructions" >/dev/null
+  plugin_listing=$(FAKE_STATE=$state PATH="$stateful_bin:$PATH" \
+    claude plugin list --json)
+  # shellcheck disable=SC2086
+  for expected_scope in $plugin_scopes; do
+    actual_version=$(printf '%s\n' "$plugin_listing" | jq -r \
+      --arg scope "$expected_scope" '
+        [.[] | select(.id == "flow42@flow42" and .scope == $scope)] |
+        if length == 1 then .[0].version else "absent-or-ambiguous" end
+      ')
+    if test "$actual_version" != 1.0.2; then
+      echo "stateful update: $scenario scope $expected_scope ended at $actual_version; install returned rc=0 without convergence" >&2
+      return 1
+    fi
+  done
+}
+
+run_stateful_rollback_scenario() {
+  scenario=$1
+  skill=$2
+  state=$stateful_tmp/$scenario.json
+  update_extracted=$stateful_tmp/$scenario.update.extracted.sh
+  update_instructions=$stateful_tmp/$scenario.update.sh
+  rollback_instructions=$stateful_tmp/$scenario.rollback.sh
+  plugin_scopes='user local'
+
+  jq -n '{
+    declarations: {
+      user: {source:"github", repo:"owner/flow42", ref:"v1.0.1"}
+    },
+    installs: {user:"1.0.1", local:"1.0.1"},
+    available: "1.0.1"
+  }' >"$state"
+  extract_claude_update_block "$skill" "$update_extracted"
+  render_claude_block "$update_extracted" "$update_instructions" "$plugin_scopes"
+  if FAKE_FAIL_ADD_SOURCE=owner/flow42@v1.0.2 FAKE_STATE=$state \
+    PATH="$stateful_bin:$PATH" sh -e "$update_instructions" >/dev/null 2>&1; then
+    echo "stateful rollback: $scenario did not observe the forced add failure" >&2
+    return 1
+  fi
+
+  extract_claude_rollback_block "$skill" "$rollback_instructions"
+  marketplace_scope=user plugin_scopes=$plugin_scopes \
+    recorded_marketplace_source=owner/flow42@v1.0.1 \
+    FAKE_STATE=$state PATH="$stateful_bin:$PATH" \
+    sh "$rollback_instructions" >/dev/null 2>&1
+  if ! jq -e '
+    .declarations.user ==
+      {source:"github", repo:"owner/flow42", ref:"v1.0.1"}
+  ' "$state" >/dev/null; then
+    echo "stateful rollback: $scenario did not restore the exact source object" >&2
+    return 1
+  fi
+  plugin_listing=$(FAKE_STATE=$state PATH="$stateful_bin:$PATH" \
+    claude plugin list --json)
+  # shellcheck disable=SC2086
+  for expected_scope in $plugin_scopes; do
+    actual_version=$(printf '%s\n' "$plugin_listing" | jq -r \
+      --arg scope "$expected_scope" '
+        [.[] | select(.id == "flow42@flow42" and .scope == $scope)] |
+        if length == 1 then .[0].version else "absent-or-ambiguous" end
+      ')
+    if test "$actual_version" != 1.0.1; then
+      echo "stateful rollback: $scenario scope $expected_scope restored $actual_version instead of 1.0.1" >&2
+      return 1
+    fi
+  done
+}
+
+stateful_tmp=$(mktemp -d "${TMPDIR:-/tmp}/flow42-update-stateful.XXXXXX")
+stateful_bin=$stateful_tmp/bin
+mkdir "$stateful_bin"
+cp "$root/tests/fixtures/update/fake-claude" "$stateful_bin/claude"
+chmod +x "$stateful_bin/claude"
+
+run_stateful_update_scenario plugin-removed "$root/skills/update/SKILL.md" \
+  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
+  '{"local":"1.0.1"}' 'local'
+run_stateful_update_scenario plugin-preserved "$root/skills/update/SKILL.md" \
+  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"},"project":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
+  '{"local":"1.0.1"}' 'local'
+run_stateful_update_scenario multi-install-scope "$root/skills/update/SKILL.md" \
+  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
+  '{"user":"1.0.1","local":"1.0.1"}' 'user local'
+run_stateful_rollback_scenario rollback "$root/skills/update/SKILL.md"
+
+mutated_skill=$stateful_tmp/drop-update-step.md
+sed -f "$root/tests/fixtures/update/drop-update-step.sed" \
+  "$root/skills/update/SKILL.md" >"$mutated_skill"
+if cmp -s "$root/skills/update/SKILL.md" "$mutated_skill"; then
+  echo 'update mutation: drop-update-step fixture made no change' >&2
+  exit 1
+fi
+if run_stateful_update_scenario mutation-drop-update "$mutated_skill" \
+  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"},"project":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
+  '{"local":"1.0.1"}' 'local' >/dev/null 2>&1; then
+  echo 'update mutation: drop-update-step did not break plugin-preserved convergence' >&2
+  exit 1
+fi
+
+mutated_skill=$stateful_tmp/single-scope-discovery.md
+sed -f "$root/tests/fixtures/update/single-scope-discovery.sed" \
+  "$root/skills/update/SKILL.md" >"$mutated_skill"
+if cmp -s "$root/skills/update/SKILL.md" "$mutated_skill"; then
+  echo 'update mutation: single-scope-discovery fixture made no change' >&2
+  exit 1
+fi
+if assert_claude_declaration_safety "$mutated_skill" >/dev/null 2>&1; then
+  echo 'update mutation: single-scope-discovery did not break the ambiguity stop rule' >&2
+  exit 1
+fi
+
+mutated_skill=$stateful_tmp/listing-derived-rollback.md
+sed -f "$root/tests/fixtures/update/listing-derived-rollback.sed" \
+  "$root/skills/update/SKILL.md" >"$mutated_skill"
+if cmp -s "$root/skills/update/SKILL.md" "$mutated_skill"; then
+  echo 'update mutation: listing-derived-rollback fixture made no change' >&2
+  exit 1
+fi
+if run_stateful_rollback_scenario mutation-listing-rollback "$mutated_skill" \
+  >/dev/null 2>&1; then
+  echo 'update mutation: listing-derived-rollback did not break exact rollback' >&2
+  exit 1
+fi
+rm -rf "$stateful_tmp"
+
 fake_bin=$(mktemp -d)
 fake_log=$fake_bin/claude.log
 trap 'rm -rf "$fake_bin"' EXIT HUP INT TERM
@@ -264,18 +469,24 @@ FAKE_CLAUDE_LOG=$fake_log PATH="$fake_bin:$PATH" \
 FAKE_CLAUDE_LOG=$fake_log PATH="$fake_bin:$PATH" \
   claude plugin install flow42@flow42 --scope "$plugin_scope" -y
 FAKE_CLAUDE_LOG=$fake_log PATH="$fake_bin:$PATH" \
+  claude plugin update flow42@flow42 --scope "$plugin_scope" -y
+FAKE_CLAUDE_LOG=$fake_log PATH="$fake_bin:$PATH" \
   claude plugin marketplace remove flow42 --scope "$marketplace_scope"
 FAKE_CLAUDE_LOG=$fake_log PATH="$fake_bin:$PATH" \
   claude plugin marketplace add "$recorded_marketplace_source" --scope "$marketplace_scope"
 FAKE_CLAUDE_LOG=$fake_log PATH="$fake_bin:$PATH" \
   claude plugin install flow42@flow42 --scope "$plugin_scope" -y
+FAKE_CLAUDE_LOG=$fake_log PATH="$fake_bin:$PATH" \
+  claude plugin update flow42@flow42 --scope "$plugin_scope" -y
 mixed_scope_calls=$(cat "$fake_log")
 expected_mixed_scope_calls='plugin marketplace remove flow42 --scope user
 plugin marketplace add owner/flow42@v1.2.4 --scope user
 plugin install flow42@flow42 --scope local -y
+plugin update flow42@flow42 --scope local -y
 plugin marketplace remove flow42 --scope user
 plugin marketplace add owner/flow42@v1.2.3 --scope user
-plugin install flow42@flow42 --scope local -y'
+plugin install flow42@flow42 --scope local -y
+plugin update flow42@flow42 --scope local -y'
 if test "$mixed_scope_calls" != "$expected_mixed_scope_calls"; then
   echo 'update skill: mixed Claude marketplace and plugin scopes collapsed during update or rollback' >&2
   exit 1
@@ -393,15 +604,9 @@ if test -z "$claude_step"; then
   exit 1
 fi
 case "$claude_step" in
-  *'marketplace remove'*'marketplace add'*'plugin install'*) ;;
+  *'marketplace remove'*'marketplace add'*'plugin install'*'plugin update'*) ;;
   *)
-    echo 'update skill: Claude path must remove the old pin, add the new pin, then reinstall the plugin' >&2
-    exit 1
-    ;;
-esac
-case "$claude_step" in
-  *'plugin update'*)
-    echo 'update skill: Claude path cannot update a plugin uninstalled by marketplace removal' >&2
+    echo 'update skill: Claude path must move the pin, install, then update the plugin' >&2
     exit 1
     ;;
 esac
@@ -409,9 +614,9 @@ esac
 rollback_step=$(tr '\n' ' ' < "$root/skills/update/SKILL.md" |
   sed -n 's/.*Treat the add\(.*\)Do not edit harness cache directories.*/\1/p')
 case "$rollback_step" in
-  *'For Claude'*'restore the recorded'*'reinstall the plugin'*) ;;
+  *'For Claude'*'Restore'*'plugin install'*'plugin update'*) ;;
   *)
-    echo 'update skill: Claude rollback must restore the marketplace and reinstall the plugin' >&2
+    echo 'update skill: Claude rollback must symmetrically restore and converge the plugin' >&2
     exit 1
     ;;
 esac
