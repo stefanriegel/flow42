@@ -7,8 +7,8 @@ description: Safely resume interrupted Flow42 work from persisted artifacts. Use
 
 ## Contract prelude
 
-Resolve the Flow42 bundle root as this file's grandparent directory
-(`<bundle>/skills/<name>/SKILL.md`), not the working directory; where the harness
+Resolve the Flow42 bundle root as this file's great-grandparent directory (the
+`<bundle>` in `<bundle>/skills/<name>/SKILL.md`), not the working directory; where the harness
 exports `${CLAUDE_PLUGIN_ROOT}`, that is the same directory. Before acting, read
 `<bundle>/core/CONTRACT.md`, `<bundle>/core/workflow.json`,
 `<bundle>/core/SECURITY.md`, and `<bundle>/core/config-schema.json`; read
@@ -31,6 +31,10 @@ delete, overwrite, or force-push to manufacture a clean state. Recovery heading
 may say “Don't Panic”; operational details stay precise.
 
 When consistent, resolve the declared dynamic target `recorded-resume-stage`
-from `status.resume_stage`, require that value to be a real lifecycle stage,
-transition `blocked` to it, clear resolved blockers, increment revision, append
+from `status.resume_stage`. Require it to be a non-final stage and to equal the
+`from` stage of the latest persisted transition into `blocked`; a label recorded
+only in status is insufficient. Reject `complete`, `abandoned`, `superseded`,
+`blocked`, any side state, and any status/history mismatch. Never take a
+`blocked → blocked` self-loop. After the binding validates, transition `blocked`
+to the resolved stage, clear resolved blockers, increment revision, append
 history, and reread both files.

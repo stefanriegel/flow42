@@ -1,14 +1,21 @@
 # Public evaluations
 
-Flow42 uses three explicitly separate proof levels:
+Flow42 uses three explicitly separate proof tiers:
 
-- **Behavioural:** disposable Git repositories and stateful fake harnesses
-  observe end state, including update, ownership, receipt-currency,
-  configuration, and lifecycle-transition controls.
+- **Behavioural reference fixtures:** disposable Git repositories and stateful
+  fake CLIs observe end state for update convergence, ownership including
+  committed rename attribution, and review-receipt currency. They prove the
+  documented command sequence or test-local predicate against Git/CLI semantics;
+  they do not prove that an installed agent followed the instructions.
 - **Structural:** JSON/YAML shape, declared workflow targets, schema validation,
-  and byte-identical direct-skill preludes.
+  lifecycle-grammar simulations, portable case consistency, and byte-identical
+  direct-skill preludes. Structural simulation is not Flow42 runtime behaviour.
 - **Text conformance:** normative prose remains present. This detects accidental
   deletion but does not prove Git behaviour or agent semantics.
+
+Environment probes are outside those proof tiers. In particular, masking
+`PATH` and calling `command -v` does not execute Flow42's missing-Forge behavior
+and is not an evaluation result.
 
 Every portable fixture defines an initial repository, intent, allowed actions,
 required gates, expected artifacts, and observable pass/fail conditions.
@@ -36,6 +43,10 @@ Run deterministic failure-path evaluations with:
 ```sh
 sh evals/run.sh
 ```
+
+The runner prints the proof tier beside every check. It does not count a literal
+fixture read or environment probe as behaviour. Its summary is an index of mixed
+local evidence, not a native-agent or harness-parity result.
 
 Native harness evidence is recorded under `evidence/evals/`; these runs complement
 the deterministic suite and are required before a harness-parity claim.

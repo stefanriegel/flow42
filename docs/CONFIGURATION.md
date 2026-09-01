@@ -10,9 +10,9 @@ its human rendering.
 | `forge` | `auto`, `github`, `gitlab`, `none` | Provider selection. `auto` inspects `origin`. |
 | `harness` | `auto`, `claude-code`, `codex`, `pi` | Active coding-agent harness. |
 | `execution_environment` | `auto`, `orca`, `native` | Prefer Orca ADE when its CLI reports a ready runtime. |
-| `base_branch` | `auto` or branch | Integration base. |
+| `base_branch` | `auto` or `git check-ref-format --branch` valid name | Integration base. |
 | `concurrency` | `1`–`4` | Total worker ceiling; workers cannot delegate. |
-| `worktree_parent` | `auto` or safe path | Isolated worktree location. |
+| `worktree_parent` | `auto` or safe repository-relative path | Absolute, home-relative, and parent-traversing paths are rejected. |
 | `model_profiles.frontier` | `auto` or `^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$` | Frontier model preference. |
 | `model_profiles.worker` | same pattern | Worker model preference. |
 | `model_profiles.utility` | same pattern | Utility model preference. |
@@ -33,7 +33,20 @@ are required. A command token that looks like a repository path must exist,
 unless the value is `[auto]`. `auto` values must be resolved into work-item
 evidence before build. Configuration does not require an approval artifact or
 Forge interaction. Never execute command strings through a shell; each array
-element is one argument.
+element is one argument. The command policy rejects shell evaluation,
+substitution and operators, destructive Git/filesystem commands, Forge writes,
+and deploy or publish prefixes. For recognized control CLIs, validation fails
+closed when global options prevent the action from being normalized. This
+syntactic policy does not make an arbitrary repository script trustworthy;
+configured project tools still run inside the normal worker, ownership, and
+capability boundary.
+
+The accepted YAML subset is deliberate: plain unquoted single-line scalars,
+two-space-indented mappings, inline comma-separated plain token arrays, and
+empty-inline or two-space block lists for paths and gates. Aliases, anchors,
+tags, merge keys, flow mappings, quoted/multiline scalars, and other YAML forms
+are rejected rather than interpreted differently by different harnesses.
+Duplicate mapping keys are also rejected before semantic validation.
 
 Model profiles are capability floors, not model allowlists. The orchestrator records the
 resolved provider, model, and reasoning level for every delegated job. See

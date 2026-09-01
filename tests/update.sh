@@ -2,6 +2,18 @@
 set -eu
 
 root=$(CDPATH=''; export CDPATH; cd -- "$(dirname -- "$0")/.." && pwd)
+stateful_tmp=
+fake_bin=
+
+cleanup() {
+  if test -n "$stateful_tmp" && test -d "$stateful_tmp"; then
+    find "$stateful_tmp" -depth -delete
+  fi
+  if test -n "$fake_bin" && test -d "$fake_bin"; then
+    find "$fake_bin" -depth -delete
+  fi
+}
+trap cleanup EXIT HUP INT TERM
 
 test -f "$root/skills/update/SKILL.md"
 test "$(sed -n '1p' "$root/skills/update/SKILL.md")" = '---'
@@ -96,11 +108,17 @@ assert_claude_scope_instructions() {
   grep -Fq 'target_marketplace_source=<owner>/<repo>@<tag>' "$skill" || return 1
   grep -Fq 'claude plugin marketplace add "$target_marketplace_source" --scope "$marketplace_scope"' "$skill" || return 1
   grep -Fq 'claude plugin marketplace add "$recorded_marketplace_source" --scope "$marketplace_scope"' "$skill" || return 1
+  grep -Fq 'recorded_marketplace_removed=false' "$skill" || return 1
+  grep -Fq 'target_marketplace_added=false' "$skill" || return 1
+  grep -Fq '${declaring_settings_file:?run the Claude preflight in this same shell first}' "$skill" || return 1
+  grep -Fq 'if test "$target_marketplace_added" = true; then' "$skill" || return 1
+  grep -Fq 'test "$recorded_marketplace_removed" = true; then' "$skill" || return 1
   test "$(grep -Fc 'claude plugin marketplace remove flow42 --scope "$marketplace_scope"' "$skill")" -ge 2 || return 1
   test "$(grep -Fc 'claude plugin install flow42@flow42 --scope "$plugin_scope" -y' "$skill")" -ge 2 || return 1
   test "$(grep -Fc 'claude plugin update flow42@flow42 --scope "$plugin_scope" -y' "$skill")" -ge 2 || return 1
   grep -Fq 'object to deep-equal the recorded source' "$skill" || return 1
   grep -Fq 'require every selected `version` to equal that target version' "$skill" || return 1
+  grep -Fq 'A single marketplace pin cannot soundly restore' "$skill" || return 1
   if grep -Fq '<owner>/<repo>#<tag>' "$skill"; then
     echo 'update skill: Claude GitHub shorthand uses obsolete #ref syntax' >&2
     return 1
@@ -262,20 +280,18 @@ extract_claude_update_block() {
   skill=$1
   output=$2
   awk '
-    /^For Claude Code,/ { in_claude = 1 }
-    in_claude && /^```sh$/ { in_block = 1; next }
+    /^# flow42-claude-update$/ { in_block = 1; next }
     in_block && /^```$/ { exit }
     in_block { print }
   ' "$skill" >"$output"
   test -s "$output"
 }
 
-extract_claude_rollback_block() {
+extract_claude_preflight_block() {
   skill=$1
   output=$2
   awk '
-    /^Treat the add,/ { in_rollback = 1 }
-    in_rollback && /^```sh$/ { in_block = 1; next }
+    /^# flow42-claude-preflight$/ { in_block = 1; next }
     in_block && /^```$/ { exit }
     in_block { print }
   ' "$skill" >"$output"
@@ -286,13 +302,16 @@ render_claude_block() {
   source_block=$1
   rendered_block=$2
   plugin_scopes=$3
+  recorded_source=${4:-owner/flow42@v1.0.1}
+  target_source=${5:-owner/flow42@v1.0.2}
   sed \
     -e 's|<recorded-marketplace-declaration-scope>|user|g' \
     -e "s|<space-separated-recorded-plugin-installation-scopes>|$plugin_scopes|g" \
     -e "s|<recorded-plugin-installation-scope>|$plugin_scopes|g" \
-    -e 's|<source-object-reconstructed-add-argument>|owner/flow42@v1.0.1|g' \
-    -e 's|<exact-current-add-source>|owner/flow42@v1.0.1|g' \
-    -e 's|<owner>/<repo>@<tag>|owner/flow42@v1.0.2|g' \
+    -e "s|<source-object-reconstructed-add-argument>|$recorded_source|g" \
+    -e "s|<exact-current-add-source>|$recorded_source|g" \
+    -e "s|<owner>/<repo>@<tag>|$target_source|g" \
+    -e 's|<verified-candidate-plugin-version>|1.0.2|g' \
     "$source_block" >"$rendered_block"
 }
 
@@ -302,7 +321,9 @@ run_stateful_update_scenario() {
   declarations=$3
   installs=$4
   plugin_scopes=$5
+  preserve_installs=${6:-false}
   state=$stateful_tmp/$scenario.json
+  settings_file=$stateful_tmp/$scenario.settings.json
   extracted=$stateful_tmp/$scenario.extracted.sh
   instructions=$stateful_tmp/$scenario.sh
 
@@ -315,8 +336,18 @@ run_stateful_update_scenario() {
   ' >"$state"
   extract_claude_update_block "$skill" "$extracted"
   render_claude_block "$extracted" "$instructions" "$plugin_scopes"
+  recorded_source_json=$(printf '%s\n' "$declarations" | jq -c '.user')
+  jq -n --argjson source "$recorded_source_json" '{
+    extraKnownMarketplaces: {flow42: {source:$source}}
+  }' >"$settings_file"
 
-  FAKE_STATE=$state PATH="$stateful_bin:$PATH" sh -e "$instructions" >/dev/null
+  FAKE_PRESERVE_INSTALLS_ON_REMOVE=$preserve_installs \
+    recorded_source_json=$recorded_source_json \
+    recorded_plugin_version=1.0.1 \
+    declaring_settings_file=$settings_file FAKE_SETTINGS_FILE=$settings_file \
+    FAKE_STATE=$state \
+    PATH="$stateful_bin:$PATH" \
+    sh -e "$instructions" >/dev/null
   plugin_listing=$(FAKE_STATE=$state PATH="$stateful_bin:$PATH" \
     claude plugin list --json)
   # shellcheck disable=SC2086
@@ -333,40 +364,35 @@ run_stateful_update_scenario() {
   done
 }
 
-run_stateful_rollback_scenario() {
+assert_stateful_restoration() {
   scenario=$1
-  skill=$2
-  state=$stateful_tmp/$scenario.json
-  update_extracted=$stateful_tmp/$scenario.update.extracted.sh
-  update_instructions=$stateful_tmp/$scenario.update.sh
-  rollback_instructions=$stateful_tmp/$scenario.rollback.sh
-  plugin_scopes='user local'
+  state=$2
+  expected_projection=$3
+  expected_source_json=$4
+  plugin_scopes=$5
+  settings_file=$6
 
-  jq -n '{
-    declarations: {
-      user: {source:"github", repo:"owner/flow42", ref:"v1.0.1"}
-    },
-    installs: {user:"1.0.1", local:"1.0.1"},
-    available: "1.0.1"
-  }' >"$state"
-  extract_claude_update_block "$skill" "$update_extracted"
-  render_claude_block "$update_extracted" "$update_instructions" "$plugin_scopes"
-  if FAKE_FAIL_ADD_SOURCE=owner/flow42@v1.0.2 FAKE_STATE=$state \
-    PATH="$stateful_bin:$PATH" sh -e "$update_instructions" >/dev/null 2>&1; then
-    echo "stateful rollback: $scenario did not observe the forced add failure" >&2
+  actual_projection=$(jq -S '{declarations, installs, available}' "$state")
+  if test "$actual_projection" != "$expected_projection"; then
+    echo "stateful rollback: $scenario did not restore declarations, installs, and available version exactly" >&2
     return 1
   fi
-
-  extract_claude_rollback_block "$skill" "$rollback_instructions"
-  marketplace_scope=user plugin_scopes=$plugin_scopes \
-    recorded_marketplace_source=owner/flow42@v1.0.1 \
-    FAKE_STATE=$state PATH="$stateful_bin:$PATH" \
-    sh "$rollback_instructions" >/dev/null 2>&1
-  if ! jq -e '
-    .declarations.user ==
-      {source:"github", repo:"owner/flow42", ref:"v1.0.1"}
-  ' "$state" >/dev/null; then
-    echo "stateful rollback: $scenario did not restore the exact source object" >&2
+  marketplace_listing=$(FAKE_STATE=$state PATH="$stateful_bin:$PATH" \
+    claude plugin marketplace list --json)
+  actual_source_json=$(printf '%s\n' "$marketplace_listing" | jq -c '
+    [.[] | select(.name == "flow42")] |
+    if length == 1 then .[0] | del(.name) else error("ambiguous readback") end
+  ')
+  if ! jq -en --argjson actual "$actual_source_json" \
+    --argjson expected "$expected_source_json" '$actual == $expected' >/dev/null; then
+    echo "stateful rollback: $scenario source-kind readback differed from the recorded object" >&2
+    return 1
+  fi
+  settings_source_json=$(jq -c \
+    '.extraKnownMarketplaces.flow42.source // empty' "$settings_file")
+  if ! jq -en --argjson actual "$settings_source_json" \
+    --argjson expected "$expected_source_json" '$actual == $expected' >/dev/null; then
+    echo "stateful rollback: $scenario settings declaration differed from the recorded source object" >&2
     return 1
   fi
   plugin_listing=$(FAKE_STATE=$state PATH="$stateful_bin:$PATH" \
@@ -385,22 +411,249 @@ run_stateful_rollback_scenario() {
   done
 }
 
+run_stateful_mutation_failures() {
+  source_kind=$1
+  source_json=$2
+  recorded_source=$3
+  directory_version=$4
+  failure_phase=${5:-before}
+  skill=${6:-$root/skills/update/SKILL.md}
+  plugin_scopes='user local'
+  update_extracted=$stateful_tmp/$source_kind.failure-update.extracted.sh
+  update_instructions=$stateful_tmp/$source_kind.failure-update.sh
+
+  extract_claude_update_block "$skill" "$update_extracted"
+  render_claude_block "$update_extracted" "$update_instructions" \
+    "$plugin_scopes" "$recorded_source" owner/flow42@v1.0.2
+
+  while IFS= read -r failed_command; do
+    scenario=$source_kind-$failure_phase-$(printf '%s\n' "$failed_command" | tr ' /@' '---')
+    state=$stateful_tmp/$scenario.json
+    settings_file=$stateful_tmp/$scenario.settings.json
+    fail_marker=$stateful_tmp/$scenario.failed
+    jq -n --argjson source "$source_json" '{
+      declarations: {user:$source},
+      installs: {user:"1.0.1", local:"1.0.1"},
+      available: "1.0.1"
+    }' >"$state"
+    jq -n --argjson source "$source_json" '{
+      extraKnownMarketplaces: {flow42: {source:$source}}
+    }' >"$settings_file"
+    expected_projection=$(jq -S '{declarations, installs, available}' "$state")
+
+    if FAKE_FAIL_COMMAND=$failed_command FAKE_FAIL_MARKER=$fail_marker \
+      FAKE_FAIL_PHASE=$failure_phase \
+      FAKE_DIRECTORY_VERSION=$directory_version \
+      recorded_source_json=$source_json recorded_plugin_version=1.0.1 \
+      declaring_settings_file=$settings_file FAKE_SETTINGS_FILE=$settings_file \
+      FAKE_STATE=$state \
+      PATH="$stateful_bin:$PATH" sh -e "$update_instructions" \
+      >/dev/null 2>&1; then
+      echo "stateful rollback: $scenario did not observe its forced mutation failure" >&2
+      return 1
+    fi
+    if test ! -f "$fail_marker"; then
+      echo "stateful rollback: $scenario never reached its forced mutation step" >&2
+      return 1
+    fi
+
+    assert_stateful_restoration "$scenario" "$state" "$expected_projection" \
+      "$source_json" "$plugin_scopes" "$settings_file"
+  done <<'EOF'
+plugin marketplace remove flow42 --scope user
+plugin marketplace add owner/flow42@v1.0.2 --scope user
+plugin install flow42@flow42 --scope user -y
+plugin update flow42@flow42 --scope user -y
+plugin install flow42@flow42 --scope local -y
+plugin update flow42@flow42 --scope local -y
+plugin list --json
+EOF
+}
+
+render_claude_preflight() {
+  source_block=$1
+  rendered_block=$2
+  sed -n 'p' "$source_block" >"$rendered_block"
+  # shellcheck disable=SC2016
+  printf '%s\n' \
+    'printf '\''%s\t%s\t%s\t%s\n'\'' "$marketplace_scope" "$recorded_source_kind" "$recorded_marketplace_source" "$recorded_plugin_version" >"$FLOW42_PREFLIGHT_RESULT"' \
+    >>"$rendered_block"
+}
+
+run_stateful_preflight_scenario() {
+  scenario=$1
+  expected_result=$2
+  declarations=$3
+  installs=$4
+  expected_record=$(printf '%b' "${5:-}")
+  fail_update_help=${6:-false}
+  skill=${7:-$root/skills/update/SKILL.md}
+  expected_error=${8:-}
+  scenario_root=$stateful_tmp/preflight\ scenarios/$scenario
+  config_root=$scenario_root/config
+  project_root=$scenario_root/project
+  state=$scenario_root/state.json
+  extracted=$scenario_root/preflight.extracted.sh
+  instructions=$scenario_root/preflight.sh
+  result=$scenario_root/result.tsv
+  error_log=$scenario_root/stderr.log
+  mkdir -p "$config_root" "$project_root/.claude"
+
+  jq -n --argjson declarations "$declarations" --argjson installs "$installs" '{
+    declarations: $declarations,
+    installs: $installs,
+    available: "1.0.1"
+  }' >"$state"
+  for declaration_scope in user project local; do
+    if ! printf '%s\n' "$declarations" | jq -e \
+      --arg scope "$declaration_scope" '.[$scope] != null' >/dev/null; then
+      continue
+    fi
+    case "$declaration_scope" in
+      user) settings_file=$config_root/settings.json ;;
+      project) settings_file=$project_root/.claude/settings.json ;;
+      local) settings_file=$project_root/.claude/settings.local.json ;;
+    esac
+    printf '%s\n' "$declarations" | jq --arg scope "$declaration_scope" '{
+      extraKnownMarketplaces: {flow42: {source: .[$scope]}}
+    }' >"$settings_file"
+  done
+  expected_projection=$(jq -S '{declarations, installs, available}' "$state")
+  extract_claude_preflight_block "$skill" "$extracted"
+  render_claude_preflight "$extracted" "$instructions"
+
+  if CLAUDE_CONFIG_DIR=$config_root FLOW42_PROJECT_ROOT=$project_root \
+    FLOW42_PREFLIGHT_RESULT=$result \
+    FAKE_FAIL_UPDATE_HELP=$fail_update_help FAKE_STATE=$state \
+    PATH="$stateful_bin:$PATH" sh -e "$instructions" \
+    >/dev/null 2>"$error_log"; then
+    actual_result=pass
+  else
+    actual_result=fail
+  fi
+  if test "$actual_result" != "$expected_result"; then
+    echo "stateful preflight: $scenario returned $actual_result instead of $expected_result" >&2
+    return 1
+  fi
+  actual_projection=$(jq -S '{declarations, installs, available}' "$state")
+  if test "$actual_projection" != "$expected_projection"; then
+    echo "stateful preflight: $scenario mutated harness state" >&2
+    return 1
+  fi
+  if test "$expected_result" = pass; then
+    if test ! -f "$result" || test "$(cat "$result")" != "$expected_record"; then
+      echo "stateful preflight: $scenario did not preserve its scope, source kind, add argument, and version" >&2
+      return 1
+    fi
+  elif test -e "$result"; then
+    echo "stateful preflight: $scenario continued after a fail-closed check" >&2
+    return 1
+  fi
+  if test -n "$expected_error" && ! grep -Fq "$expected_error" "$error_log"; then
+    echo "stateful preflight: $scenario did not report '$expected_error'" >&2
+    return 1
+  fi
+}
+
 stateful_tmp=$(mktemp -d "${TMPDIR:-/tmp}/flow42-update-stateful.XXXXXX")
 stateful_bin=$stateful_tmp/bin
 mkdir "$stateful_bin"
 cp "$root/tests/fixtures/update/fake-claude" "$stateful_bin/claude"
 chmod +x "$stateful_bin/claude"
 
+run_stateful_preflight_scenario unique-github pass \
+  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
+  '{"user":"1.0.1","local":"1.0.1"}' \
+  'user	github	owner/flow42@v1.0.1	1.0.1'
+run_stateful_preflight_scenario unique-git pass \
+  '{"project":{"source":"git","url":"https://example.invalid/flow42.git","ref":"v1.0.1"}}' \
+  '{"local":"1.0.1"}' \
+  'project	git	https://example.invalid/flow42.git#v1.0.1	1.0.1'
+run_stateful_preflight_scenario unique-directory pass \
+  '{"local":{"source":"directory","path":"/opt/flow42-source"}}' \
+  '{"local":"1.0.1"}' \
+  'local	directory	/opt/flow42-source	1.0.1'
+run_stateful_preflight_scenario zero-declarations fail '{}' \
+  '{"local":"1.0.1"}' '' false '' 'found: <none>'
+run_stateful_preflight_scenario multiple-declarations fail \
+  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"},"project":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
+  '{"local":"1.0.1"}' '' false '' 'found: user project'
+run_stateful_preflight_scenario heterogeneous-versions fail \
+  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
+  '{"user":"1.0.1","local":"0.9.9"}' '' false '' \
+  'user=1.0.1, local=0.9.9'
+run_stateful_preflight_scenario capability-unavailable fail \
+  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
+  '{"local":"1.0.1"}' '' true '' 'does not expose plugin update'
+
+mutated_skill=$stateful_tmp/drop-update-capability-gate.md
+sed -f "$root/tests/fixtures/update/drop-update-capability-gate.sed" \
+  "$root/skills/update/SKILL.md" >"$mutated_skill"
+if cmp -s "$root/skills/update/SKILL.md" "$mutated_skill"; then
+  echo 'update mutation: drop-update-capability-gate fixture made no change' >&2
+  exit 1
+fi
+if run_stateful_preflight_scenario mutation-capability-unavailable fail \
+  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
+  '{"local":"1.0.1"}' '' true "$mutated_skill" >/dev/null 2>&1; then
+  echo 'update mutation: removing the plugin update capability gate was not detected' >&2
+  exit 1
+fi
+
+mutated_skill=$stateful_tmp/allow-multiple-declarations.md
+sed -f "$root/tests/fixtures/update/allow-multiple-declarations.sed" \
+  "$root/skills/update/SKILL.md" >"$mutated_skill"
+if cmp -s "$root/skills/update/SKILL.md" "$mutated_skill"; then
+  echo 'update mutation: allow-multiple-declarations fixture made no change' >&2
+  exit 1
+fi
+if run_stateful_preflight_scenario mutation-multiple-declarations fail \
+  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"},"project":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
+  '{"local":"1.0.1"}' '' false "$mutated_skill" >/dev/null 2>&1; then
+  echo 'update mutation: allowing multiple declarations was not detected' >&2
+  exit 1
+fi
+
+mutated_skill=$stateful_tmp/infer-missing-declaration.md
+sed -f "$root/tests/fixtures/update/infer-missing-declaration.sed" \
+  "$root/skills/update/SKILL.md" >"$mutated_skill"
+if cmp -s "$root/skills/update/SKILL.md" "$mutated_skill"; then
+  echo 'update mutation: infer-missing-declaration fixture made no change' >&2
+  exit 1
+fi
+if run_stateful_preflight_scenario mutation-zero-declarations fail '{}' \
+  '{"local":"1.0.1"}' '' false "$mutated_skill" >/dev/null 2>&1; then
+  echo 'update mutation: inferring a missing declaration was not detected' >&2
+  exit 1
+fi
+
 run_stateful_update_scenario plugin-removed "$root/skills/update/SKILL.md" \
   '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
   '{"local":"1.0.1"}' 'local'
 run_stateful_update_scenario plugin-preserved "$root/skills/update/SKILL.md" \
-  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"},"project":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
-  '{"local":"1.0.1"}' 'local'
+  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
+  '{"local":"1.0.1"}' 'local' true
 run_stateful_update_scenario multi-install-scope "$root/skills/update/SKILL.md" \
   '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
   '{"user":"1.0.1","local":"1.0.1"}' 'user local'
-run_stateful_rollback_scenario rollback "$root/skills/update/SKILL.md"
+run_stateful_mutation_failures github \
+  '{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}' \
+  owner/flow42@v1.0.1 ''
+run_stateful_mutation_failures git \
+  '{"source":"git","url":"https://example.invalid/flow42.git","ref":"v1.0.1"}' \
+  'https://example.invalid/flow42.git#v1.0.1' ''
+run_stateful_mutation_failures directory \
+  '{"source":"directory","path":"/opt/flow42-source"}' \
+  /opt/flow42-source 1.0.1
+run_stateful_mutation_failures github \
+  '{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}' \
+  owner/flow42@v1.0.1 '' after
+run_stateful_mutation_failures git \
+  '{"source":"git","url":"https://example.invalid/flow42.git","ref":"v1.0.1"}' \
+  'https://example.invalid/flow42.git#v1.0.1' '' after
+run_stateful_mutation_failures directory \
+  '{"source":"directory","path":"/opt/flow42-source"}' \
+  /opt/flow42-source 1.0.1 after
 
 mutated_skill=$stateful_tmp/drop-update-step.md
 sed -f "$root/tests/fixtures/update/drop-update-step.sed" \
@@ -410,8 +663,8 @@ if cmp -s "$root/skills/update/SKILL.md" "$mutated_skill"; then
   exit 1
 fi
 if run_stateful_update_scenario mutation-drop-update "$mutated_skill" \
-  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"},"project":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
-  '{"local":"1.0.1"}' 'local' >/dev/null 2>&1; then
+  '{"user":{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}}' \
+  '{"local":"1.0.1"}' 'local' true >/dev/null 2>&1; then
   echo 'update mutation: drop-update-step did not break plugin-preserved convergence' >&2
   exit 1
 fi
@@ -435,16 +688,17 @@ if cmp -s "$root/skills/update/SKILL.md" "$mutated_skill"; then
   echo 'update mutation: listing-derived-rollback fixture made no change' >&2
   exit 1
 fi
-if run_stateful_rollback_scenario mutation-listing-rollback "$mutated_skill" \
-  >/dev/null 2>&1; then
+if run_stateful_mutation_failures mutation-listing-rollback \
+  '{"source":"github","repo":"owner/flow42","ref":"v1.0.1"}' \
+  owner/flow42@v1.0.1 '' before "$mutated_skill" >/dev/null 2>&1; then
   echo 'update mutation: listing-derived-rollback did not break exact rollback' >&2
   exit 1
 fi
-rm -rf "$stateful_tmp"
+find "$stateful_tmp" -depth -delete
+stateful_tmp=
 
 fake_bin=$(mktemp -d)
 fake_log=$fake_bin/claude.log
-trap 'rm -rf "$fake_bin"' EXIT HUP INT TERM
 cat > "$fake_bin/claude" <<'EOF'
 #!/bin/sh
 printf '%s\n' "$*" >> "$FAKE_CLAUDE_LOG"
@@ -614,9 +868,9 @@ esac
 rollback_step=$(tr '\n' ' ' < "$root/skills/update/SKILL.md" |
   sed -n 's/.*Treat the add\(.*\)Do not edit harness cache directories.*/\1/p')
 case "$rollback_step" in
-  *'For Claude'*'Restore'*'plugin install'*'plugin update'*) ;;
+  *'transaction removes the target only when'*'restores the kind-preserving recorded source'*'complete transaction'*) ;;
   *)
-    echo 'update skill: Claude rollback must symmetrically restore and converge the plugin' >&2
+    echo 'update skill: Claude rollback must remain a self-contained transaction' >&2
     exit 1
     ;;
 esac

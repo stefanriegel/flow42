@@ -7,8 +7,8 @@ description: Independently verify a Flow42 implementation against intent, spec, 
 
 ## Contract prelude
 
-Resolve the Flow42 bundle root as this file's grandparent directory
-(`<bundle>/skills/<name>/SKILL.md`), not the working directory; where the harness
+Resolve the Flow42 bundle root as this file's great-grandparent directory (the
+`<bundle>` in `<bundle>/skills/<name>/SKILL.md`), not the working directory; where the harness
 exports `${CLAUDE_PLUGIN_ROOT}`, that is the same directory. Before acting, read
 `<bundle>/core/CONTRACT.md`, `<bundle>/core/workflow.json`,
 `<bundle>/core/SECURITY.md`, and `<bundle>/core/config-schema.json`; read
@@ -25,14 +25,21 @@ reference, reviewer principal and role, session or dispatch reference,
 reference, and UTC time. Reject a receipt from the implementer or a weaker
 issuer when a stronger one is available. Use authenticated Forge provenance
 first, then a trusted orchestrator, then a distinct `local-independent-pass`;
-for the local fallback record why neither stronger issuer is available. Review the diff against the current
+for the local fallback record why neither stronger issuer is available and label
+it as lower-tier. For Forge and orchestrator issuers, resolve the receipt through
+an independent provider/orchestrator interface and require an authenticated
+result that exactly binds issuer reference, reviewer principal, session or
+dispatch, `reviewed_head`, verdict, and artifact. Missing, unavailable,
+unauthenticated, self-resolving, or mismatched results fail closed. Review the diff against the current
 artifacts and acceptance criteria. Run repository-relevant format, lint, type,
 test, build, secret, dependency, and static checks. Add UI interaction/visual
 evidence or migration dry-run/rollback proof where applicable. The implementer
-may fix findings but cannot independently review its own result. Allow at most two automatic
-fix/review loops. A blocking finding uses the declared `verifying` to `building`
-repair transition before a fix, with each fixed head reviewed again by a non-implementing
-review pass, then escalate concrete blockers. Independent review does not replace
+may fix findings but cannot independently review its own result. A blocking
+finding uses the declared `verifying` to `building` repair transition before a
+fix and increments `status.review_loops`. Each fixed head is reviewed again by a
+non-implementing review pass. When `automatic_review_limit` is reached, do not
+take another repair loop: transition to `blocked` with
+`automatic-review-limit-reached` and escalate the concrete blockers. Independent review does not replace
 explicit human confirmation where high-risk or irreversible action requires it. Always run every available
 secret, dependency-vulnerability, and static-analysis check. For auth,
 permissions, sensitive data, networking, payments, infrastructure, or production
@@ -41,6 +48,9 @@ configuration, require a persisted threat model and independent security review.
 Pass transitions `verifying` to `pr-ready`; any blocking finding transitions to
 `building` through `recorded-blocking-finding`, or to `blocked` with
 `resume_stage: verifying` when work cannot proceed. Persisting only the receipt
-and other receipt-neutral bookkeeping does not invalidate it. Any other changed
-path requires a fresh review. Use the canonical revision, atomic status,
+and receipt-neutral bookkeeping does not invalidate it. Evaluate paths with
+`--no-renames`; neutral filenames apply only at the reviewed work-item root. In
+`status.yml`, only the policy's enumerated lifecycle/CI fields are neutral, so a
+risk downgrade, identity change, review-loop change, or other field change
+requires a fresh review. Use the canonical revision, atomic status,
 append-only history, and read-back procedure.

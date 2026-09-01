@@ -3,3 +3,5 @@
 {"actor":"coordinator","from":"drafting-spec","reason":"testable-requirements-recorded","revision":3,"timestamp":"2026-09-01T05:37:26Z","to":"planning"}
 {"actor":"coordinator","from":"planning","reason":"opus-design-adjudicated-and-worker-ownership-recorded","revision":4,"timestamp":"2026-09-01T06:02:11Z","to":"building"}
 {"actor":"coordinator","from":"building","reason":"all-remediation-slices-integrated-and-local-matrix-green","revision":5,"timestamp":"2026-09-01T06:30:15Z","to":"verifying"}
+{"actor":"coordinator","from":"verifying","reason":"exact-head-independent-review-recorded-blocking-findings","revision":6,"timestamp":"2026-09-01T06:47:21Z","to":"building"}
+{"actor":"coordinator","from":"building","reason":"independent-review-remediation-integrated-and-full-local-matrix-green","revision":7,"timestamp":"2026-09-01T07:15:18Z","to":"verifying"}

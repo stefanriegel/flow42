@@ -1,0 +1,4 @@
+{
+  "status": {"stage":"blocked","state_revision":12,"resume_stage":"building"},
+  "history": [{"revision":12,"from":"verifying","to":"blocked","reason":"blocking-finding"}]
+}

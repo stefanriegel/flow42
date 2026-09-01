@@ -30,7 +30,12 @@ duplicate mutable lifecycle fields.
 Repository initialization creates `.flow42/config.yml`. Validate it against the
 versioned authority in `core/config-schema.json` before use; unknown fields,
 schema versions, retired gates, scalar commands, invalid model identifiers, and
-missing repository command paths block use with a migration instruction.
+missing repository command paths block use with a migration instruction. Parse
+only the declared YAML subset and reject duplicate keys. A literal base branch
+must satisfy both the schema pattern and `git check-ref-format --branch`;
+`worktree_parent` and protected paths reject absolute, home-relative, and parent
+traversal forms. Normalize path-qualified executables and recognized CLI global
+options before applying the fail-closed command policy.
 Configuration changes do not require a separate approval artifact or Forge
 interaction.
 
@@ -41,9 +46,12 @@ mutation. Commit artifacts so another session can resume without chat history.
 
 The stages in `workflow.json` are the only ordered forward transitions. Its
 declared `pseudo_states` expand symbolic sources, and its declared
-`dynamic_targets` resolve fields such as `status.resume_stage` only to a real
-stage. Work may enter `blocked` while retaining `resume_stage`; resume only after
-blockers clear and ownership is consistent. `abandoned` and `superseded`
+`pseudo_states` declare their included and excluded sets; `blocked` is excluded
+from `any-non-final` to prevent a self-loop. `dynamic_targets` resolve fields
+such as `status.resume_stage` only to a non-final stage that equals the actual
+pre-block stage in the latest history transition. Work may enter `blocked` while
+retaining `resume_stage`; resume only after blockers clear, the history binding
+validates, and ownership is consistent. `abandoned` and `superseded`
 are final; superseded work links its replacement. `complete` follows an
 authorized merge or explicit closure. The normal endpoint is `ready-for-human`:
 a reviewed, CI-green PR/MR.
@@ -59,6 +67,9 @@ verification finding, failing CI check, or requested change may return work to
 `building`. A state inconsistency enters `blocked` with the recorded repair
 proposal; it does not invent or rewrite history. Repair gates are evidence-based
 workflow conditions, not approval gates.
+Each `verifying` to `building` repair increments `status.review_loops`. Once
+`automatic_review_limit` is reached, another repair is illegal; transition to
+`blocked` with the limit reason and escalate instead.
 
 ## Human confirmation
 
@@ -87,16 +98,29 @@ session or dispatch, checks, artifact, and time. Use the strongest issuer
 available: `authenticated-forge`, then `trusted-orchestrator`, then
 `local-independent-pass`. The local fallback remains valid when neither stronger
 issuer is available, but must record why and must still be a distinct pass that
-did not implement the change. Review evidence never grants human approval.
+did not implement the change. It is explicitly lower-tier. A Forge or
+orchestrator receipt is valid only when an independent resolver authenticates
+the issuer record and exactly binds issuer reference, reviewer principal,
+session or dispatch, reviewed SHA, verdict, and artifact; missing, unavailable,
+unauthenticated, or mismatched resolution fails closed. Review evidence never
+grants human approval.
 
 A receipt for `reviewed_head` remains current at `HEAD` only when
 `reviewed_head` is an ancestor of or equal to `HEAD` and every NUL-delimited path
-from `git diff --name-only -z "$reviewed_head" HEAD --` is one of these files in
-the work item under review: `evidence.md`, `decisions.md`, `history.jsonl`, or
-`status.yml`. Those are receipt-neutral bookkeeping paths. Changes to any other
-path, including `intent.md`, `spec.md`, `plan.md`, `.flow42/config.yml`, product,
-contract, skill, test, or CI files invalidate the receipt and require a fresh
-non-implementer review.
+from `git diff --name-only --no-renames -z "$reviewed_head" HEAD --` is an exact
+receipt-neutral leaf in the work item under review. Renames retain both endpoints;
+nested and unrelated lookalike paths are invalid. `evidence.md`, `decisions.md`,
+and `history.jsonl` are neutral bookkeeping artifacts. In `status.yml`, neutrality
+is field-level and limited to `stage`, `state_revision`, `updated_at`, `blockers`,
+`resume_stage`, `ci_state`, `next_actions`, and `forge_item`; changing `risk`,
+identity, work type, review loops, or another field requires fresh review. Both
+status versions must contain the canonical top-level key set exactly once;
+duplicate, missing, or unknown keys fail closed before comparison.
+These are the only receipt-neutral bookkeeping paths and status fields.
+Receipt-neutral decisions never authenticate human confirmation. Changes to any
+other path, including `intent.md`, `spec.md`, `plan.md`, `.flow42/config.yml`,
+product, contract, skill, test, or CI files invalidate the receipt and require a
+fresh non-implementer review.
 
 Detect the Forge from `git remote get-url origin` and preflight `gh auth status`
 or `glab auth status`. Use official CLIs, never stored credentials or a custom

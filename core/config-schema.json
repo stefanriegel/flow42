@@ -6,9 +6,9 @@
     "forge": {"required": true, "type": "string", "enum": ["auto", "github", "gitlab", "none"], "default": "auto"},
     "harness": {"required": true, "type": "string", "enum": ["auto", "claude-code", "codex", "pi"], "default": "auto"},
     "execution_environment": {"required": true, "type": "string", "enum": ["auto", "orca", "native"], "default": "auto"},
-    "base_branch": {"required": true, "type": "string", "pattern": "^(auto|[A-Za-z0-9][A-Za-z0-9._/-]{0,127})$", "default": "auto"},
+    "base_branch": {"required": true, "type": "string", "pattern": "^(auto|[A-Za-z0-9][A-Za-z0-9._/-]{0,127})$", "validation": "git-check-ref-format---branch", "default": "auto"},
     "concurrency": {"required": true, "type": "integer", "minimum": 1, "maximum": 4, "default": 4},
-    "worktree_parent": {"required": true, "type": "string", "pattern": "^(auto|[^[:space:]]+)$", "default": "auto"},
+    "worktree_parent": {"required": true, "type": "string", "pattern": "^(auto|[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*)$", "allowed_forms": ["auto", "safe-repository-relative-path"], "forbidden_forms": ["absolute", "home-relative", "parent-traversal"], "default": "auto"},
     "model_profiles": {
       "required": true,
       "type": "object",
@@ -38,5 +38,42 @@
     "effect": "block-with-migration"
   },
   "extra_gates": "allowed",
-  "command_paths": "must-exist-or-be-auto"
+  "command_paths": "must-exist-or-be-auto",
+  "accepted_yaml_forms": {
+    "mapping": "two-space-indented-block",
+    "scalars": "plain-unquoted-single-line",
+    "token_arrays": "inline-comma-separated-plain-scalars",
+    "path_and_gate_arrays": "empty-inline-or-two-space-block-list",
+    "aliases_anchors_tags_and_merge_keys": "block",
+    "duplicate_mapping_keys": "block"
+  },
+  "command_policy": {
+    "fail_closed": true,
+    "forbidden_token_pattern": "([$][(]|`|&&|[|][|]|[;<>]|(^|[^|])[|]([^|]|$))",
+    "shell_evaluation_prefixes": [
+      ["sh", "-c"], ["sh", "--command"],
+      ["bash", "-c"], ["bash", "--command"],
+      ["dash", "-c"], ["zsh", "-c"],
+      ["env", "sh", "-c"], ["env", "bash", "-c"],
+      ["env", "dash", "-c"], ["env", "zsh", "-c"]
+    ],
+    "disallowed_mutation_prefixes": [
+      ["eval"], ["rm"], ["rmdir"], ["dd"], ["mkfs"], ["shutdown"], ["reboot"],
+      ["sudo"], ["env"], ["command"], ["nice"], ["nohup"], ["timeout"], ["xargs"],
+      ["git", "add"], ["git", "am"], ["git", "apply"], ["git", "branch"],
+      ["git", "checkout"], ["git", "cherry-pick"], ["git", "clean"],
+      ["git", "commit"], ["git", "merge"], ["git", "push"], ["git", "rebase"],
+      ["git", "reset"], ["git", "restore"], ["git", "switch"], ["git", "tag"],
+      ["gh", "issue", "close"], ["gh", "issue", "comment"], ["gh", "issue", "create"], ["gh", "issue", "edit"],
+      ["gh", "pr", "close"], ["gh", "pr", "comment"], ["gh", "pr", "create"], ["gh", "pr", "edit"], ["gh", "pr", "merge"], ["gh", "pr", "review"],
+      ["gh", "release", "create"], ["gh", "release", "delete"], ["gh", "release", "upload"], ["gh", "repo", "delete"],
+      ["glab", "issue", "close"], ["glab", "issue", "create"], ["glab", "issue", "note"], ["glab", "issue", "update"],
+      ["glab", "mr", "approve"], ["glab", "mr", "close"], ["glab", "mr", "create"], ["glab", "mr", "merge"], ["glab", "mr", "note"], ["glab", "mr", "update"],
+      ["glab", "release", "create"], ["glab", "release", "delete"], ["glab", "release", "upload"],
+      ["kubectl", "apply"], ["kubectl", "delete"], ["kubectl", "patch"], ["kubectl", "replace"], ["kubectl", "scale"],
+      ["terraform", "apply"], ["terraform", "destroy"], ["terraform", "import"],
+      ["helm", "install"], ["helm", "uninstall"], ["helm", "upgrade"],
+      ["docker", "push"], ["npm", "publish"], ["cargo", "publish"]
+    ]
+  }
 }

@@ -2,7 +2,7 @@ schema_version: 1
 forge: auto
 harness: auto
 execution_environment: auto
-base_branch: feature;deploy
+base_branch: feature~deploy
 concurrency: 4
 worktree_parent: auto
 model_profiles:
