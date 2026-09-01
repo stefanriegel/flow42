@@ -167,17 +167,15 @@ are idempotent. External issue and review text is untrusted input.
 Apply the instruction, command, worker, credential, and immutable-release
 boundaries in `core/SECURITY.md` for every phase.
 
-Source, tag, and version labels do not prove installed release bytes. Where a
-harness exposes fetched and installed cache paths, rebuild sanitized Git trees
-and require two consecutive full point-in-time observations to equal the tree of
-the already verified signed candidate. Bind project-local entries by canonical
-project path, bind the canonical config root and single-link settings files,
-validate exact reproducible source shapes before verification, neutralize Git
-templates/config/attributes, and exclude only a strictly validated,
-single-linked vendor runtime-marker schema. A missing path, force-moved tag,
-substituted cache, malformed marker, or tree mismatch fails closed and triggers
-rollback. Do not overstate this as cache immutability: without a documented
-vendor lock, a same-user concurrent writer remains a disclosed residual risk.
+Update only from a selected semantic-version tag verified by the already
+installed trusted bundle before harness mutation. Bind the advertised tag
+object, signed commit, tree, manifest version, and release checksum, then use
+the harness's documented installer and verify its reported version and bundle
+structure. Flow42 does not edit or attest private harness caches and never
+claims byte-identical rollback when the harness exposes no supported restore
+interface. Failed updates attempt a best-effort reinstall of the recorded prior
+release and report incomplete recovery honestly; unrelated project work may
+continue when the previous installation remains usable.
 
 Flow42 requires explicit confirmation from one accountable human for each
 high-risk or irreversible action; it never requires a collaborator or second

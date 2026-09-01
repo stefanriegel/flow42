@@ -2,11 +2,12 @@
 
 ## Functional requirements
 
-1. The Claude update and rollback flows reach the requested installed version
-   whether marketplace removal preserves or removes the installed plugin, and
-   bind both fetched marketplace bytes and installed cache bytes to the exact
-   verified signed candidate tree from canonical project/config identities,
-   exact reproducible source shapes, and non-linked settings state.
+1. The update flow verifies a selected signed semantic-version release before
+   mutation, delegates installation to the harness's documented package-manager
+   commands, and verifies the reported version and installed bundle structure.
+   It does not inspect or modify private harness caches. Recovery is a
+   best-effort native reinstall of the recorded prior release and never claims
+   byte-identical restoration without a supported vendor restore interface.
 2. Exact-head independent review has a coherent durable receipt model without a
    commit-after-review fixed point; correctness/security purpose, exact required
    checks, expected artifact bytes/reference, and authenticated time are
@@ -47,10 +48,10 @@ the failed invariant.
 
 ## Interfaces and data
 
-The update Interface is requested immutable source plus recorded scopes in, and
-observed installed version, verified candidate tree, fetched/installed tree
-attestations, plus rollback state out. Configuration and lifecycle Interfaces
-remain machine-readable JSON/YAML. Review receipts must not require editing the
+The update Interface is requested immutable release plus the native harness's
+recorded source/scope in, and verified release identity, observed installed
+version and bundle structure, plus honest recovery status out. Configuration and
+lifecycle Interfaces remain machine-readable JSON/YAML. Review receipts must not require editing the
 reviewed code identity after attestation; Forge linkage is receipt-neutral
 evidence while the schema-compatible status change-request field stays empty.
 
@@ -64,15 +65,15 @@ Do not persist secrets or raw authenticated CLI output.
 
 - Assets: repository integrity; the reviewed repository, baseline, head, scope,
   diff, and artifact identities; worker path and Git-administration ownership;
-  human confirmation state; configured command argv; plugin source, version,
-  candidate and installed byte identity, installation scopes, and rollback
-  state; and review provenance.
+  human confirmation state; configured command argv; signed plugin release
+  identity, installation scope, native harness state, and recovery status; and
+  review provenance.
 - Actors: the accountable human; the coordinating agent; non-implementing
   reviewers; bounded implementation workers; authenticated Forge and
   orchestrator principals; vendor CLIs; and an attacker able to control
   repository text, issue/review text, configuration values, Git pathnames or
-  administrative state including ignore/attributes/alternates files, a mutable
-  release tag or cache path, a harness-elevated repository instruction, or a
+  administrative state including ignore/attributes/alternates files, a moved
+  release tag, a harness-elevated repository instruction, or a
   replayed/unauthenticated receipt claim.
 - Trust boundaries: human request to coordinator; repository data to executable
   agent instructions; configuration tokens to process execution; coordinator
@@ -81,8 +82,8 @@ Do not persist secrets or raw authenticated CLI output.
   authenticated record to local receipt validation; and host instruction
   precedence to Flow42's later interpreted policy.
 - Abuse cases: hide a push behind a Git alias or generic Forge API command;
-  substitute same-tag/same-version marketplace or installed bytes after
-  candidate verification; redirect a coordinator push through remote/hook or
+  substitute candidate content through ambient Git state, install an unverified
+  release, or claim exact rollback from labels alone; redirect a coordinator push through remote/hook or
   ignore-file mutation while leaving the worktree clean; replay a valid receipt
   across work items/scopes/purposes or substitute its checks/artifact/time; use a
   quoted duplicate key or escaped scalar in status; smuggle an

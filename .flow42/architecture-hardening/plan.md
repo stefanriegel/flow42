@@ -188,3 +188,19 @@ disabled.
   and local entries by exact `projectPath`, neutralize Git templates/config/
   filters, compare fetched and installed trees to the verified candidate twice,
   and disclose the remaining post-observation same-user cache race.
+
+## Human-directed update simplification
+
+The 2026-09-01 user direction replaces the cache-attestation design above for
+the update slice. Orca owns worktrees, terminals, processes, worker settlement,
+and cleanup. Flow42 update owns only read-only discovery, trusted signed-release
+verification, harness-native install/reinstall, structural readback, and honest
+reporting.
+
+The simplified update has four phases: inspect one unambiguous installation;
+verify a selected signed semantic-version tag with the already-installed trust
+anchor; install through the documented harness CLI; then verify version and
+bundle structure. It never edits or attests private harness caches. Failure
+keeps the current version when mutation has not started, otherwise attempts a
+best-effort native reinstall and reports incomplete recovery without blocking
+unrelated project work.
