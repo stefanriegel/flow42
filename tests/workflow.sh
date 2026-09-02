@@ -36,4 +36,13 @@ jq -e '
   | length == 0' "$p" >/dev/null || fail "blocked entered from wrong source"
 
 test "$(w '.workflow.automatic_review_limit')" = "2" || fail "review limit changed silently"
+
+# gates, the review-loop counter, and the risk/review sections are load-bearing — pin them
+jq -e '.workflow.transitions | any(.from == "plan-gate" and .to == "building" and .gate == "high-risk-plan")' "$p" >/dev/null || fail "high-risk-plan gate missing"
+jq -e '.workflow.transitions | any(.from == "verifying" and .to == "pr-ready" and .gate == "verification-passed")' "$p" >/dev/null || fail "verification-passed gate missing"
+jq -e '[.workflow.transitions[] | select(.to == "complete")] | length == 2 and all(.gate == "human-authorized-close")' "$p" >/dev/null || fail "human-authorized-close gates missing"
+jq -e '.workflow.repair_transitions[0].counter | .field == "status.review_loops" and .increment == 1 and .maximum_from == "automatic_review_limit" and .on_exhausted.to == "blocked"' "$p" >/dev/null || fail "review-loop counter or escalation missing"
+jq -e '.risk.security_triggers | length == 7' "$p" >/dev/null || fail "security triggers changed"
+jq -e '.review.stamp_fields == ["orca_ref","reviewer_agent","review_kind","verdict","reviewed_head","recorded_at"]' "$p" >/dev/null || fail "review stamp fields changed"
+jq -e '.workflow.mandatory_gates == ["high-risk-plan","irreversible-action","merge","deploy"]' "$p" >/dev/null || fail "mandatory gates changed"
 echo "workflow ok"

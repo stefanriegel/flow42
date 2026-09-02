@@ -15,6 +15,22 @@ skills CLI resolves the harness itself. `orca skills install` performs the
 same operation through Orca's UI, and is the recommended path when you are
 already working inside Orca.
 
+## Integrity
+
+The skills CLI installs from the repository as it resolves it at install time;
+V2's signed-release verification chain was deliberately retired (direction
+decision 16). Integrity now rests on GitHub account security and the skills
+CLI's resolution. To bind an install to an exact release, verify the installed
+files against the tagged tree afterwards:
+
+```sh
+git clone --depth 1 --branch v3.0.0 https://github.com/stefanriegel/flow42
+diff -r flow42/skills/flow42 <path-to-installed-skill>/flow42
+```
+
+A nonzero diff means the installed skill is not the tagged release — reinstall
+before trusting it.
+
 ## Verify the install
 
 ```sh

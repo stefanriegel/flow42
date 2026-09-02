@@ -25,8 +25,9 @@ for dir in "$root"/.flow42/*/; do
   test -f "$h" || continue
   jq -e . "$h" >/dev/null 2>&1 || jq -es . "$h" >/dev/null || fail "$id: invalid history JSON"
   if test -f "$ex" && grep -qx "$id" "$ex"; then continue; fi
+  test -f "$s" || fail "$id: status.yml missing"
   n=0
-  while IFS= read -r line; do
+  while IFS= read -r line || [ -n "$line" ]; do
     n=$((n + 1))
     rev=$(printf '%s' "$line" | jq -r '.revision'); f=$(printf '%s' "$line" | jq -r '.from'); t=$(printf '%s' "$line" | jq -r '.to')
     test "$rev" = "$n" || fail "$id: revision $rev at position $n not contiguous"

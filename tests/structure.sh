@@ -27,4 +27,38 @@ done
 ! grep -rn '\[TODO:' "$root/skills" || fail "placeholder found"
 # deleted concepts must not survive in the shipped skill
 ! grep -rniE 'issuer_kind|resolver|marker-pair|scope_digest|diff_digest|change_request|intent-gate' "$root/skills" || fail "retired concept survives in skills/"
+
+# the evidence template carries the canonical review-stamp format
+grep -q 'review stamp:' "$root/skills/flow42/templates/evidence.md" || fail "review stamp format missing from evidence template"
+
+# worktree_parent pattern must reject dot-only (traversal) segments
+pat=$(jq -r '.config_schema.fields.worktree_parent.pattern' "$p")
+for bad in '..' '../outside' 'a/../b' '.'; do
+  printf '%s' "$bad" | jq -R --arg re "$pat" 'test($re)' | grep -qx false || fail "worktree_parent pattern accepts traversal: $bad"
+done
+
+# validate the repo's own .flow42/config.yml against policy
+c="$root/.flow42/config.yml"
+if test -f "$c"; then
+  grep -q '^schema_version: 3$' "$c" || fail "config schema_version must be 3"
+  for key in $(jq -r '.config_schema.fields | to_entries[] | select(.value.required == true) | .key' "$p"); do
+    grep -q "^$key:" "$c" || fail "config missing required field: $key"
+  done
+  for g in $(jq -r '.config_schema.fields.mandatory_gates.must_include_all[]' "$p"); do
+    grep -qE "^[[:space:]]*-[[:space:]]$g\$" "$c" || fail "config missing mandatory gate: $g"
+  done
+  for key in format lint typecheck test build; do
+    toks=$(sed -n "s/^  $key: \[\(.*\)\]\$/\1/p" "$c" | tr -d ' ')
+    test -n "$toks" || continue
+    first=${toks%%,*}
+    case "$first" in
+      sh|bash|dash|zsh|env|eval|command|xargs|nohup|timeout|git|gh|glab|terraform|kubectl|helm)
+        fail "config commands.$key first token violates command_policy_rules: $first";;
+    esac
+    case "$toks" in
+      *'$'*|*'`'*|*';'*|*'|'*|*'&'*|*'<'*|*'>'*|*'('*|*')'*)
+        fail "config commands.$key contains shell metacharacters";;
+    esac
+  done
+fi
 echo "structure ok"

@@ -1,5 +1,7 @@
 # Evidence: Architecture hardening
 
+> LEGACY (v2 schema): review receipts below use the retired schema-2 receipt format. V3 evidence uses one-line review stamps — see skills/flow42/templates/evidence.md.
+
 This file is chronological. Update-convergence and private-cache observations
 recorded before the `2026-09-01 update simplification repair` describe the
 historical implementation at those subjects; they were superseded and are not

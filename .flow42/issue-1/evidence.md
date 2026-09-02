@@ -1,5 +1,7 @@
 # Evidence: Ship Flow42 V1
 
+> LEGACY (v2 schema): review receipts below use the retired schema-2 receipt format. V3 evidence uses one-line review stamps — see skills/flow42/templates/evidence.md.
+
 ## 2026-08-27 runtime-free foundation
 
 - Red: supported docs, lifecycle, CI, validation, and tests referenced Python.
