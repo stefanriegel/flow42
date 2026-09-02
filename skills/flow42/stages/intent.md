@@ -13,8 +13,11 @@ initial problem statement. Do not re-ask branches that selection already resolve
 forward as resolved facts and record where they came from.
 
 Create a lowercase work ID matching `^[a-z0-9][a-z0-9-]{0,62}$`; reject unsafe or colliding paths.
-Create `.flow42/<work-id>/` from every file in `<skill>/templates/`, using your agent's own file
-tools, including the revision-1 creation event in `history.jsonl` with `from: null`. Fill
+Create `.flow42/<work-id>/` from the seven work-item templates in `<skill>/templates/` —
+`intent.md`, `spec.md`, `plan.md`, `evidence.md`, `decisions.md`, `status.yml`, `history.jsonl` —
+using your agent's own file tools, including the revision-1 creation event in `history.jsonl` with
+`from: null`. `config.yml`, `signals.md`, and `options.md` are not work-item files; never copy them
+into a work item (a real `options.md` from `explore` is copied in as-is, never from the template). Fill
 `intent.md` with the problem, desired outcome, users, constraints, non-goals, acceptance signals,
 assumptions, and risks.
 

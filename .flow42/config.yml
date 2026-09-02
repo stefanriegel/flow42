@@ -7,7 +7,7 @@ commands:
   format: []
   lint: []
   typecheck: []
-  test: [sh, tests/structure.sh]
+  test: [tests/structure.sh]
   build: []
 protected_paths:
   - .github/workflows

@@ -72,7 +72,7 @@
       "forge": {"required": true, "type": "string", "enum": ["auto", "github", "gitlab", "none"], "default": "auto"},
       "base_branch": {"required": true, "type": "string", "pattern": "^(auto|[A-Za-z0-9][A-Za-z0-9._/-]{0,127})$", "default": "auto"},
       "concurrency": {"required": true, "type": "integer", "minimum": 1, "maximum": 4, "default": 4},
-      "worktree_parent": {"required": true, "type": "string", "pattern": "^(auto|[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*)$", "default": "auto"},
+      "worktree_parent": {"required": true, "type": "string", "pattern": "^(auto|[A-Za-z0-9._-]*[A-Za-z0-9_-][A-Za-z0-9._-]*(/[A-Za-z0-9._-]*[A-Za-z0-9_-][A-Za-z0-9._-]*)*)$", "default": "auto"},
       "bootstrap": {"required": false, "type": "string", "enum": ["required", "done"], "default": null},
       "commands": {"required": true, "type": "object", "keys": ["format", "lint", "typecheck", "test", "build"], "value_type": "token-array"},
       "protected_paths": {"required": true, "type": "path-array", "item_pattern": "^[A-Za-z0-9._/-]+$", "default": []},

@@ -34,6 +34,12 @@ exist. Configuration may add gates but must include every gate in
 `.config_schema.fields.mandatory_gates.must_include_all`; omission blocks initialization. Reread the
 file after writing and confirm it matches what validated.
 
+On a Forge-connected repository (an `origin` remote plus authenticated `gh` or `glab`), offer once
+— here, during init — to set up the recurring maintenance cadence using the exact
+`orca automations create` command in `<skill>/stages/maintain.md`. Record the human's answer;
+`maintain` itself never re-offers it. Declining here means the cadence is manual until the human
+asks for it.
+
 If `CLAUDE.md` or `AGENTS.md` needs Flow42 guidance, report a suggested patch; do not edit those
 files during initialization. Init never creates Forge artifacts — no issues, no PR/MR comments, no
 other Forge writes, ever.
